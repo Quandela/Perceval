@@ -302,13 +302,6 @@ def max_photon_state_iterator(m: int, n_max: int):
             yield output_state
 
 
-def tensorproduct(states: list[StateVector | BasicState]) -> StateVector | BasicState:
-    # Computes states[0] * states[1] * ... * states[n]
-    if len(states) == 1:
-        return states[0]
-    return tensorproduct(states[:-2] + [states[-2] * states[-1]])
-
-
 @dispatch(StateVector, annot_tag=str)
 def anonymize_annotations(sv: StateVector, annot_tag: str = "a") -> StateVector:
     # This algo anonymizes annotations but is not enough to have superposed states exactly the same given the storage

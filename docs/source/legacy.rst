@@ -32,8 +32,8 @@ Definition of the new classes
 Some calls will use or return only the type that makes sense (e.g. :code:`AnnotatedFockState::threshold_detection()`
 always returns a :code:`FockState` as a detected state naturally loses all kinds of photon annotation.
 
-.. note:: Note that the arithmetic is still implemented between states of different types. The result is the most
-  complex type of both operands (e.g. :code:`NoisyFockState` ⊗ :code:`FockState` gives a :code:`NoisyFockState`).
+.. note:: Note that arithmetic still works between states of different types. The result is the most complex type of
+          both operands (e.g. :code:`NoisyFockState` ⊗ :code:`FockState` gives a :code:`NoisyFockState`).
 
 Usage in Perceval
 .................
@@ -99,8 +99,10 @@ The following methods and classes have been removed or definitely modified as th
 - The :code:`n` parameter of SLOS backend (deprecated since 0.12, now automatically chosen when using :code:`set_input_state`)
 - :code:`thresholded_output` method of :code:`Processor` and :code:`RemoteProcessor`
   (deprecated since 0.12, replaced by adding several :code:`Detector.threshold()`)
-- :code:`Processor.with_polarized_input` method was removed, because :code:`Processor.with_input` is now able to handle
-  a polarized :code:`AnnotatedFockState` transparently.
+- :code:`with_polarized_input` method of :code:`Processor` (because :code:`Processor.with_input` is now able to handle
+  a polarized :code:`AnnotatedFockState` transparently)
+- :code:`tensorproduct(states: list)` from :code:`perceval.utils` (due to tensor products being handled well by
+  multiplication operators and specific methods - see :code:`BSDistribution.list_tensor_product`, for instance)
 - :code:`JobGroup.list_existing()` has been renamed into :code:`JobGroup.list_locally_saved()`
 
 
