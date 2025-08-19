@@ -346,7 +346,7 @@ class AProcessor(ABC):
                 raise ValueError("The value of min_detected_photons is not set."
                                  " Use the method processor.min_detected_photons_filter(value).")
 
-    def with_input(self, input_state: FockState | AnnotatedFockState | LogicalState | StateVector | SVDistribution) -> None:
+    def with_input(self, input_state: FockState | AnnotatedFockState | LogicalState | StateVector | SVDistribution):
         """
         Simulates plugging the photonic source on certain modes and turning it on.
         Computes the input probability distribution

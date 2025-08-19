@@ -99,6 +99,8 @@ The following methods and classes have been removed or definitely modified as th
 - The :code:`n` parameter of SLOS backend (deprecated since 0.12, now automatically chosen when using :code:`set_input_state`)
 - :code:`thresholded_output` method of :code:`Processor` and :code:`RemoteProcessor`
   (deprecated since 0.12, replaced by adding several :code:`Detector.threshold()`)
+- :code:`Processor.with_polarized_input` method was removed, because :code:`Processor.with_input` is now able to handle
+  a polarized :code:`AnnotatedFockState` transparently.
 - :code:`JobGroup.list_existing()` has been renamed into :code:`JobGroup.list_locally_saved()`
 
 

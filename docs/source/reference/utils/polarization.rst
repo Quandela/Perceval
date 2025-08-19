@@ -15,9 +15,11 @@ Jones vector: :math:`\begin{pmatrix}\cos \frac{\pi}{4}\\e^{i\frac{\pi}{4}}\sin \
 
 .. code-block:: python
 
-    >>> p = pcvl.Polarization(sp.pi/2, sp.pi/4)
-    >>> p.project_ev_eh()
-    (sqrt(2)/2, sqrt(2)*exp(I*pi/4)/2)
+    >>> import perceval as pcvl, sympy as sp
+    >>>
+    >>> p = pcvl.Polarization((sp.pi/2, sp.pi/4))
+    >>> p.project_eh_ev()
+    (0.707106, 0.5+0.5j)
 
 It is also possible to use ``H``, ``V``, ``D``, ``A``, ``L`` and ``R`` as shortcuts to predefined values:
 
@@ -51,7 +53,7 @@ It is also possible to use ``H``, ``V``, ``D``, ``A``, ``L`` and ``R`` as shortc
     >>> p = pcvl.Polarization("D")
     >>> p.theta_phi
     (pi/2, 0)
-    >>> p.project_ev_eh())
+    >>> p.project_eh_ev()
     (sqrt(2)/2, sqrt(2)/2)
 
 Defining states with polarization is then simply to use the :ref:`Annotation` ``P``:
@@ -75,7 +77,7 @@ If polarization is used for any photon in the state, the state is considered as 
 .. note::
    To simplify the notation:
 
-   * linear polarization can be defined with a single parameter: ``{P:sp.pi/2}`` is equivalent to ``{P:(sp.pi/2,0}``
+   * linear polarization can be defined with a single parameter: ``{P:sp.pi/2}`` is equivalent to ``{P:(sp.pi/2,0)}``
 
    * if the polarization annotation is omitted for some photons, these photons will be considered as having a horizontal polarization.
 
