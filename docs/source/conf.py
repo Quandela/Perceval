@@ -118,7 +118,6 @@ html_static_path = ["_static"]
 html_theme_options = {
     "navigation_depth": 2,
     "titles_only": False,
-    "display_version": True,
 }
 
 html_style = "css/style.css"

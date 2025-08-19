@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 import pytest
-from perceval import BasicState, StateVector, tensorproduct, BSDistribution, SVDistribution
+from perceval import BasicState, StateVector, BSDistribution, SVDistribution
 from _test_utils import assert_svd_close, assert_bsd_close
 
 sv0 = StateVector([0, 1]) + StateVector([1, 1]) * 1j
@@ -63,18 +63,13 @@ def test_mul():
     _assert_sv_approx_eq(result, expected, "BS with SV multiplication is wrong")
 
 
-def test_tensorproduct():
-    result = tensorproduct([sv0, sv1, bs])
-    expected = sv0 * sv1 * bs
-    _assert_sv_approx_eq(result, expected, "tensor product is wrong")
-
-
 def test_power():
     power = 5
-    sv_list = power * [sv0]
 
     result = sv0 ** power
-    expected = tensorproduct(sv_list)
+    expected = sv0
+    for _ in range(power - 1):
+        expected *= sv0
     _assert_sv_approx_eq(result, expected, "SV pow is wrong")
 
     result = bs ** power
