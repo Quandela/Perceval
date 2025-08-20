@@ -147,6 +147,9 @@ def _list_merge(distributions: list[Iterable[tuple[FockState, float]]], prob_thr
                 continue
             _inner_tensor_product(dist[1:], current_state.merge(bs), prob)
 
-    start_state = FockState(next(iter(distributions[0]))[0].m)
-    _inner_tensor_product(distributions, start_state, 1)
+    for bs, p in distributions[0]:
+        if p < prob_threshold:
+            continue
+        _inner_tensor_product(distributions[1:], bs, p)
+
     return res

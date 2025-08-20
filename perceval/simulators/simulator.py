@@ -433,6 +433,18 @@ class Simulator(ISimulator):
         cache = {}
         input_set = set((state, self._best_n(s[2], state.n)) for s in decomposed_input for state in s[1])
         len_input_set = len(input_set)
+
+        if len_input_set == 1:
+            # Shortcut: avoid recombination
+            (state, n) = next(iter(input_set))
+            self.use_mask(n)
+            self._backend.set_input_state(state)
+            res = self._backend.prob_distribution()
+            self._logical_perf += sum(res.values())
+            if len(res):
+                res.normalize()
+            return res
+
         prog_cb = partial_progress_callable(progress_callback, max_val=0.5)  # From 0. to 0.5
         previous_n = None
         for idx, (state, n) in enumerate(sorted(input_set, key=lambda x: x[1])):
