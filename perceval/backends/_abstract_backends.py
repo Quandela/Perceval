@@ -187,13 +187,11 @@ class AStrongSimulationBackend(ABackend):
             bsd.add(output_state, self.probability(output_state))
         return bsd
 
-    def prob_iterator(self) -> Iterable[tuple[FockState, float]]:
+    def prob_iterator(self, min_p: float = global_params["min_p"]) -> Iterable[tuple[FockState, float]]:
+        # DO NOT document for users
         probs = self.all_prob(self._input_state)
-        # TODO: replace min_p by an external value so we can filter more
-        states = [state for i, state in enumerate(self._get_iterator(self._input_state)) if probs[i] > global_params["min_p"]]
-        probs = [prob for prob in probs if prob > global_params["min_p"]]
-
-        return _StateProbIterator(states, probs)
+        states = [state for i, state in enumerate(self._get_iterator(self._input_state)) if probs[i] > min_p]
+        return _StateProbIterator(states, [prob for prob in probs if prob > min_p])
 
     def evolve(self) -> StateVector:
         """Evolves the input BasicState into a StateVector."""

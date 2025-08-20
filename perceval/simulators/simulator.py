@@ -456,7 +456,7 @@ class Simulator(ISimulator):
                 self.use_mask(n)
 
             self._backend.set_input_state(state)
-            cache[(state, n)] = self._backend.prob_iterator()
+            cache[(state, n)] = self._backend.prob_iterator(p_threshold)
             if prog_cb and idx % 10 == 0:
                 progress = (idx + 1) / len_input_set
                 exec_request = prog_cb(progress, 'compute probability distributions')
