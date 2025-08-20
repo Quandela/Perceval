@@ -434,13 +434,13 @@ class Simulator(ISimulator):
         input_set = set((state, self._best_n(s[2], state.n)) for s in decomposed_input for state in s[1])
         len_input_set = len(input_set)
 
-        if len_input_set == 1:
+        if len(decomposed_input) == 1 and len(decomposed_input[0][1]) == 1:
             # Shortcut: avoid recombination
             (state, n) = next(iter(input_set))
             self.use_mask(n)
             self._backend.set_input_state(state)
             res = self._backend.prob_distribution()
-            self._logical_perf += sum(res.values())
+            self._logical_perf += sum(res.values()) * decomposed_input[0][0]
             if len(res):
                 res.normalize()
             return res
