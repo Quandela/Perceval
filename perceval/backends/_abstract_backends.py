@@ -28,6 +28,8 @@
 # SOFTWARE.
 from __future__ import annotations
 from abc import ABC, abstractmethod
+from typing import Iterable
+
 import exqalibur as xq
 
 from perceval.components import ACircuit
@@ -76,6 +78,16 @@ class ASamplingBackend(ABackend):
     @abstractmethod
     def samples(self, count: int) -> BSSamples:
         """Request samples from the circuit given an input state"""
+
+
+class _StateProbIterator(Iterable[tuple[FockState, float]]):
+
+    def __init__(self, states: Iterable[FockState], probs: Iterable[float]):
+        self.states = states
+        self.probs = probs
+
+    def __iter__(self):
+        return zip(self.states, self.probs)
 
 
 class AStrongSimulationBackend(ABackend):
@@ -174,6 +186,9 @@ class AStrongSimulationBackend(ABackend):
         for output_state in self._get_iterator(self._input_state):
             bsd.add(output_state, self.probability(output_state))
         return bsd
+
+    def prob_iterator(self) -> Iterable[tuple[FockState, float]]:
+        return _StateProbIterator(self._get_iterator(self._input_state), self.all_prob(self._input_state))
 
     def evolve(self) -> StateVector:
         """Evolves the input BasicState into a StateVector."""

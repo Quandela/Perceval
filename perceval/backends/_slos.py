@@ -184,6 +184,9 @@ class SLOSBackend(AStrongSimulationBackend):
         self._path_roots.append(new_path)
         return True
 
+    def _get_iterator(self, input_state: FockState):
+        return self._fsas[input_state.n]
+
     def prob_amplitude(self, output_state: FockState) -> complex:
         if self._input_state.n != output_state.n:
             return complex(0)
@@ -198,7 +201,7 @@ class SLOSBackend(AStrongSimulationBackend):
         c = abs(c) ** 2 / istate.prodnfact()
         xq.all_prob_normalize_output(c, self._fsas[istate.n])
         bsd = BSDistribution()
-        for output_state, probability in zip(self._fsas[istate.n], c):
+        for output_state, probability in zip(self._get_iterator(istate), c):
             bsd.add(output_state, probability)
         return bsd
 

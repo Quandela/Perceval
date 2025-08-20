@@ -30,8 +30,6 @@ from __future__ import annotations
 
 import sys
 
-from copy import copy
-
 from exqalibur import SimpleSourceIterator
 from multipledispatch import dispatch
 from numbers import Number
@@ -45,7 +43,8 @@ from perceval.utils.density_matrix_utils import extract_upper_triangle
 from perceval.utils.logging import get_logger
 from perceval.runtime import cancel_requested
 
-from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping, _split_by_photon_count
+from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping, _split_by_photon_count, \
+    _list_merge
 from ._simulate_detectors import simulate_detectors
 from .simulator_interface import ISimulator
 
@@ -445,7 +444,7 @@ class Simulator(ISimulator):
                 self.use_mask(n)
 
             self._backend.set_input_state(state)
-            cache[(state, n)] = self._backend.prob_distribution()
+            cache[(state, n)] = self._backend.prob_iterator()
             if prog_cb and idx % 10 == 0:
                 progress = (idx + 1) / len_input_set
                 exec_request = prog_cb(progress, 'compute probability distributions')
@@ -457,9 +456,8 @@ class Simulator(ISimulator):
         prog_cb = partial_progress_callable(progress_callback, min_val=0.5)  # From 0.5 to 1
         for idx, (prob0, bs_data, n) in enumerate(decomposed_input):
             """First, recombine evolved state vectors given a single input"""
-            probs_in_s = BSDistribution.list_tensor_product([cache[(state, self._best_n(n, state.n))] for state in bs_data],
-                                                            merge_modes=True,
-                                                            prob_threshold=p_threshold / (10 * prob0))
+            probs_in_s = _list_merge([cache[(state, self._best_n(n, state.n))] for state in bs_data],
+                                     prob_threshold=p_threshold / (10 * prob0))
             self.DEBUG_merge_count += len(bs_data) - 1
 
             """
