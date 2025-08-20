@@ -141,7 +141,7 @@ class Processor(AProcessor):
             if isinstance(self.input_state, AnnotatedFockState):
                 self._inputs_map = SVDistribution(StateVector(self.input_state))
             else:
-                self._generate_noisy_input()
+                self._inputs_map = None
         elif isinstance(self.input_state, SVDistribution):
             self._inputs_map = self.input_state
 
