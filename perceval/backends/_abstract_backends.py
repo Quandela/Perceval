@@ -33,7 +33,7 @@ from typing import Iterable
 import exqalibur as xq
 
 from perceval.components import ACircuit
-from perceval.utils import BasicState, FockState, BSDistribution, BSSamples, StateVector, allstate_array
+from perceval.utils import BasicState, FockState, BSDistribution, BSSamples, StateVector, allstate_iterator, global_params
 
 
 class ABackend(ABC):
@@ -146,7 +146,7 @@ class AStrongSimulationBackend(ABackend):
         n_photons = input_state.n
 
         if n_photons not in self._cache_iterator.keys():
-            self._cache_iterator[n_photons] = allstate_array(input_state, self._mask)
+            self._cache_iterator[n_photons] = tuple(allstate_iterator(input_state, self._mask))
 
         return self._cache_iterator[n_photons]
 
@@ -188,7 +188,12 @@ class AStrongSimulationBackend(ABackend):
         return bsd
 
     def prob_iterator(self) -> Iterable[tuple[FockState, float]]:
-        return _StateProbIterator(self._get_iterator(self._input_state), self.all_prob(self._input_state))
+        probs = self.all_prob(self._input_state)
+        # TODO: replace min_p by an external value so we can filter more
+        states = [state for i, state in enumerate(self._get_iterator(self._input_state)) if probs[i] > global_params["min_p"]]
+        probs = [prob for prob in probs if prob > global_params["min_p"]]
+
+        return _StateProbIterator(states, probs)
 
     def evolve(self) -> StateVector:
         """Evolves the input BasicState into a StateVector."""
