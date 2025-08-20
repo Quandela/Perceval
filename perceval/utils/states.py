@@ -274,7 +274,7 @@ def allstate_iterator(input_state: BasicState | StateVector, mask: xq.FSMask = N
 
     :param input_state: a given input state vector
     :param mask: an optional mask
-    :return: list of output_state
+    :return: a single state in the Fock space of the input state. When all the space is covered, the iteration ends.
     """
     m = input_state.m
     ns = input_state.n
@@ -290,25 +290,16 @@ def allstate_iterator(input_state: BasicState | StateVector, mask: xq.FSMask = N
 
 
 def max_photon_state_iterator(m: int, n_max: int):
-    """
-    Iterator on all possible output state on m modes with at most n_max photons
+    """Iterator on all possible output state on m modes with at most n_max photons
 
     :param m: number of modes
     :param n_max: maximum number of photons
-    :return: list of BasicState
+    :return: a single state containing from 0 to n_max photons. When all the space is covered, the iteration ends.
     """
     for n in range(n_max+1):
         output_array = xq.FSArray(m, n)
         for output_state in output_array:
             yield output_state
-
-
-def tensorproduct(states: list[StateVector | BasicState]) -> StateVector | BasicState:
-    r""" Computes states[0] * states[1] * ...
-    """
-    if len(states) == 1:
-        return states[0]
-    return tensorproduct(states[:-2] + [states[-2] * states[-1]])
 
 
 @dispatch(StateVector, annot_tag=str)

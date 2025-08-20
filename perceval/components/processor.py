@@ -138,13 +138,10 @@ class Processor(AProcessor):
 
     def _input_changed_observer(self):
         if isinstance(self.input_state, BasicState):
-            if isinstance(self.input_state, AnnotatedFockState) and self.input_state.has_polarization:
-                self._inputs_map = SVDistribution(self.input_state)
+            if isinstance(self.input_state, AnnotatedFockState):
+                self._inputs_map = SVDistribution(StateVector(self.input_state))
         elif isinstance(self.input_state, SVDistribution):
             self._inputs_map = self.input_state
-
-    def with_polarized_input(self, bs: AnnotatedFockState):
-        self.experiment.with_polarized_input(bs)
 
     def clear_input_and_circuit(self, new_m=None):
         super().clear_input_and_circuit(new_m)
