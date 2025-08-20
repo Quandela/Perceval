@@ -140,8 +140,6 @@ class Processor(AProcessor):
         if isinstance(self.input_state, BasicState):
             if isinstance(self.input_state, AnnotatedFockState) and self.input_state.has_polarization:
                 self._inputs_map = SVDistribution(self.input_state)
-            else:
-                self._generate_noisy_input()
         elif isinstance(self.input_state, SVDistribution):
             self._inputs_map = self.input_state
 
