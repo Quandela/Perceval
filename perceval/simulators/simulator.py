@@ -29,6 +29,7 @@
 from __future__ import annotations
 
 import sys
+from collections import defaultdict
 
 from exqalibur import SimpleSourceIterator
 from multipledispatch import dispatch
@@ -429,14 +430,11 @@ class Simulator(ISimulator):
         else:
             decomposed_input = [(prob, states, sum(state.n for state in states)) for states, prob in input_dist]
 
-        """Create a cache with strong simulation of all unique input"""
-        cache = {}
-        input_set = set((state, self._best_n(s[2], state.n)) for s in decomposed_input for state in s[1])
-        len_input_set = len(input_set)
-
         if len(decomposed_input) == 1 and len(decomposed_input[0][1]) == 1:
             # Shortcut: avoid recombination
-            (state, n) = next(iter(input_set))
+            state = decomposed_input[0][1][0]
+            n = decomposed_input[0][2]
+            n = self._best_n(n, n)
             self.use_mask(n)
             self._backend.set_input_state(state)
             res = self._backend.prob_distribution()
@@ -445,9 +443,22 @@ class Simulator(ISimulator):
                 res.normalize()
             return res
 
+        """Create a cache with strong simulation of all unique input"""
+        cache = {}
+
+        input_dict = defaultdict(float)
+        for (prob, states, n) in decomposed_input:
+            for state in states:
+                s = (state, self._best_n(n, state.n))
+                current_prob = input_dict[s]
+                if prob > current_prob:
+                    input_dict[s] = prob
+
+        len_input_set = len(input_dict)
+
         prog_cb = partial_progress_callable(progress_callback, max_val=0.5)  # From 0. to 0.5
         previous_n = None
-        for idx, (state, n) in enumerate(sorted(input_set, key=lambda x: x[1])):
+        for idx,((state, n), prob0) in enumerate(sorted(input_dict.items(), key=lambda x: x[0][1])):
             if n != previous_n and n != 0:
                 previous_n = n
                 # The backend init the mask when setting the state and when setting the mask if there is an input state,
@@ -456,7 +467,7 @@ class Simulator(ISimulator):
                 self.use_mask(n)
 
             self._backend.set_input_state(state)
-            cache[(state, n)] = self._backend.prob_iterator(p_threshold)
+            cache[(state, n)] = self._backend.prob_iterator(p_threshold / (10 * prob0))
             if prog_cb and idx % 10 == 0:
                 progress = (idx + 1) / len_input_set
                 exec_request = prog_cb(progress, 'compute probability distributions')
