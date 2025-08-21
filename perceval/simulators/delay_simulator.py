@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from copy import copy
 
 from .simulator_interface import ASimulatorDecorator
 from ._simulator_utils import _retrieve_mode_count, _unitary_components_to_circuit
@@ -123,6 +124,17 @@ class DelaySimulator(ASimulatorDecorator):
                 reduced_out_state = out_state[m[0]:m[1]]
                 output += probampli * reduced_out_state
         return output
+
+    def _transmit_heralds_postselect(self):
+        heralds = None
+        if self._heralds is not None:
+            heralds = {m + self._mode_range()[0]: v for m, v in self._heralds.items()}
+        postselect = None
+        if self._postselect is not None:
+            postselect = copy(self._postselect)
+            postselect.shift_modes(self._mode_range()[0])
+        self._simulator.set_selection(postselect=postselect, heralds=heralds)
+        # self._simulator.keep_heralds(True)
 
     def _expand_td(self, component_list: list):
         mode_count = self._original_m
