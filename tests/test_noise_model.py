@@ -42,16 +42,6 @@ def test_noise_model_default():
     nm = NoiseModel()
     assert len(nm.__dict__()) == 0
     assert nm.brightness == BRIGHTNESS_DEF
-    b = nm[BRIGHTNESS_KEY]
-    assert b.is_default  # No value was passed
-    brightness_new = 0.1
-    b.set(brightness_new)
-    assert not b.is_default
-    assert nm.brightness == brightness_new
-
-    brightness_new = 0.2
-    nm[BRIGHTNESS_KEY].set(brightness_new)
-    assert nm.brightness == brightness_new
 
 
 def test_noise_model_init():
@@ -59,9 +49,7 @@ def test_noise_model_init():
     assert PHASE_IMPRECISION_KEY in nm.__dict__()
     assert G2_KEY in nm.__dict__()
     assert BRIGHTNESS_KEY not in nm.__dict__()
-    assert not nm[PHASE_IMPRECISION_KEY].is_default
-    assert not nm[G2_KEY].is_default
-    assert nm[BRIGHTNESS_KEY].is_default
+    assert nm.brightness == BRIGHTNESS_DEF
 
 
 def test_noise_model_errors():

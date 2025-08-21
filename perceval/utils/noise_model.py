@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
 from ._validated_params import AValidatedParam, ValidatedBool, ValidatedFloat
 from math import pi
@@ -46,6 +47,19 @@ class NoiseModel:
     :param phase_error: maximum random noise on the phase shifters (in radian)
     """
 
+    # Source parameters
+    brightness = ValidatedFloat(0, 1, 1)
+    indistinguishability = ValidatedFloat(0, 1, 1)
+    g2 = ValidatedFloat(0, 1, 0)
+    g2_distinguishable = ValidatedBool(True)
+
+    # System-wide parameter
+    transmittance = ValidatedFloat(0, 1, 1)
+
+    # Optical circuit parameter
+    phase_imprecision = ValidatedFloat(0, default_value=0)
+    phase_error = ValidatedFloat(0, pi, 0)
+
     def __init__(self,
                  brightness: float = None,
                  indistinguishability: float = None,
@@ -55,48 +69,43 @@ class NoiseModel:
                  phase_imprecision: float = None,
                  phase_error: float = None
                  ):
-        # Source parameters
-        self._params: dict[str, AValidatedParam] = {}
-        self._add_param(ValidatedFloat("brightness", brightness, 0, 1, 1))
-        self._add_param(ValidatedFloat("indistinguishability", indistinguishability, 0, 1, 1))
-        self._add_param(ValidatedFloat("g2", g2, 0, 1, 0))
-        self._add_param(ValidatedBool("g2_distinguishable", g2_distinguishable, True))
-
-        # System-wide parameter
-        self._add_param(ValidatedFloat("transmittance", transmittance, 0, 1, 1))
-
-        # Optical circuit parameter
-        self._add_param(ValidatedFloat("phase_imprecision", phase_imprecision, 0, default_value=0))
-        self._add_param(ValidatedFloat("phase_error", phase_error, 0, pi, 0))
+        self.brightness = brightness
+        self.indistinguishability = indistinguishability
+        self.g2 = g2
+        self.g2_distinguishable = g2_distinguishable
+        self.transmittance = transmittance
+        self.phase_imprecision = phase_imprecision
+        self.phase_error = phase_error
 
     def __deepcopy__(self, memo):
-        return NoiseModel(**{param.name: param._value for param in self._params.values()})
+        return NoiseModel(**self.__dict__())
 
-    def _add_param(self, param: AValidatedParam):
-        self._params[param.name] = param
-        cls = type(self)
-        if not hasattr(cls, param.name):
-            # Create a property named after the param name
-            setattr(cls, param.name, property(lambda slf: slf._params[param.name].get()))
+    def __getitem__(self, param_name: str) -> bool | float:   # TODO: remove this ?
+        try:
+            return getattr(self, param_name)
+        except AttributeError:
+            raise KeyError(f"No parameter named '{param_name}'")
 
-    def __getitem__(self, param_name: str) -> AValidatedParam:
-        if param_name in self._params:
-            return self._params[param_name]
-        raise KeyError(f"No parameter named '{param_name}'")
-
-    def set_value(self, param_name: str, value):
-        self[param_name].set(value)
+    def set_value(self, param_name: str, value):  # TODO: remove this ?
+        self.__setattr__(param_name, value)
 
     def __str__(self) -> str:
         return str(self.__dict__())
 
     def __dict__(self) -> dict:
-        return {k: v.get() for k, v in self._params.items() if not v.is_default}
+        cls = type(self)
+        res = {}
+        for attr in dir(self):
+            if not attr.startswith("__") and isinstance(cls.__dict__.get(attr), AValidatedParam):
+                v = getattr(self, attr)
+                if v != cls.__dict__[attr].default_value:
+                    res[attr] = v
+        return res
 
     def __eq__(self, other) -> bool:
-        if len(self._params) != len(other._params):
-            return False
-        for field in self._params:
-            if self._params[field] != other._params[field]:
-                return False
+        cls = type(self)
+        for attr in dir(self):
+            if not attr.startswith("__") and isinstance(cls.__dict__.get(attr), AValidatedParam):
+                if getattr(self, attr) != getattr(other, attr):
+                    return False
         return True
