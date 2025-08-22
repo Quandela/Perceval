@@ -70,7 +70,6 @@ class LossSimulator(ASimulatorDecorator):
 
     def _transmit_heralds_postselect(self):
         self._simulator.set_selection(postselect=self._postselect, heralds=self._heralds)
-        # self._simulator.keep_heralds(True)
 
     def _simulate_losses_with_beam_splitters(self, components: list) -> ACircuit:
         output = []

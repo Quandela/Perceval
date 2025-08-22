@@ -134,7 +134,6 @@ class DelaySimulator(ASimulatorDecorator):
             postselect = copy(self._postselect)
             postselect.shift_modes(self._mode_range()[0])
         self._simulator.set_selection(postselect=postselect, heralds=heralds)
-        # self._simulator.keep_heralds(True)
 
     def _expand_td(self, component_list: list):
         mode_count = self._original_m
