@@ -43,6 +43,10 @@ def test_noise_model_default():
     assert len(nm.__dict__()) == 0
     assert nm.brightness == BRIGHTNESS_DEF
 
+    # Test we can assign a value using setattr
+    nm.g2 = 0.1
+    assert nm.g2 == 0.1
+
 
 def test_noise_model_init():
     nm = NoiseModel(phase_imprecision=1e-3, g2=0.05)
@@ -74,8 +78,14 @@ def test_noise_model_errors():
     with pytest.raises(ValueError):
         nm.set_value(BRIGHTNESS_KEY, 1.3)
 
+    with pytest.raises(ValueError):
+        nm.brightness = 1.3
+
     with pytest.raises(TypeError):
         nm.set_value(G2_DIST_KEY, 1.3)
+
+    with pytest.raises(TypeError):
+        nm.g2_distinguishable = 1.3
 
 
 def test_noise_model_eq():
