@@ -27,12 +27,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from __future__ import annotations
 from collections import Counter
-
 import random
 import numpy as np
 
-from .statevector import BSDistribution, BSCount, BSSamples
+from .states import BSDistribution, BSCount, BSSamples
 
 
 def _deduce_count(**kwargs) -> int:
@@ -57,7 +57,7 @@ def samples_to_sample_count(sample_list: BSSamples) -> BSCount:
     :param sample_list: the list to convert
     :return: the state count
     """
-    return BSCount(Counter(sample_list))
+    return Counter(sample_list)
 
 
 def samples_to_probs(sample_list: BSSamples) -> BSDistribution:

@@ -36,7 +36,7 @@ from functools import cache
 from .abstract_component import AComponent
 from .linear_circuit import Circuit
 from .unitary_components import BS, PERM
-from perceval.utils import BasicState, BSDistribution
+from perceval.utils import FockState, BSDistribution
 from perceval.utils.logging import channel, get_logger
 
 
@@ -68,7 +68,7 @@ class IDetector(AComponent, ABC):
         """
 
     @abstractmethod
-    def detect(self, theoretical_photons: int) -> BSDistribution | BasicState:
+    def detect(self, theoretical_photons: int) -> BSDistribution | FockState:
         """
         Returns a one mode Fock state or distribution out of a theoretical photon count hitting the detector.
 
@@ -86,7 +86,7 @@ class IDetector(AComponent, ABC):
 
 
 class BSLayeredPPNR(IDetector):
-    """
+    r"""
     BSLayeredPPNR implements Pseudo Photon Number Resolving detection using layers of beam splitter plugged on
     :math:`2^{(number\ of\ layers)}` threshold detectors.
 
@@ -134,9 +134,9 @@ class BSLayeredPPNR(IDetector):
                 ppnr_circuit.add(m, BS(BS.r_to_theta(self._r)))
         return ppnr_circuit
 
-    def detect(self, theoretical_photons: int) -> BSDistribution | BasicState:
+    def detect(self, theoretical_photons: int) -> BSDistribution | FockState:
         if theoretical_photons < 2:
-            return BasicState([theoretical_photons])
+            return FockState([theoretical_photons])
 
         if theoretical_photons in self._cache:
             return self._cache[theoretical_photons]
@@ -145,13 +145,13 @@ class BSLayeredPPNR(IDetector):
         ppnr_circuit = self.create_circuit()
         slos = SLOSBackend()
         slos.set_circuit(ppnr_circuit)
-        slos.set_input_state(BasicState([theoretical_photons] + [0]*(ppnr_circuit.m - 1)))
+        slos.set_input_state(FockState([theoretical_photons] + [0]*(ppnr_circuit.m - 1)))
         dist = slos.prob_distribution()
 
         output = BSDistribution()
         for state, prob in dist.items():
             state = state.threshold_detection()
-            output[BasicState([state.n])] += prob
+            output[FockState([state.n])] += prob
         self._cache[theoretical_photons] = output
         return output
 
@@ -230,13 +230,13 @@ class Detector(IDetector):
             return DetectionType.PNR
         return DetectionType.PPNR
 
-    def detect(self, theoretical_photons: int) -> BSDistribution | BasicState:
+    def detect(self, theoretical_photons: int) -> BSDistribution | FockState:
         detector_type = self.type
         if theoretical_photons < 2 or detector_type == DetectionType.PNR:
-            return BasicState([theoretical_photons])
+            return FockState([theoretical_photons])
 
         if detector_type == DetectionType.Threshold:
-            return BasicState([1])
+            return FockState([1])
 
         if theoretical_photons in self._cache:
             return self._cache[theoretical_photons]
@@ -246,10 +246,10 @@ class Detector(IDetector):
         max_detectable = min(self._max, theoretical_photons)
         for i in range(1, max_detectable):
             p_i = self._cond_probability(i, theoretical_photons)
-            result.add(BasicState([i]), p_i)
+            result.add(FockState([i]), p_i)
             remaining_p -= p_i
         # The highest detectable photon count gains all the remaining probability
-        result.add(BasicState([max_detectable]), remaining_p)
+        result.add(FockState([max_detectable]), remaining_p)
         self._cache[theoretical_photons] = result
         return result
 

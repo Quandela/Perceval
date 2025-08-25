@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 import exqalibur as xq
-from perceval.utils import BasicState, BSDistribution, StateVector
+from perceval.utils import FockState, BSDistribution, StateVector
 from perceval.components import ACircuit
 
 from ._abstract_backends import AStrongSimulationBackend
@@ -53,14 +53,14 @@ class SLAPBackend(AStrongSimulationBackend):
         else:
             self._slap.reset_mask()
 
-    def set_input_state(self, input_state: BasicState):
+    def set_input_state(self, input_state: FockState):
         super().set_input_state(input_state)
         if self._mask:
             self._slap.set_mask(self._mask)
         else:
             self._slap.reset_mask()
 
-    def prob_amplitude(self, output_state: BasicState) -> complex:
+    def prob_amplitude(self, output_state: FockState) -> complex:
         istate = self._input_state
         all_pa = self._slap.all_prob_ampli(istate)
         if self._mask:
@@ -81,7 +81,7 @@ class SLAPBackend(AStrongSimulationBackend):
     def name(self) -> str:
         return "SLAP"
 
-    def all_prob(self, input_state: BasicState = None):
+    def all_prob(self, input_state: FockState = None):
         if input_state is not None:
             self.set_input_state(input_state)
         else:

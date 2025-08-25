@@ -21,16 +21,7 @@ algorithm command returns a :ref:`Job` object, hiding this complexity.
 
 Here, the computation has not started yet, but it's been prepared in :code:`local_sample_job` to run locally.
 
-Algorithms code reference index
-===============================
-
-.. toctree::
-   sampler
-   analyzer
-   tomography
-
-Samples of interest vs Shots
-============================
+**Samples of interest vs Shots**
 
 On a QPU, the acquisition is measured in **shots**. A shot is any coincidence with at least 1 detected photon.
 Shots act as credits on the Cloud services. Users have to set a maximum shots value they are willing to use for any
@@ -46,3 +37,8 @@ Here, the computation was set-up to run on `sim:sampling` platform when :code:`r
 
 For more information about the shots and shots/samples ratio estimate, please read
 :ref:`Remote computing tutorial<V. Remote computing>`.
+
+.. toctree::
+   sampler
+   analyzer
+   tomography

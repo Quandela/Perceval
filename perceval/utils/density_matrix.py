@@ -39,7 +39,7 @@ from scipy.sparse.linalg import LinearOperator, eigsh
 from scipy.sparse import dok_array, csr_array, kron
 
 import exqalibur as xq
-from .statevector import StateVector, SVDistribution, BasicState, max_photon_state_iterator, BSSamples
+from .states import StateVector, SVDistribution, BasicState, max_photon_state_iterator, BSSamples, FockState
 from .density_matrix_utils import array_to_statevector, is_hermitian, sparray
 
 # In all the DensityMatrix Class, there is a compromise between csr_array and dok_array.
@@ -170,7 +170,7 @@ class DensityMatrix:
             raise TypeError("mixed_state must be a BasicState, a StateVector a SVDistribution or a 2d array")
 
         for key in svd.keys():
-            if any([bs[0].has_annotations for bs in key]):
+            if any([not isinstance(bs[0], FockState) for bs in key]):
                 raise ValueError("annotations are not supported yet in DensityMatrix")
 
         m = svd.m

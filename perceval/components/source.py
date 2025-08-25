@@ -31,7 +31,7 @@ from __future__ import annotations
 from exqalibur import BSSamples
 import exqalibur as xq
 
-from perceval.utils import SVDistribution, BasicState, anonymize_annotations, NoiseModel, global_params
+from perceval.utils import SVDistribution, NoisyFockState, FockState, anonymize_annotations, NoiseModel, global_params
 from perceval.utils.logging import get_logger, channel
 
 DISTINGUISHABLE_KEY = 'distinguishable'
@@ -67,7 +67,7 @@ class Source:
                                  multiphoton_model == DISTINGUISHABLE_KEY)
 
         self.simplify_distribution = False  # Simplify the distribution by anonymizing photon annotations (can be
-                                             # time-consuming for larger distributions)
+                                            # time-consuming for larger distributions)
 
         self._sampler : xq.SourceSampler | None = None
 
@@ -111,14 +111,14 @@ class Source:
         :param nphotons: Require `nphotons` in the mode (default 1).
         :param prob_threshold: Probability threshold under which the resulting state is filtered out.
         """
-        return self.generate_distribution(BasicState([nphotons]), prob_threshold)
+        return self.generate_distribution(FockState([nphotons]), prob_threshold)
 
-    def generate_distribution(self, expected_input: BasicState, prob_threshold: float = 0):
+    def generate_distribution(self, expected_input: FockState, prob_threshold: float = 0) -> SVDistribution:
         """
         Simulates plugging the photonic source on certain modes and turning it on.
         Computes the input probability distribution
 
-        :param expected_input: Expected input BasicState
+        :param expected_input: Expected input FockState
             The properties of the source will alter the input state. A perfect source always delivers the expected state
             as an input. Imperfect ones won't.
         :param prob_threshold: Probability threshold under which the resulting state is filtered out. By default,
@@ -133,7 +133,7 @@ class Source:
             dist = anonymize_annotations(dist, annot_tag='_')
         return dist
 
-    def create_iterator(self, expected_input: BasicState, min_photons_filter: int = 0) -> xq.SimpleSourceIterator:
+    def create_iterator(self, expected_input: FockState, min_photons_filter: int = 0) -> xq.SimpleSourceIterator:
         """
         Creates a source iterator that can generate all already separated noisy states according
         to the probability distribution without representing them in memory.
@@ -142,13 +142,13 @@ class Source:
 
         Supports a min_photons_filter to avoid generating states having not enough photons.
 
-        :code:
-        ```
-        iterator = source.create_iterator(BasicState([1, 0, 1]), 2)
-        iterator.prob_threshold = iterator.max_p * 1e-5  # Generates only states having at most 1e-5 times the biggest probability.
-        for separated_state, prob in iterator:
-            print(separated_state, prob)
-        ```
+        >>> from perceval import BasicState, Source
+        >>>
+        >>> source = Source(indistinguishability=0.85, losses=0.56)
+        >>> iterator = source.create_iterator(BasicState([1, 0, 1]), 2)
+        >>> iterator.prob_threshold = iterator.max_p * 1e-5  # Generates only states having at most 1e-5 times the biggest probability.
+        >>> for separated_state, prob in iterator:
+        >>>     print(separated_state, prob)
 
         :param expected_input: Expected input BasicState
         :param min_photons_filter: The minimum number of photons required to generate a state.
@@ -156,7 +156,7 @@ class Source:
         # TODO: chose iterator depending on the input state
         return self._source.create_simple_iterator(expected_input, min_photons_filter)
 
-    def create_sampler(self, expected_input: BasicState, min_photons_filter: int = 0) -> xq.SourceSampler:
+    def create_sampler(self, expected_input: FockState, min_photons_filter: int = 0) -> xq.SourceSampler:
         """
         Creates a source sampler that will be able to generate states according to the source probability distribution
         :param expected_input: The expected input BasicState to sample.
@@ -164,7 +164,7 @@ class Source:
         """
         return self._source.create_sampler(expected_input, min_photons_filter)
 
-    def generate_samples(self, max_samples: int, expected_input: BasicState, min_detected_photons = 0) -> BSSamples:
+    def generate_samples(self, max_samples: int, expected_input: FockState, min_detected_photons = 0) -> list[NoisyFockState]:
         """
         Samples states from the source probability distribution without representing the whole distribution in memory.
         Creates a source sampler and store it in self for faster repeated sampling if necessary.
@@ -174,14 +174,14 @@ class Source:
         :param min_detected_photons: Minimum number of photons in a sampled state.
         """
         if self.is_perfect():
-            return BSSamples([expected_input] * max_samples)
+            return [NoisyFockState(expected_input)] * max_samples
 
         if self._sampler is None or min_detected_photons != self._sampler.min_photons_filter or expected_input != self._sampler.expected_input:
             self._sampler = self.create_sampler(expected_input, min_detected_photons)
 
         return self._sampler.generate_samples(max_samples)
 
-    def generate_separated_samples(self, max_samples: int, expected_input: BasicState, min_detected_photons = 0) -> list[BSSamples]:
+    def generate_separated_samples(self, max_samples: int, expected_input: FockState, min_detected_photons = 0) -> list[BSSamples]:
         """
         Samples separated states from the source probability distribution without representing the whole distribution in memory.
         The sampled states are equivalent (up to permutation) to calling separate_state() on each state returned by generate_samples()

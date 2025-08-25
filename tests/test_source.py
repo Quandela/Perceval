@@ -30,11 +30,11 @@ from collections import defaultdict
 
 import pytest
 import math
+from collections import Counter
 
-from perceval import BSDistribution, StateVector, filter_distribution_photon_count, SVDistribution, \
-    anonymize_annotations
+from perceval import filter_distribution_photon_count, SVDistribution, \
+    anonymize_annotations, FockState, NoisyFockState, StateVector
 from perceval.components import Source
-from perceval.utils import BasicState
 from perceval.utils.conversion import samples_to_probs
 from perceval.utils.dist_metrics import tvd_dist
 from perceval.rendering.pdisplay import pdisplay_state_distrib
@@ -69,8 +69,8 @@ def test_source_emission_g2_losses_indistinguishable():
     s = Source(emission_probability=0.4, multiphoton_component=0.1, losses=0.08, indistinguishability=0.9,
                multiphoton_model="indistinguishable")
     svd = s.probability_distribution()
-    assert_svd_close(svd, dict2svd({"|0>": 0.631386, "|2{_:0}>": 0.006694286297288383, "|{_:0}{_:1}>": 3.62111e-4,
-                                    "|{_:0}>": 0.343035, "|{_:1}>": 0.01852243527847053}))
+    assert_svd_close(svd, dict2svd({"|0>": 0.631386, "|2{0}>": 0.006694286297288383, "|{0}{1}>": 3.62111e-4,
+                                    "|{0}>": 0.343035, "|{1}>": 0.01852243527847053}))
 
 
 def test_source_indistinguishability():
@@ -81,9 +81,8 @@ def test_source_indistinguishability():
         assert len(k) == 1
         state = k[0]
         assert state.n == 1
-        annot = state.get_photon_annotation(0)
-        assert "_" in annot, "missing distinguishability feature _"
-        if annot["_"] != 0:
+        assert isinstance(state, NoisyFockState)
+        if str(state) != "|{0}>":
             assert pytest.approx(1-math.sqrt(0.5)) == v
         else:
             assert pytest.approx(math.sqrt(0.5)) == v
@@ -104,22 +103,30 @@ def test_source_multiple_photons_per_mode():
 def test_source_sample_no_filter():
     nb_samples = 200
 
-    bs = BasicState("|1,1>")
+    bs = FockState("|1,1>")
     source_1 = Source(emission_probability=0.9, multiphoton_component=0.1, losses=0.1, indistinguishability=0.9)
     source_2 = Source(emission_probability=0.9, multiphoton_component=0.1, losses=0.1, indistinguishability=0.9)
+    source_2.simplify_distribution = True
 
     # generate samples directly from the source
     samples_from_source = source_1.generate_samples(nb_samples, bs)
     assert len(samples_from_source) == nb_samples
 
-    dist_samples = samples_to_probs(samples_from_source)
+    counter_samples = Counter(samples_from_source)
+    total = counter_samples.total()
+    dist_samples = SVDistribution()
+    for k, v in counter_samples.items():
+        dist_samples.add(StateVector(k), v / total)
 
     # compare these samples with complete distribution
-    dist = source_2.generate_distribution(bs,0)
-    dist = anonymize_annotations(dist, annot_tag="_")  # to be able to compare the distributions
-    dist = BSDistribution({key[0]:value for key,value in dist.items()}) # change SVD to BSD
+    dist_raw = source_2.generate_distribution(bs,0)
+    dist = SVDistribution()
+    for k, v in dist_raw.items():
+        dist.add(StateVector(NoisyFockState(k[0])), v)
 
     # just avoid the warning in tvd_dist
+    for el in set(dist_samples.keys()) - set(dist.keys()):
+        dist[el] = 0
     for el in set(dist.keys()) - set(dist_samples.keys()):
         dist_samples[el] = 0
 
@@ -151,7 +158,7 @@ def test_source_samples_with_filter(brightness, g2, hom, losses, multiphoton_mod
     nb_samples = 200
     min_detected_photons = 2
 
-    bs = BasicState("|1,1>")
+    bs = FockState("|1,1>")
     source_1 = Source(brightness, g2, hom, losses)
     source_2 = Source(brightness, g2, hom, losses)
 
@@ -160,18 +167,24 @@ def test_source_samples_with_filter(brightness, g2, hom, losses, multiphoton_mod
     assert len(samples_from_source) == nb_samples
     assert all(bs.n >= min_detected_photons for bs in samples_from_source)
 
-    dist_samples = samples_to_probs(samples_from_source)
-    dist_samples = SVDistribution(dist_samples)
+    counter_samples = Counter(samples_from_source)
+    total = counter_samples.total()
+    dist_samples = SVDistribution()
+    for k, v in counter_samples.items():
+        dist_samples.add(StateVector(k), v / total)
     dist_samples = anonymize_annotations(dist_samples, annot_tag="_")  # to be able to compare the distributions
-    dist_samples = BSDistribution({sv[0]: value for sv, value in dist_samples.items()})  # change SVD to BSD
 
     # compare these samples with complete distribution
+    source_2.simplify_distribution = True
     dist = source_2.generate_distribution(bs, 0)
-    dist = anonymize_annotations(dist, annot_tag="_")
-    dist = BSDistribution({key[0]: value for key, value in dist.items()})  # change SVD to BSD
-    dist = filter_distribution_photon_count(dist, min_detected_photons)[0]
+    dist_raw = filter_distribution_photon_count(dist, min_detected_photons)[0]
+    dist = SVDistribution()
+    for k, v in dist_raw.items():
+        dist.add(StateVector(NoisyFockState(k[0])), v)
 
     # just avoid the warning in tvd_dist
+    for el in set(dist_samples.keys()) - set(dist.keys()):
+        dist[el] = 0
     for el in set(dist.keys()) - set(dist_samples.keys()):
         dist_samples[el] = 0
 
