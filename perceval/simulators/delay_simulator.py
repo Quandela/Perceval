@@ -76,6 +76,9 @@ def _compute_depth(component_list: list, mode_count: int) -> int:
 
 
 class DelaySimulator(ASimulatorDecorator):
+
+    _can_transmit_selection = True
+
     def __init__(self, simulator):
         super().__init__(simulator)
         self._original_m: int = 0
