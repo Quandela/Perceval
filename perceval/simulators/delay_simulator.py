@@ -31,7 +31,7 @@ from copy import copy
 from .simulator_interface import ASimulatorDecorator
 from ._simulator_utils import _retrieve_mode_count, _unitary_components_to_circuit
 from perceval.components import ACircuit, PERM, TD, IDetector
-from perceval.utils import BasicState, BSDistribution, StateVector, global_params
+from perceval.utils import FockState, BSDistribution, StateVector, global_params
 
 from enum import Enum
 
@@ -85,9 +85,9 @@ class DelaySimulator(ASimulatorDecorator):
     def _prepare_input(self, input_state):
         if isinstance(input_state, tuple):
             expanded_input = input_state[1] ** self._depth
-            return input_state[0], expanded_input * BasicState([0] * (self._expanded_m - self._depth * self._original_m))
+            return input_state[0], expanded_input * FockState([0] * (self._expanded_m - self._depth * self._original_m))
         expanded_input = input_state ** self._depth
-        return expanded_input * BasicState([0] * (self._expanded_m - self._depth * self._original_m))
+        return expanded_input * FockState([0] * (self._expanded_m - self._depth * self._original_m))
 
     def _prepare_circuit(self, circuit, m=None):
         if m is None:

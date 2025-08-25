@@ -30,7 +30,7 @@ from __future__ import annotations
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import ACircuit, Processor, AComponent,  Experiment, IDetector, Detector
-from perceval.utils import BasicState, NoiseModel
+from perceval.utils import FockState, NoiseModel
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import deserialize
 
@@ -194,7 +194,7 @@ class RemoteProcessor(AProcessor):
     def type(self) -> ProcessorType:
         return self._type
 
-    def check_input(self, input_state: BasicState) -> None:
+    def check_input(self, input_state: FockState) -> None:
         super().check_input(input_state)
         n_heralds = sum(self.heralds.values())
         n_photons = input_state.n + n_heralds

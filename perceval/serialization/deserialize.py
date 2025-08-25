@@ -360,10 +360,7 @@ class ExperimentBuilder:
         input_state_str = self._pb_e.input_state
         if input_state_str:
             input_state = deserialize(input_state_str)
-            if not isinstance(input_state, BasicState) or not input_state.has_polarization:
-                experiment.with_input(input_state)
-            else:
-                experiment.with_polarized_input(input_state)
+            experiment.with_input(input_state)
 
         min_photons_filter = self._pb_e.min_photons_filter
         if min_photons_filter != VALUE_NOT_SET:

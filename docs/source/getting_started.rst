@@ -7,7 +7,7 @@ What is Perceval?
 Perceval is a toolbox containing generic functions and classes, built around an optimised native core (see
 :ref:`exqalibur` code reference).
 
-If offers tools to:
+It offers tools to:
 
 * Manipulate quantum states in the Fock space
 

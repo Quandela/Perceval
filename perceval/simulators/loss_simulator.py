@@ -30,7 +30,7 @@
 from .simulator_interface import ASimulatorDecorator
 from ._simulator_utils import _retrieve_mode_count, _unitary_components_to_circuit
 from perceval.components import ACircuit, LC, PERM, BS, IDetector
-from perceval.utils import BasicState, BSDistribution, StateVector
+from perceval.utils import FockState, BSDistribution, StateVector
 
 
 class LossSimulator(ASimulatorDecorator):
@@ -39,8 +39,8 @@ class LossSimulator(ASimulatorDecorator):
 
     def _prepare_input(self, input_state):
         if isinstance(input_state, tuple):
-            return input_state[0], input_state[1] * BasicState([0] * (self._expanded_m - self._original_m))
-        return input_state * BasicState([0] * (self._expanded_m - self._original_m))
+            return input_state[0], input_state[1] * FockState([0] * (self._expanded_m - self._original_m))
+        return input_state * FockState([0] * (self._expanded_m - self._original_m))
 
     def _prepare_circuit(self, circuit, m = None):
         if m is None:
