@@ -1,7 +1,7 @@
 Polarization
 ============
 
-Polarization encoding is stored in :ref:`Basic State` objects as a special ``P`` :ref:`Annotation`.
+Polarization encoding is stored in :ref:`AnnotatedFockState` objects as a special ``P`` annotation.
 
 Their value follows `Jones calculus <https://en.wikipedia.org/wiki/Jones_calculus>`_. Annotations values are represented
 by two angles :math:`(\theta, \phi)`.
@@ -15,9 +15,11 @@ Jones vector: :math:`\begin{pmatrix}\cos \frac{\pi}{4}\\e^{i\frac{\pi}{4}}\sin \
 
 .. code-block:: python
 
-    >>> p = pcvl.Polarization(sp.pi/2, sp.pi/4)
-    >>> p.project_ev_eh()
-    (sqrt(2)/2, sqrt(2)*exp(I*pi/4)/2)
+    >>> import perceval as pcvl, sympy as sp
+    >>>
+    >>> p = pcvl.Polarization((sp.pi/2, sp.pi/4))
+    >>> p.project_eh_ev()
+    (0.707106, 0.5+0.5j)
 
 It is also possible to use ``H``, ``V``, ``D``, ``A``, ``L`` and ``R`` as shortcuts to predefined values:
 
@@ -51,10 +53,10 @@ It is also possible to use ``H``, ``V``, ``D``, ``A``, ``L`` and ``R`` as shortc
     >>> p = pcvl.Polarization("D")
     >>> p.theta_phi
     (pi/2, 0)
-    >>> p.project_ev_eh())
+    >>> p.project_eh_ev()
     (sqrt(2)/2, sqrt(2)/2)
 
-Defining states with polarization is then simply to use the :ref:`Annotation` ``P``:
+Defining states with polarization is as simple as using the ``P`` special annotation:
 
 .. code-block:: python
 
@@ -65,17 +67,17 @@ If polarization is used for any photon in the state, the state is considered as 
 
 .. code-block:: python
 
-    >>> pcvl.BasicState("|{P:H},0,{P:V}>").has_polarization
+    >>> pcvl.AnnotatedFockState("|{P:H},0,{P:V}>").has_polarization
     True
-    >>> pcvl.BasicState("|{P:V},0,1>").has_polarization
+    >>> pcvl.AnnotatedFockState("|{P:V},0,1>").has_polarization
     True
-    >>> pcvl.BasicState("|1,0,1>").has_polarization
+    >>> pcvl.AnnotatedFockState("|{a:0},0,{a:1}>").has_polarization
     False
 
 .. note::
    To simplify the notation:
 
-   * linear polarization can be defined with a single parameter: ``{P:sp.pi/2}`` is equivalent to ``{P:(sp.pi/2,0}``
+   * linear polarization can be defined with a single parameter: ``{P:sp.pi/2}`` is equivalent to ``{P:(sp.pi/2,0)}``
 
    * if the polarization annotation is omitted for some photons, these photons will be considered as having a horizontal polarization.
 

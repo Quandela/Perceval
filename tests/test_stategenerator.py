@@ -196,7 +196,7 @@ def check_dicke_state(state: pcvl.StateVector, n: int, k: int, encoding: pcvl.En
 
 
 @patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
-@pytest.mark.parametrize("encoding", [pcvl.Encoding.RAW, pcvl.Encoding.POLARIZATION, pcvl.Encoding.DUAL_RAIL])
+@pytest.mark.parametrize("encoding", [pcvl.Encoding.RAW, pcvl.Encoding.POLARIZATION, pcvl.Encoding.DUAL_RAIL]) # TODO : PostSelect should accept AnnotatedFockStates ?
 def test_dicke_state(mock_warn, encoding):
     n = 2
     k = 2*n

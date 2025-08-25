@@ -42,7 +42,7 @@ def test_logical_state():
     ls = LogicalState("010011")
     assert ls == LogicalState([0,1,0,0,1,1])
     ls = LogicalState([0,1,0,0,0,1])
-    assert str(ls) == "010001"
+    assert str(ls) == "|010001>"
     ls1 = LogicalState([1,0])
     assert ls + ls1 == LogicalState([0,1,0,0,0,1,1,0])
 

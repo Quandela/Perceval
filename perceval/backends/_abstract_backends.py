@@ -28,10 +28,12 @@
 # SOFTWARE.
 from __future__ import annotations
 from abc import ABC, abstractmethod
+from typing import Iterable
+
 import exqalibur as xq
 
 from perceval.components import ACircuit
-from perceval.utils import BasicState, BSDistribution, BSSamples, StateVector, allstate_array
+from perceval.utils import BasicState, FockState, BSDistribution, BSSamples, StateVector, allstate_iterator, global_params
 
 
 class ABackend(ABC):
@@ -51,17 +53,16 @@ class ABackend(ABC):
         self._circuit = circuit
         self._umat = circuit.compute_unitary()
 
-    def set_input_state(self, input_state: BasicState):
+    def set_input_state(self, input_state: FockState):
         """
         Sets an input state for the simulation. This state has to be a Fock state without annotations.
         """
         self._check_state(input_state)
         self._input_state = input_state
 
-    def _check_state(self, state: BasicState):
+    def _check_state(self, state: FockState):
         assert self._circuit is not None, 'Circuit must be set before the input state'
         assert self._circuit.m == state.m, f'Circuit({self._circuit.m}) and state({state.m}) size mismatch'
-        assert not state.has_annotations, 'State should be composed of indistinguishable photons only'
 
     @property
     @abstractmethod
@@ -77,6 +78,16 @@ class ASamplingBackend(ABackend):
     @abstractmethod
     def samples(self, count: int) -> BSSamples:
         """Request samples from the circuit given an input state"""
+
+
+class _StateProbIterator(Iterable[tuple[FockState, float]]):
+
+    def __init__(self, states: Iterable[FockState], probs: Iterable[float]):
+        self.states = states
+        self.probs = probs
+
+    def __iter__(self):
+        return zip(self.states, self.probs)
 
 
 class AStrongSimulationBackend(ABackend):
@@ -127,7 +138,7 @@ class AStrongSimulationBackend(ABackend):
         self._mask_n = None
         self.clear_iterator_cache()
 
-    def set_input_state(self, input_state: BasicState):
+    def set_input_state(self, input_state: FockState):
         super().set_input_state(input_state)
         self._init_mask()
 
@@ -135,7 +146,7 @@ class AStrongSimulationBackend(ABackend):
         n_photons = input_state.n
 
         if n_photons not in self._cache_iterator.keys():
-            self._cache_iterator[n_photons] = allstate_array(input_state, self._mask)
+            self._cache_iterator[n_photons] = tuple(allstate_iterator(input_state, self._mask))
 
         return self._cache_iterator[n_photons]
 
@@ -148,15 +159,15 @@ class AStrongSimulationBackend(ABackend):
         super().set_circuit(circuit)
 
     @abstractmethod
-    def prob_amplitude(self, output_state: BasicState) -> complex:
+    def prob_amplitude(self, output_state: FockState) -> complex:
         """Computes the probability amplitude for a given output state. The input state and the circuit must already be set"""
         pass
 
-    def probability(self, output_state: BasicState) -> float:
+    def probability(self, output_state: FockState) -> float:
         """Computes the probability for a given output state. The input state and the circuit must already be set"""
         return abs(self.prob_amplitude(output_state)) ** 2
 
-    def all_prob(self, input_state: BasicState = None) -> list[float]:
+    def all_prob(self, input_state: FockState = None) -> list[float]:
         """Computes the list of probabilities of all states (respecting the mask if any was set).
         The order of the states can be retrieved using `allstate_iterator()`"""
         if input_state is not None:
@@ -175,6 +186,12 @@ class AStrongSimulationBackend(ABackend):
         for output_state in self._get_iterator(self._input_state):
             bsd.add(output_state, self.probability(output_state))
         return bsd
+
+    def prob_iterator(self, min_p: float = global_params["min_p"]) -> Iterable[tuple[FockState, float]]:
+        # DO NOT document for users
+        probs = self.all_prob(self._input_state)
+        states = [state for i, state in enumerate(self._get_iterator(self._input_state)) if probs[i] > min_p]
+        return _StateProbIterator(states, [prob for prob in probs if prob > min_p])
 
     def evolve(self) -> StateVector:
         """Evolves the input BasicState into a StateVector."""

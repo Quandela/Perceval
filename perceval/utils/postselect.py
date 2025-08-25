@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import exqalibur as xq
 
-from .statevector import BSDistribution, StateVector
+from .states import BSDistribution, StateVector
 try:
     from typing import TypeAlias
 except ImportError:
