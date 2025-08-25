@@ -120,11 +120,12 @@ class AParametrizedComponent(AComponent):
         return self._params[param_name]
 
     def get_parameters(self, all_params: bool = False, expressions = False) -> list[Parameter]:
-        """Return the parameters of the circuit
+        """Return the parameters of the component
 
         :param all_params: if False, only returns the variable parameters
         :param expressions: if True, returns Expressions and parameters embedded in circuit components.
             If False, returns the raw parameters that make up the expressions only. Default False.
+
         :return: the list of parameters
         """
         param_list = []
@@ -138,9 +139,9 @@ class AParametrizedComponent(AComponent):
                         for p in param.parameters:
                             if p not in param_list:
                                 param_list.append(p)
-                else:
-                    if param not in param_list:
-                        param_list.append(param)
+
+                elif param not in param_list:
+                    param_list.append(param)
         return param_list
 
     def reset_parameters(self) -> None:

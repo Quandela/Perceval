@@ -354,6 +354,23 @@ class Circuit(ACircuit):
                 j -= 1
         raise IndexError("column index out of range")
 
+    def get_parameters(self, all_params: bool = False, expressions = False) -> list[Parameter]:
+        """Return the parameters of the circuit
+
+        :param all_params: if False, only returns the variable parameters
+        :expressions: if True, returns highest level Expressions and parameters only.
+            If False, returns the raw parameters that make up the expressions only.
+            Default `False`.
+
+        :return: the list of parameters
+        """
+        total_params = dict()
+        for _, comp in self:
+            if comp._params:
+                comp_params = comp.get_parameters(all_params, expressions)
+                total_params.update(dict.fromkeys(comp_params))
+        return list(total_params.keys())
+
     def __getitem__(self, idx) -> ACircuit:
         """
         Direct access to components - using __getitem__ operator
@@ -444,6 +461,7 @@ class Circuit(ACircuit):
             f"Port range exceeds circuit size (received {port_range} but maximum expected value is {self.m-1})"
         assert len(port_range) == component.m, \
             f"Port range ({len(port_range)}) is not matching component size ({component.m})"
+
         # merge the parameters - we are only interested in non-assigned parameters if it is not a global operator
         for _, p in component._params.items():
             if not p.fixed:
@@ -451,6 +469,7 @@ class Circuit(ACircuit):
                     if internal_p.name in self._params and internal_p._pid != self._params[internal_p.name]._pid:
                         raise RuntimeError("two parameters with the same name in the circuit (%s)" % p.name)
                     self._params[internal_p.name] = internal_p
+
         # register the component
         if merge and isinstance(component, Circuit) and component._components:
             for sprange, sc in component._components:
