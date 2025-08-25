@@ -198,7 +198,7 @@ class SLOSBackend(AStrongSimulationBackend):
         c = abs(c) ** 2 / istate.prodnfact()
         xq.all_prob_normalize_output(c, self._fsas[istate.n])
         bsd = BSDistribution()
-        for output_state, probability in zip(self._fsas[istate.n], c):
+        for output_state, probability in zip(self._get_iterator(istate), c):
             bsd.add(output_state, probability)
         return bsd
 
@@ -211,7 +211,7 @@ class SLOSBackend(AStrongSimulationBackend):
         c = self._state_mapping[input_state].coefs.reshape(self._fsas[input_state.n].count())
         c = abs(c)**2 / self._input_state.prodnfact()
         xq.all_prob_normalize_output(c, self._fsas[input_state.n])
-        return c
+        return c.tolist()
 
     def evolve(self) -> StateVector:
         istate = self._input_state

@@ -29,8 +29,7 @@
 from __future__ import annotations
 
 import sys
-
-from copy import copy
+from collections import defaultdict
 
 from exqalibur import SimpleSourceIterator
 from multipledispatch import dispatch
@@ -45,7 +44,8 @@ from perceval.utils.density_matrix_utils import extract_upper_triangle
 from perceval.utils.logging import get_logger
 from perceval.runtime import cancel_requested
 
-from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping, _split_by_photon_count
+from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping, _split_by_photon_count, \
+    _list_merge
 from ._simulate_detectors import simulate_detectors
 from .simulator_interface import ISimulator
 
@@ -430,13 +430,35 @@ class Simulator(ISimulator):
         else:
             decomposed_input = [(prob, states, sum(state.n for state in states)) for states, prob in input_dist]
 
+        if len(decomposed_input) == 1 and len(decomposed_input[0][1]) == 1:
+            # Shortcut: avoid recombination
+            state = decomposed_input[0][1][0]
+            n = decomposed_input[0][2]
+            n = self._best_n(n, n)
+            self.use_mask(n)
+            self._backend.set_input_state(state)
+            res = self._backend.prob_distribution()
+            self._logical_perf += sum(res.values()) * decomposed_input[0][0]
+            if len(res):
+                res.normalize()
+            return res
+
         """Create a cache with strong simulation of all unique input"""
         cache = {}
-        input_set = set((state, self._best_n(s[2], state.n)) for s in decomposed_input for state in s[1])
-        len_input_set = len(input_set)
+
+        input_dict = defaultdict(float)
+        for (prob, states, n) in decomposed_input:
+            for state in states:
+                s = (state, self._best_n(n, state.n))
+                current_prob = input_dict[s]
+                if prob > current_prob:
+                    input_dict[s] = prob
+
+        len_input_set = len(input_dict)
+
         prog_cb = partial_progress_callable(progress_callback, max_val=0.5)  # From 0. to 0.5
         previous_n = None
-        for idx, (state, n) in enumerate(sorted(input_set, key=lambda x: x[1])):
+        for idx,((state, n), prob0) in enumerate(sorted(input_dict.items(), key=lambda x: x[0][1])):
             if n != previous_n and n != 0:
                 previous_n = n
                 # The backend init the mask when setting the state and when setting the mask if there is an input state,
@@ -445,7 +467,7 @@ class Simulator(ISimulator):
                 self.use_mask(n)
 
             self._backend.set_input_state(state)
-            cache[(state, n)] = self._backend.prob_distribution()
+            cache[(state, n)] = self._backend.prob_iterator(p_threshold / (10 * prob0))
             if prog_cb and idx % 10 == 0:
                 progress = (idx + 1) / len_input_set
                 exec_request = prog_cb(progress, 'compute probability distributions')
@@ -457,9 +479,8 @@ class Simulator(ISimulator):
         prog_cb = partial_progress_callable(progress_callback, min_val=0.5)  # From 0.5 to 1
         for idx, (prob0, bs_data, n) in enumerate(decomposed_input):
             """First, recombine evolved state vectors given a single input"""
-            probs_in_s = BSDistribution.list_tensor_product([cache[(state, self._best_n(n, state.n))] for state in bs_data],
-                                                            merge_modes=True,
-                                                            prob_threshold=p_threshold / (10 * prob0))
+            probs_in_s = _list_merge([cache[(state, self._best_n(n, state.n))] for state in bs_data],
+                                     prob_threshold=p_threshold / (10 * prob0))
             self.DEBUG_merge_count += len(bs_data) - 1
 
             """

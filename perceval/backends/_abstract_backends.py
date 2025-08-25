@@ -28,10 +28,12 @@
 # SOFTWARE.
 from __future__ import annotations
 from abc import ABC, abstractmethod
+from typing import Iterable
+
 import exqalibur as xq
 
 from perceval.components import ACircuit
-from perceval.utils import BasicState, FockState, BSDistribution, BSSamples, StateVector, allstate_array
+from perceval.utils import BasicState, FockState, BSDistribution, BSSamples, StateVector, allstate_iterator, global_params
 
 
 class ABackend(ABC):
@@ -76,6 +78,16 @@ class ASamplingBackend(ABackend):
     @abstractmethod
     def samples(self, count: int) -> BSSamples:
         """Request samples from the circuit given an input state"""
+
+
+class _StateProbIterator(Iterable[tuple[FockState, float]]):
+
+    def __init__(self, states: Iterable[FockState], probs: Iterable[float]):
+        self.states = states
+        self.probs = probs
+
+    def __iter__(self):
+        return zip(self.states, self.probs)
 
 
 class AStrongSimulationBackend(ABackend):
@@ -134,7 +146,7 @@ class AStrongSimulationBackend(ABackend):
         n_photons = input_state.n
 
         if n_photons not in self._cache_iterator.keys():
-            self._cache_iterator[n_photons] = allstate_array(input_state, self._mask)
+            self._cache_iterator[n_photons] = tuple(allstate_iterator(input_state, self._mask))
 
         return self._cache_iterator[n_photons]
 
@@ -174,6 +186,12 @@ class AStrongSimulationBackend(ABackend):
         for output_state in self._get_iterator(self._input_state):
             bsd.add(output_state, self.probability(output_state))
         return bsd
+
+    def prob_iterator(self, min_p: float = global_params["min_p"]) -> Iterable[tuple[FockState, float]]:
+        # DO NOT document for users
+        probs = self.all_prob(self._input_state)
+        states = [state for i, state in enumerate(self._get_iterator(self._input_state)) if probs[i] > min_p]
+        return _StateProbIterator(states, [prob for prob in probs if prob > min_p])
 
     def evolve(self) -> StateVector:
         """Evolves the input BasicState into a StateVector."""

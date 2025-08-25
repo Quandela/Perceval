@@ -30,6 +30,7 @@ import copy
 from collections import defaultdict
 from math import sqrt
 from multipledispatch import dispatch
+from typing import Iterable
 
 from perceval.utils import FockState, NoisyFockState, AnnotatedFockState, BSDistribution, StateVector, Annotation, SVDistribution
 from perceval.components import Circuit
@@ -125,5 +126,30 @@ def _split_by_photon_count(sv: StateVector) -> SVDistribution:
     for (state, prob) in counter.values():
         state.normalize()
         res[state] = prob
+
+    return res
+
+def _list_merge(distributions: list[Iterable[tuple[FockState, float]]], prob_threshold: float = 0) -> dict[FockState, float]:
+    # Note: the iterable must reset each time we call it
+    if len(distributions) == 0:
+        return dict()
+
+    res = defaultdict(float)
+
+    def _inner_tensor_product(dist: list[Iterable[tuple[FockState, float]]], current_state: FockState, current_prob: float):
+        if len(dist) == 0:
+            res[current_state] += current_prob
+            return
+
+        for bs, p in dist[0]:
+            prob = current_prob * p
+            if prob < prob_threshold:
+                continue
+            _inner_tensor_product(dist[1:], current_state.merge(bs), prob)
+
+    for bs, p in distributions[0]:
+        if p < prob_threshold:
+            continue
+        _inner_tensor_product(distributions[1:], bs, p)
 
     return res
