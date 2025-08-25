@@ -124,10 +124,7 @@ class Analyzer(AAlgorithm):
 
         # Compute probabilities for all input states
         for idx, i_state in enumerate(self.input_states_list):
-            if i_state.has_polarization:
-                self._processor.with_polarized_input(i_state)
-            else:
-                self._processor.with_input(i_state)
+            self._processor.with_input(i_state)
             job = self._sampler.probs
             job.name = f'{self.default_job_name} {idx+1}/{len(self.input_states_list)}'
             probs_output = job.execute_sync()
@@ -151,6 +148,7 @@ class Analyzer(AAlgorithm):
                     self._distribution[iidx, oidx] = probs_res[i_state][o_state]
                     sum_p += probs_res[i_state][o_state]
             if expected is not None:
+                expected_o = None
                 if i_state in expected:
                     expected_o = expected[i_state]
                 elif i_state in self._mapping and self._mapping[i_state] in expected:
@@ -160,6 +158,8 @@ class Analyzer(AAlgorithm):
                         if v == expected_o:
                             expected_o = k
                             break
+                if expected_o is None:
+                    raise ValueError(f"Output not found in expected mapping for input state: {i_state}")
                 if sum_p > 0:
                     self.error_rate += 1 - \
                         (self._distribution[iidx, self.output_states_list.index(expected_o)]/sum_p).real

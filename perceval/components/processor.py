@@ -31,7 +31,7 @@ from __future__ import annotations
 import sys
 
 from perceval.backends import ABackend, ASamplingBackend, BACKEND_LIST
-from perceval.utils import SVDistribution, BasicState, StateVector, NoiseModel
+from perceval.utils import SVDistribution, BasicState, FockState, AnnotatedFockState, StateVector, NoiseModel
 from perceval.utils.logging import get_logger, channel
 
 from .abstract_processor import AProcessor, ProcessorType
@@ -39,6 +39,7 @@ from .experiment import Experiment
 from .linear_circuit import ACircuit, Circuit
 from .source import Source
 from .unitary_components import PS
+
 
 class Processor(AProcessor):
     """
@@ -76,7 +77,7 @@ class Processor(AProcessor):
     @property
     def _has_custom_input(self):
         return (isinstance(self.input_state, SVDistribution)
-                or (isinstance(self.input_state, BasicState) and self.input_state.has_polarization))
+                or (isinstance(self.input_state, AnnotatedFockState) and self.input_state.has_polarization))
 
     def _noise_changed_observer(self):
         self._source = Source.from_noise_model(self.noise)
@@ -131,21 +132,18 @@ class Processor(AProcessor):
 
     def generate_noisy_heralds(self) -> SVDistribution:
         if self.heralds:
-            heralds_perfect_state = BasicState([v for k, v in sorted(self.experiment.in_heralds.items())])
+            heralds_perfect_state = FockState([v for k, v in sorted(self.experiment.in_heralds.items())])
             return self._source.generate_distribution(heralds_perfect_state)
         return SVDistribution()
 
     def _input_changed_observer(self):
         if isinstance(self.input_state, BasicState):
-            if self.input_state.has_polarization:
-                self._inputs_map = SVDistribution(self.input_state)
+            if isinstance(self.input_state, AnnotatedFockState):
+                self._inputs_map = SVDistribution(StateVector(self.input_state))
             else:
-                self._generate_noisy_input()
+                self._inputs_map = None
         elif isinstance(self.input_state, SVDistribution):
             self._inputs_map = self.input_state
-
-    def with_polarized_input(self, bs: BasicState):
-        self.experiment.with_polarized_input(bs)
 
     def clear_input_and_circuit(self, new_m=None):
         super().clear_input_and_circuit(new_m)
@@ -201,7 +199,8 @@ class Processor(AProcessor):
                           channel.general)
         self._simulator.keep_heralds(False)
         self._simulator.compute_physical_logical_perf(self._compute_physical_logical_perf)
-        res = self._simulator.probs_svd(self.source_distribution, self.detectors, progress_callback)
+        svd = self.source_distribution if self._has_custom_input else (self._source, self.input_state)
+        res = self._simulator.probs_svd(svd, self.detectors, progress_callback)
         get_logger().info("Local strong simulation complete!", channel.general)
 
         self.log_resources(sys._getframe().f_code.co_name, {'precision': precision})

@@ -29,12 +29,14 @@
 from __future__ import annotations
 
 import copy
+import weakref
 from dataclasses import dataclass
+from typing import Callable
 
 from multipledispatch import dispatch
 from numpy import inf
 
-from perceval.utils import BasicState, Parameter, PostSelect, LogicalState, NoiseModel, ModeType, StateVector, \
+from perceval.utils import FockState, AnnotatedFockState, Parameter, PostSelect, LogicalState, NoiseModel, ModeType, StateVector, \
     SVDistribution
 from perceval.utils.logging import get_logger, channel
 from perceval.utils.algorithms.simplification import perm_compose, simplify
@@ -81,9 +83,9 @@ class Experiment:
 
         self._min_detected_photons_filter: int | None = None
 
-        self._circuit_changed_observers: list[callable] = []
-        self._noise_changed_observers: list[callable] = []
-        self._input_changed_observers: list[callable] = []
+        self._circuit_changed_observers: list[Callable[[Experiment | AComponent | None], None]] = []
+        self._noise_changed_observers: list[Callable[[], None]] = []
+        self._input_changed_observers: list[Callable[[], None]] = []
 
         self.noise: NoiseModel | None = noise
 
@@ -147,12 +149,14 @@ class Experiment:
 
     def _circuit_changed(self, component=None):
         for observer in self._circuit_changed_observers:
-            observer(component)  # Used to notify the Processors containing this experiment of a new component
+            observer_fn = observer()
+            if observer_fn is not None:
+                observer_fn(component)  # Used to notify the Processors containing this experiment of a new component
 
     def add_observers(self, circuit_observer: callable, noise_observer: callable, input_observer: callable):
-        self._circuit_changed_observers.append(circuit_observer)
-        self._noise_changed_observers.append(noise_observer)
-        self._input_changed_observers.append(input_observer)
+        self._circuit_changed_observers.append(weakref.WeakMethod(circuit_observer))
+        self._noise_changed_observers.append(weakref.WeakMethod(noise_observer))
+        self._input_changed_observers.append(weakref.WeakMethod(input_observer))
 
     def min_detected_photons_filter(self, n: int):
         r"""
@@ -186,7 +190,9 @@ class Experiment:
         if nm is None or isinstance(nm, NoiseModel):
             self._noise = nm
             for observer in self._noise_changed_observers:
-                observer()
+                observer_fn = observer()
+                if observer_fn is not None:
+                    observer_fn()
         else:
             raise TypeError("noise type has to be 'NoiseModel'")
 
@@ -768,22 +774,18 @@ class Experiment:
     def in_heralds(self) -> dict[int, int]:
         return {port_range[0]: port.expected for port, port_range in self._in_ports.items() if isinstance(port, Herald)}
 
-    def check_input(self, input_state: BasicState):
+    def check_input(self, input_state: FockState):
         r"""Check if a basic state input matches with the current experiment configuration"""
         assert self.m_in, "A circuit has to be set before the input state"
         expected_input_length = self.m_in
         assert len(input_state) == expected_input_length, \
             f"Input length not compatible with circuit (expects {expected_input_length}, got {len(input_state)})"
-        if input_state.has_polarization:
-            get_logger().warn("Given input state has polarization, that will be ignored in the computation"
-                              " (use with_polarized_input instead).")
-        elif input_state.has_annotations:
-            get_logger().warn("Given input state has annotations, that will be ignored in the computation."
-                              " To use them, consider using a StateVector.")
 
     def _input_changed(self):
         for observer in self._input_changed_observers:
-            observer()
+            observer_fn = observer()
+            if observer_fn is not None:
+                observer_fn()
 
     @dispatch(LogicalState)
     def with_input(self, input_state: LogicalState):
@@ -792,8 +794,8 @@ class Experiment:
             self._min_detected_photons_filter = input_state.n
         self.with_input(input_state)
 
-    @dispatch(BasicState)
-    def with_input(self, input_state: BasicState) -> None:
+    @dispatch(FockState)
+    def with_input(self, input_state: FockState) -> None:
         self.check_input(input_state)
         input_list = [0] * self.circuit_size
         input_idx = 0
@@ -805,8 +807,16 @@ class Experiment:
                 input_list[k] = input_state[input_idx]
                 input_idx += 1
 
-        self._input_state = BasicState(input_list)
+        self._input_state = FockState(input_list)
         self._input_changed()
+
+    @dispatch(AnnotatedFockState)
+    def with_input(self, input_state: AnnotatedFockState) -> None:
+        if input_state.has_polarization:
+            self._input_state = input_state
+            self._input_changed()
+        else:
+            raise TypeError("Local simulations only support AnnotatedFockState in case of a polarized input state")
 
     @dispatch(StateVector)
     def with_input(self, sv: StateVector):
@@ -834,11 +844,6 @@ class Experiment:
                     raise ValueError(
                         f'Input distribution contains states with a bad size ({state.m}), expected {self.circuit_size}')
         self._input_state = svd
-        self._input_changed()
-
-    def with_polarized_input(self, bs: BasicState):
-        assert bs.has_polarization, "BasicState is not polarized, please use with_input instead"
-        self._input_state = bs
         self._input_changed()
 
     def flatten(self, max_depth=None) -> list[tuple]:

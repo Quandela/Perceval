@@ -48,7 +48,7 @@ class FFSimulator(ISimulator):
         self._backend = backend
 
         self._noise_model = None
-        self._source = None
+        self._source: Source = None
 
     def compute_physical_logical_perf(self, value: bool):
         if value:
@@ -71,7 +71,7 @@ class FFSimulator(ISimulator):
         self._source = source
 
     def _probs_svd(self,
-                   input_state: SVDistribution | BasicState,
+                   input_state: SVDistribution | tuple[Source, BasicState],
                    detectors: list[IDetector] = None,
                    progress_callback: callable = None) -> tuple[BSDistribution, float]:
 
@@ -96,11 +96,19 @@ class FFSimulator(ISimulator):
         #  it can be even faster by removing more impossible measures (thus not simulating them)
 
         # Estimation of possible measures: n for each measured mode
-        n = input_state.n if isinstance(input_state, BasicState) else input_state.n_max
+        if isinstance(input_state, tuple):
+            self.set_source(input_state[0])
+            n = input_state[1].n
+            m = input_state[1].m
+            if self._source.multiphoton_component > 0:
+                n *= 2
+        else:
+            n = input_state.n_max
+            m = input_state.m
         intermediate_progress = 1 / n ** len(measured_modes)
         prog_cb = partial_progress_callable(progress_callback, max_val=intermediate_progress)
 
-        default_res = self._simulate(input_state, components, detectors, prog_cb, new_heralds=new_heralds)
+        default_res = self._simulate(input_state, components, m, detectors, prog_cb, new_heralds=new_heralds)
         default_norm_factor = default_res["global_perf"]
         default_res = default_res["results"]
 
@@ -123,7 +131,7 @@ class FFSimulator(ISimulator):
 
                 if self._post_process_state(state):
                     prob *= default_norm_factor
-                    res[self._remove_heralds(state[:input_state.m])] = prob
+                    res[self._remove_heralds(state[:m])] = prob
                     global_perf += prob
 
                 if prog_cb is not None:
@@ -142,7 +150,7 @@ class FFSimulator(ISimulator):
                 new_heralds = {i: state[i] for i in measured_modes if i not in self._heralds}
                 new_prog_cb = partial_progress_callable(prog_cb, j / len(default_res), (j + 1) / len(default_res))
 
-                sub_res = self._simulate(input_state, components, detectors, new_prog_cb,
+                sub_res = self._simulate(input_state, components, m, detectors, new_prog_cb,
                                          filter_states=True, new_heralds=new_heralds)
 
                 norm_factor = sub_res["global_perf"]
@@ -152,7 +160,7 @@ class FFSimulator(ISimulator):
 
                 for st, p in sub_res["results"].items():
                     # No need for post_process here: results are already post-processed by the sub simulator
-                    res[self._remove_heralds(st[:input_state.m])] = p * norm_factor
+                    res[self._remove_heralds(st[:m])] = p * norm_factor
 
                 simulated_measures.add(measured_state)
 
@@ -202,8 +210,9 @@ class FFSimulator(ISimulator):
 
         return res, list(measured_modes), feed_forwarded_modes
 
-    def _simulate(self, input_state: SVDistribution,
+    def _simulate(self, input_state: SVDistribution | tuple[Source, BasicState],
                   components: list[tuple[tuple, AComponent | Processor]],
+                  m: int,
                   detectors: list[IDetector],
                   prog_cb=None,
                   filter_states: bool = False,
@@ -220,7 +229,6 @@ class FFSimulator(ISimulator):
          :return: the results of a sub-simulation prob_svd
          """
 
-        m = input_state.m
         if detectors is None:
             detectors = m * [None]
         proc = Processor(self._backend, m)
@@ -233,9 +241,13 @@ class FFSimulator(ISimulator):
             proc.add(r, c)
 
         # Now the Processor has only the heralds that were possibly added by adding Processors as input, all at the end
-        heralded_dist = proc.generate_noisy_heralds()
-        if len(heralded_dist):
-            input_state = input_state * heralded_dist  # Must not change the original object
+        if isinstance(input_state, SVDistribution):
+            heralded_dist = proc.generate_noisy_heralds()
+            if len(heralded_dist):
+                input_state = input_state * heralded_dist  # Must not change the original object
+        else:
+            proc.with_input(input_state[1])
+            input_state = (input_state[0], proc.input_state)
 
         sum_new_heralds = 0
         if new_heralds is not None:

@@ -45,7 +45,7 @@ from .circuit.create_renderer import RendererFactory
 from .circuit import DisplayConfig, ASkin
 from perceval.utils import BasicState, Matrix, simple_float, simple_complex, DensityMatrix, mlstr, ModeType, Encoding
 from perceval.utils.logging import get_logger, channel
-from perceval.utils.statevector import StateVector, BSCount, BSDistribution, SVDistribution
+from perceval.utils.states import StateVector, BSCount, BSDistribution, SVDistribution
 from perceval.runtime import JobGroup
 
 from .format import Format
@@ -178,9 +178,9 @@ def pdisplay_experiment(processor: Experiment,
             renderer.subblock_info.update(pre_renderer.subblock_info)
 
     in_ports_drawn_on_modes = []
-    for port, port_range in processor._in_ports.items():
+    for port_range in processor._in_ports.values():
+        # Avoids adding ports on heralded modes and modes with ports already defined
         in_ports_drawn_on_modes += port_range
-        renderer.add_in_port(port_range[0], port)
 
     if isinstance(processor._input_state, BasicState):
         renderer.display_input_photons(processor._input_state, original_mode_style)
@@ -189,6 +189,9 @@ def pdisplay_experiment(processor: Experiment,
         for i in range(processor.circuit_size):
             if i not in in_ports_drawn_on_modes:
                 renderer.add_in_port(i, empty_raw_port)
+
+    for port, port_range in processor._in_ports.items():
+        renderer.add_in_port(port_range[0], port)
 
     renderer.add_detectors(processor._detectors)
     ports_drawn_on_modes = []

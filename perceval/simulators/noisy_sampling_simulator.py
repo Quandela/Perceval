@@ -36,7 +36,7 @@ from typing import Callable
 
 from perceval.backends import ASamplingBackend
 from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType, check_heralds_detectors, Source
-from perceval.utils import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, PostSelect, \
+from perceval.utils import BasicState, FockState, StateVector, NoisyFockState, BSCount, BSSamples, SVDistribution, PostSelect, \
     samples_to_sample_count
 from perceval.utils.logging import get_logger, channel
 from perceval.runtime import cancel_requested
@@ -77,7 +77,7 @@ class SamplesProvider:
                 if cancel_request is not None and cancel_request.get('cancel_requested', False):
                     break
 
-    def estimate_weights_from_distribution(self, noisy_input: BSDistribution, n_samples: int):
+    def estimate_weights_from_distribution(self, noisy_input: SVDistribution, n_samples: int):
         """
         Decide how much of each input we will generate when the pool becomes empty based on
         the probability of seeing such an input state and the total number of samples.
@@ -86,16 +86,18 @@ class SamplesProvider:
         :param n_samples: The total number of samples to generate
         """
         if n_samples:
-            for noisy_s, prob in noisy_input.items():
-                ns = min(math.ceil(prob * n_samples), self._max_samples)
-                for bs in noisy_s.separate_state(keep_annotations=False):
-                    if self._weights[bs] + ns < self._max_samples:
-                        self._weights.add(bs, ns)
-                    else:
-                        self._weights.add(bs, self._max_samples - self._weights[bs])
+            for noisy_sv, prob in noisy_input.items():
+                for noisy_s in noisy_sv.keys():
+                    ns = min(math.ceil(prob * n_samples), self._max_samples)
+                    bs_list = [noisy_s] if isinstance(noisy_s, FockState) else noisy_s.separate_state()
+                    for bs in bs_list:
+                        if self._weights[bs] + ns < self._max_samples:
+                            self._weights.add(bs, ns)
+                        else:
+                            self._weights.add(bs, self._max_samples - self._weights[bs])
 
-    def estimate_weights_from_source(self, sample_generator: Callable[[int], BSSamples],
-                                     n_samples: int) -> list[BasicState] | BSSamples:
+    def estimate_weights_from_source(self, sample_generator: Callable[[int], list[BSSamples]],
+                                     n_samples: int) -> list[BSSamples]:
         """
         Decide how much of each input we will generate when the pool becomes empty based on
         a batch of samples generated from the source and the total number of samples.
@@ -104,13 +106,13 @@ class SamplesProvider:
         input_samples = sample_generator(n_samples)
 
         for sample in input_samples:
-            for state in sample.separate_state(keep_annotations=False):
+            for state in sample:
                 if self._weights[state] < self._max_samples:
                     self._weights.add(state, 1)
 
         return input_samples
 
-    def _compute_samples(self, fock_state: BasicState):
+    def _compute_samples(self, fock_state: FockState):
         if fock_state not in self._weights:
             self._weights[fock_state] = self._min_samples
 
@@ -121,7 +123,7 @@ class SamplesProvider:
         self._pools[fock_state] += self._backend.samples(n_samples)
         self._weights[fock_state] = min(max(int(self._weights[fock_state] * self._sample_coeff), 16), self._max_samples)
 
-    def sample_from(self, input_state: BasicState) -> BasicState:
+    def sample_from(self, input_state: FockState) -> BasicState:
         """Pop an output from the pool of outputs for the given input state.
         If none is available, computes a batch of outputs based on the associated weight."""
         if not len(self._pools[input_state]):
@@ -244,12 +246,12 @@ class NoisySamplingSimulator:
 
     def _noisy_sampling(
             self,
-            sample_generator: Callable[[int], BSSamples],
+            sample_generator: Callable[[int], list[list[BasicState]]],
             provider: SamplesProvider,
             max_samples: int,
             max_shots: int,
             detection_type: DetectionType,
-            first_batch: list[BasicState] | BSSamples,
+            first_batch: list[BSSamples],
             progress_callback: callable = None) -> dict:
 
         output = BSSamples()
@@ -275,20 +277,19 @@ class NoisySamplingSimulator:
                     nb_gen = min(nb_gen, max_shots - shots)
                 selected_inputs = sample_generator(nb_gen)
 
-            selected_bs = selected_inputs[idx]
+            selected_bs = selected_inputs[idx] # should be a FockState / FockState list
             idx += 1
 
             # Sampling
-            if selected_bs.has_annotations:  # In case of annotations, input must be separately sampled, then recombined
-                bs_list = selected_bs.separate_state(keep_annotations=False)
+            if len(selected_bs) > 1:  # In case of annotations, input must be separately sampled, then recombined
                 sampled_components = []
-                for bs in bs_list:
+                for bs in selected_bs:
                     sampled_components.append(provider.sample_from(bs))
                 sampled_state = sampled_components.pop()
                 for component in sampled_components:
                     sampled_state = sampled_state.merge(component)
             else:
-                sampled_state = provider.sample_from(selected_bs)
+                sampled_state = provider.sample_from(selected_bs[0])
 
             if self._detectors:
                 sampled_state = simulate_detectors_sample(sampled_state, self._detectors, detection_type,
@@ -342,19 +343,19 @@ class NoisySamplingSimulator:
         return zpp, max_p
 
     def _preprocess_input_state(self, svd: SVDistribution, max_p: float, n_threshold: int
-                                ) -> tuple[BSDistribution, float]:
+                                ) -> tuple[SVDistribution, float]:
         """
         Rework the input distribution to get rid of improbable states. Compute a first value for physical performance
         """
         p_threshold = max_p / n_threshold
-        new_input = BSDistribution()
+        new_input = SVDistribution()
         physical_perf = 1
         for sv, p in svd.items():
             n_photons = next(iter(sv.n))
             if n_photons < self.min_detected_photons_filter:
                 physical_perf -= p
             elif p >= p_threshold:
-                new_input[sv[0]] = p
+                new_input[StateVector(sv[0])] = p
         new_input.normalize()
         get_logger().debug(
             f"Reduced input SVD from {len(svd)} to {len(new_input)} elements using {p_threshold} threshold",
@@ -372,7 +373,7 @@ class NoisySamplingSimulator:
         return prepare_samples, max_shots
 
     def _prepare_provider(self, provider: SamplesProvider,
-                          svd: SVDistribution | tuple[Source, BasicState],
+                          svd: SVDistribution | tuple[Source, FockState],
                           max_samples: int,
                           max_shots: int,
                           progress_callback: callable):
@@ -388,24 +389,25 @@ class NoisySamplingSimulator:
             if source_defined:
                 source, bs_input = svd
                 n = bs_input.n
-                pre_physical_perf, zpp = source.cache_prob_table(n, self.min_detected_photons_filter)
+                sampler = source.create_sampler(bs_input, self.min_detected_photons_filter)
+                pre_physical_perf = sampler.physical_perf
+                zpp = sampler.zpp
                 prepare_samples, max_shots = self._compute_samples_with_perf(prepare_samples, pre_physical_perf, zpp,
                                                                              max_shots)
 
-                sample_generator = lambda i: source.generate_samples(i, bs_input, self.min_detected_photons_filter)
-
+                sample_generator = sampler.generate_separated_samples
                 first_batch = provider.estimate_weights_from_source(sample_generator, prepare_samples)
 
             else:
                 n = svd.n_max
                 zpp, max_p = self._check_input_svd(svd)
-                trimmed_bsd, pre_physical_perf = self._preprocess_input_state(svd, max_p, prepare_samples)
+                trimmed_svd, pre_physical_perf = self._preprocess_input_state(svd, max_p, prepare_samples)
                 prepare_samples, max_shots = self._compute_samples_with_perf(prepare_samples, pre_physical_perf, zpp,
                                                                              max_shots)
 
-                sample_generator = lambda i: trimmed_bsd.sample(i, non_null=False)
+                sample_generator = lambda i: [state.separate_state() if isinstance(state, NoisyFockState) else [state] for state_v in trimmed_svd.sample(i, non_null=False) for state in state_v.keys()]
 
-                provider.estimate_weights_from_distribution(trimmed_bsd, prepare_samples)
+                provider.estimate_weights_from_distribution(trimmed_svd, prepare_samples)
 
             # Prepare pools of pre-computed samples
             provider.prepare(progress_callback)
@@ -421,7 +423,7 @@ class NoisySamplingSimulator:
         return prepare_samples
 
     def samples(self,
-                svd: SVDistribution | tuple[Source, BasicState],
+                svd: SVDistribution | tuple[Source, FockState],
                 max_samples: int,
                 max_shots: int = None,
                 progress_callback: callable = None) -> dict:
@@ -449,7 +451,7 @@ class NoisySamplingSimulator:
         one_input = len(svd) == 1 or (source_defined and svd[0].is_perfect())
         if not self._heralds and not self._postselect.has_condition and one_input and det_type == DetectionType.PNR:
             only_input = svd[1] if source_defined else next(iter(svd))[0]
-            if not only_input.has_annotations:
+            if isinstance(only_input, FockState):
                 get_logger().debug("Perfect sampling: use the fast '_perfect_samples_no_selection' call",
                                    channel.general)
                 # Choose a consistent samples limit

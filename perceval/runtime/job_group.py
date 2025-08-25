@@ -419,12 +419,12 @@ class JobGroup:
 
     def rerun_failed_sequential(self, delay: float, replace_failed_jobs=True) -> None:
         """
-        Reruns Failed jobs in the group on the Cloud in a sequential manner with a
-        user-specified delay between the completion of one job and the start of the next.
+        Reruns Failed jobs in the group on the Cloud in a sequential manner with a user-specified delay between the
+        completion of one job and the start of the next.
 
         :param delay: number of seconds to wait between re-launching jobs on cloud
-        :param replace_failed_jobs: Indicates whether a new job created from a rerun should
-        replace the previously failed job (defaults to True).
+        :param replace_failed_jobs: Indicates whether a new job created from a rerun should replace the previously
+                                    failed job (defaults to True).
         """
         self._launch_jobs(rerun=True,
                           concurrent_job_count = 1,
@@ -454,8 +454,8 @@ class JobGroup:
         is raised, terminating the launch process. Any remaining jobs in the group will not be sent.
         RemoteConfig.set_cloud_maximal_job_count() should be set in accordance with the user pricing plan.
 
-        :param replace_failed_jobs: Indicates whether a new job created from a rerun should
-        replace the previously failed job (defaults to True).
+        :param replace_failed_jobs: Indicates whether a new job created from a rerun should replace the previously
+                                    failed job (defaults to True).
         """
         self._launch_jobs(concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count(),
                           delay=0,
