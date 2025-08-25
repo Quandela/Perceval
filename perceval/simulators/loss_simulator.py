@@ -35,6 +35,8 @@ from perceval.utils import FockState, BSDistribution, StateVector
 
 class LossSimulator(ASimulatorDecorator):
 
+    _can_transmit_selection = True
+
     def _prepare_input(self, input_state):
         if isinstance(input_state, tuple):
             return input_state[0], input_state[1] * FockState([0] * (self._expanded_m - self._original_m))
@@ -65,6 +67,9 @@ class LossSimulator(ASimulatorDecorator):
             reduced_out_state = out_state[0:self._original_m]
             output += probampli*reduced_out_state
         return output
+
+    def _transmit_heralds_postselect(self):
+        self._simulator.set_selection(postselect=self._postselect, heralds=self._heralds)
 
     def _simulate_losses_with_beam_splitters(self, components: list) -> ACircuit:
         output = []
