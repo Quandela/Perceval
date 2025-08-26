@@ -8,3 +8,4 @@ Beginner tutorials
    notebooks/Circuit_Tutorial
    backends
    notebooks/Computation_Tutorial
+   notebooks/Remote_Computation_Tutorial

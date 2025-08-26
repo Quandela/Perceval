@@ -57,7 +57,7 @@ def samples_to_sample_count(sample_list: BSSamples) -> BSCount:
     :param sample_list: the list to convert
     :return: the state count
     """
-    return Counter(sample_list)
+    return BSCount(Counter(sample_list))
 
 
 def samples_to_probs(sample_list: BSSamples) -> BSDistribution:
