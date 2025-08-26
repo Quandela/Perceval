@@ -22,34 +22,45 @@ Perceval has been developed as a complete toolkit for physicists, computer scien
 and practitioners of quantum computing. It can be used to reproduce published experimental works or to experiment
 directly with a new generation of quantum algorithms.
 
-If you are using Perceval for academic work, please cite the `Perceval white paper <https://arxiv.org/abs/2204.00602>`_
-as:
+.. |pcvl_paper_link| raw:: html
+
+    <a href="https://arxiv.org/abs/2204.00602" target="_blank">Perceval white paper</a>
+
+If you are using Perceval for academic work, please cite the |pcvl_paper_link| as:
 
 .. code:: latex
 
     @article{heurtel2023perceval,
-    doi = {10.22331/q-2023-02-21-931},
-    url = {https://doi.org/10.22331/q-2023-02-21-931},
-    title = {Perceval: {A} {S}oftware {P}latform for {D}iscrete {V}ariable {P}hotonic {Q}uantum {C}omputing},
-    author = {Heurtel, Nicolas and Fyrillas, Andreas and Gliniasty, Gr{\'{e}}goire de and Le Bihan, Rapha{\"{e}}l and Malherbe, S{\'{e}}bastien and Pailhas, Marceau and Bertasi, Eric and Bourdoncle, Boris and Emeriau, Pierre-Emmanuel and Mezher, Rawad and Music, Luka and Belabas, Nadia and Valiron, Benoît and Senellart, Pascale and Mansfield, Shane and Senellart, Jean},
-    journal = {{Quantum}},
-    issn = {2521-327X},
-    publisher = {{Verein zur F{\"{o}}rderung des Open Access Publizierens in den Quantenwissenschaften}},
-    volume = {7},
-    pages = {931},
-    month = feb,
-    year = {2023}
+        doi = {10.22331/q-2023-02-21-931},
+        url = {https://doi.org/10.22331/q-2023-02-21-931},
+        title = {Perceval: {A} {S}oftware {P}latform for {D}iscrete {V}ariable {P}hotonic {Q}uantum {C}omputing},
+        author = {Heurtel, Nicolas and Fyrillas, Andreas and Gliniasty, Gr{\'{e}}goire de and Le Bihan, Rapha{\"{e}}l and Malherbe, S{\'{e}}bastien and Pailhas, Marceau and Bertasi, Eric and Bourdoncle, Boris and Emeriau, Pierre-Emmanuel and Mezher, Rawad and Music, Luka and Belabas, Nadia and Valiron, Benoît and Senellart, Pascale and Mansfield, Shane and Senellart, Jean},
+        journal = {{Quantum}},
+        issn = {2521-327X},
+        publisher = {{Verein zur F{\"{o}}rderung des Open Access Publizierens in den Quantenwissenschaften}},
+        volume = {7},
+        pages = {931},
+        month = feb,
+        year = {2023}
     }
 
 Related Projects
 ================
 
+.. |interop_link| raw:: html
+
+    <a href="https://perceval.quandela.net/interopdocs/" target="_blank">perceval-interop</a>
+
+.. |merlinquantum_link| raw:: html
+
+    <a href="https://merlinquantum.ai/" target="_blank">merlinquantum</a>
+
 Perceval is used in several higher-level projects (non-exhaustive list):
 
 * **perceval-interop**: Interoperability tools for conversion between photonic and gate based Quantum computing. See
-  the project here: `perceval-interop <https://perceval.quandela.net/interopdocs/>`_.
+  the project here: |interop_link|.
 * **MerLin**: A framework to bring quantum computing to AI practitioners, requiring no prior quantum expertise.
-  Learn more here: `merlinquantum <https://merlinquantum.ai/>`_.
+  Learn more here: |merlinquantum_link|.
 
 
 .. toctree::
