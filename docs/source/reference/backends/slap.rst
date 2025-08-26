@@ -2,9 +2,8 @@ SLAPBackend
 ^^^^^^^^^^^
 
 The :code:`SLAPBackend` (for Simulator of LAttice of Polynomials) is a strong simulation backend that,
-like the :code:`SLOSBackend`, is able to compute efficiently all the output probabilities at once.
-
-It does that by computing partial derivatives of a polynomial along a graph.
+like the :code:`SLOSBackend`, is able to compute efficiently all the output probabilities at once. It achieves its goal
+by computing partial derivatives of a polynomial along a graph. The algorithm is introduced in :cite:t:`goubault2025`.
 
 The main advantage compared to SLOS is that this graph is not represented in memory,
 so this backend is more memory efficient, with the downside of being slower when memory is not a limitation

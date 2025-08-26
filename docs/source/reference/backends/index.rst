@@ -24,9 +24,9 @@ A comparison of the backends is available at :ref:`Simulation Back-ends`.
 .. toctree::
    :maxdepth: 2
 
-   naive
-   naive_approx
    slos
    slap
-   mps
    clifford2017
+   naive
+   naive_approx
+   mps
