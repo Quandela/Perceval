@@ -31,7 +31,7 @@ from copy import copy
 from .simulator_interface import ASimulatorDecorator
 from ._simulator_utils import _retrieve_mode_count, _unitary_components_to_circuit
 from perceval.components import ACircuit, PERM, TD, IDetector
-from perceval.utils import FockState, BSDistribution, StateVector, global_params
+from perceval.utils import FockState, BSDistribution, StateVector, global_params, PostSelect
 
 from enum import Enum
 
@@ -129,10 +129,10 @@ class DelaySimulator(ASimulatorDecorator):
         return output
 
     def _transmit_heralds_postselect(self):
-        heralds = self._heralds
+        heralds = {}
         if self._heralds:
             heralds = {m + self._mode_range()[0]: v for m, v in self._heralds.items()}
-        postselect = self._postselect
+        postselect = PostSelect()
         if self._postselect.has_condition:
             postselect = copy(self._postselect)
             postselect.shift_modes(self._mode_range()[0])
