@@ -182,10 +182,10 @@ class ASimulatorDecorator(ISimulator, ABC):
         if self.min_detected_photons_filter:
             results, physical_perf = filter_distribution_photon_count(results, self.min_detected_photons_filter)
         logical_perf = 1
-        if (self._compute_physical_logical_perf or not self._can_transmit_selection) and (self._postselect is not None or self._heralds is not None):
+        if (self._compute_physical_logical_perf or not self._can_transmit_selection) and (self._postselect.has_condition or self._heralds):
             # Only at last layer that can't transfer this responsibility to the next layer
             results, logical_perf = post_select_distribution(results, self._postselect, self._heralds, self._keep_heralds)
-        elif self._heralds is not None and not self._keep_heralds:
+        elif self._heralds and not self._keep_heralds:
             new_res = BSDistribution()
             for bs, p in results.items():
                 new_res[bs.remove_modes(list(self._heralds))] += p
@@ -194,7 +194,7 @@ class ASimulatorDecorator(ISimulator, ABC):
 
     def _postprocess_sv(self, sv: StateVector) -> StateVector:
         sv = self._postprocess_sv_impl(sv)
-        if self._postselect is not None or self._heralds is not None:
+        if self._postselect.has_condition or self._heralds:
             sv, _ = post_select_statevector(sv, self._postselect, self._heralds, self._keep_heralds)
         return sv
 
@@ -206,6 +206,8 @@ class ASimulatorDecorator(ISimulator, ABC):
         self._simulator.set_circuit(self._prepare_circuit(circuit, m))
 
     def probs(self, input_state) -> BSDistribution:
+        if self._can_transmit_selection:
+            self._transmit_heralds_postselect()
         results = self._simulator.probs(self._prepare_input(input_state))
         results = self._postprocess_bsd(results)[0]
         return results

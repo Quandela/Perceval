@@ -129,11 +129,11 @@ class DelaySimulator(ASimulatorDecorator):
         return output
 
     def _transmit_heralds_postselect(self):
-        heralds = None
-        if self._heralds is not None:
+        heralds = self._heralds
+        if self._heralds:
             heralds = {m + self._mode_range()[0]: v for m, v in self._heralds.items()}
-        postselect = None
-        if self._postselect is not None:
+        postselect = self._postselect
+        if self._postselect.has_condition:
             postselect = copy(self._postselect)
             postselect.shift_modes(self._mode_range()[0])
         self._simulator.set_selection(postselect=postselect, heralds=heralds)
