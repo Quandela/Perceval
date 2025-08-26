@@ -123,13 +123,13 @@ class CircuitOptimizer:
         if empty_mode_list is None:
             empty_mode_list = []
 
-        if first_guess is None:
-            first_guess = []
-
         optimizer = xq.CircuitOptimizer(target, serialize_binary(template), empty_mode_list)
         optimizer.set_max_eval_per_trial(self._max_eval_per_trial)
         optimizer.set_threshold(self._threshold)
-        optimized_circuit = deserialize_circuit(optimizer.optimize(self._trials, first_guess=first_guess))
+        if first_guess is None:
+            optimized_circuit = deserialize_circuit(optimizer.optimize(self._trials))
+        else:
+            optimized_circuit = deserialize_circuit(optimizer.optimize(first_guess))
         return optimized_circuit, optimizer.fidelity
 
     def optimize_rectangle(self,
