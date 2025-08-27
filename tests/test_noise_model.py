@@ -35,7 +35,6 @@ BRIGHTNESS_KEY = "brightness"
 BRIGHTNESS_DEF = 1
 PHASE_IMPRECISION_KEY = "phase_imprecision"
 G2_KEY = "g2"
-G2_DIST_KEY = "g2_distinguishable"
 
 
 def test_noise_model_default():
@@ -76,13 +75,7 @@ def test_noise_model_errors():
 
     nm = NoiseModel()
     with pytest.raises(ValueError):
-        nm.set_value(BRIGHTNESS_KEY, 1.3)
-
-    with pytest.raises(ValueError):
         nm.brightness = 1.3
-
-    with pytest.raises(TypeError):
-        nm.set_value(G2_DIST_KEY, 1.3)
 
     with pytest.raises(TypeError):
         nm.g2_distinguishable = 1.3
@@ -92,7 +85,7 @@ def test_noise_model_eq():
     nm1 = NoiseModel(brightness=0.15, indistinguishability=0.89, g2=0.01, g2_distinguishable=False)
     nm2 = NoiseModel(brightness=0.15, indistinguishability=0.89, g2=0.01, g2_distinguishable=False)
     assert nm1 == nm2
-    nm2.set_value(BRIGHTNESS_KEY, 0.2)
+    nm2.brightness = 0.2
     assert nm1 != nm2
     nm2 = NoiseModel(brightness=0.15, indistinguishability=0.89, g2=0.01)
     assert nm1 != nm2

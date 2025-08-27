@@ -105,6 +105,18 @@ The following methods and classes have been removed or definitely modified as th
   multiplication operators and specific methods - see :code:`BSDistribution.list_tensor_product`, for instance)
 - :code:`JobGroup.list_existing()` has been renamed into :code:`JobGroup.list_locally_saved()`
 
+NoiseModel
+^^^^^^^^^^
+
+The way of :code:`NoiseModel` to handle its attributes has changed to be more pythonic.
+Now, your IDE should be able to tell that the attributes exist in the class,
+and the attributes can be changed using a syntax like :code:`noise_model.g2 = 0.1`.
+
+This change is accompanied by the removal of some methods:
+- The :code:`__getitem__` has been removed since it was giving a class that is not accessible anymore
+- The :code:`set_value` method has been removed, and can be replaced either by spelling directly the attribute (:code:`noise_model.g2 = 0.1`)
+  or by using the python method :code:`setattr(noise_model, "g2", 0.1)`.
+
 
 Older changes
 -------------

@@ -80,15 +80,6 @@ class NoiseModel:
     def __deepcopy__(self, memo):
         return NoiseModel(**self.__dict__())
 
-    def __getitem__(self, param_name: str) -> bool | float:   # TODO: remove this ?
-        try:
-            return getattr(self, param_name)
-        except AttributeError:
-            raise KeyError(f"No parameter named '{param_name}'")
-
-    def set_value(self, param_name: str, value):  # TODO: remove this ?
-        self.__setattr__(param_name, value)
-
     def __str__(self) -> str:
         return str(self.__dict__())
 
