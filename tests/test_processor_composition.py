@@ -182,7 +182,7 @@ def test_processor_feed_forward_multiple_layers():
     ffc2 = FFConfigurator(2, 1, PS(phi=P("phi")), {"phi": 1.57}, name="D2")
     p.add(0, ffc2)
 
-    expected = (Unitary, Barrier, Barrier, Barrier, Detector, FFConfigurator, Barrier, Barrier, Detector, Detector,
+    expected = (Unitary, Barrier, Barrier, Detector, Barrier, FFConfigurator, Barrier, Detector, Detector, Barrier,
                 FFConfigurator)
     for (r, c), expected_type in zip(p.components, expected):
         assert isinstance(c, expected_type)

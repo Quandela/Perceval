@@ -337,12 +337,12 @@ class Experiment:
         if modes_add_detectors and modes_add_detectors[0] > 0:  # Barrier above detectors
             ports = tuple(range(0, modes_add_detectors[0]))
             self._components.append((ports, Barrier(len(ports), visible=True)))
-        if modes_add_detectors and modes_add_detectors[-1] < self.m - 1:  # Barrier below detectors
-            ports = tuple(range(modes_add_detectors[-1] + 1, self.m))
-            self._components.append((ports, Barrier(len(ports), visible=True)))
         for m in modes_add_detectors:
             self.detectors_injected.append(m)
             self._components.append(((m,), self._detectors[m]))
+        if modes_add_detectors and modes_add_detectors[-1] < self.m - 1:  # Barrier below detectors
+            ports = tuple(range(modes_add_detectors[-1] + 1, self.m))
+            self._components.append((ports, Barrier(len(ports), visible=True)))
         self._components.append((modes, component))
         self._has_feedforward = True
         self._is_unitary = False
