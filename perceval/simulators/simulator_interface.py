@@ -141,6 +141,9 @@ class ISimulator(ABC):
 
 
 class ASimulatorDecorator(ISimulator, ABC):
+
+    _can_transmit_selection = False
+
     def __init__(self, simulator: ISimulator):
         super().__init__()
         self._simulator: ISimulator = simulator
@@ -165,6 +168,9 @@ class ASimulatorDecorator(ISimulator, ABC):
     def _prepare_detectors_impl(self, detectors: list[IDetector]) -> list[IDetector] | None:
         pass
 
+    def _transmit_heralds_postselect(self):
+        pass
+
     def _prepare_detectors(self, detectors: list[IDetector] = None) -> list[IDetector] | None:
         if detectors is None:
             return None
@@ -176,29 +182,39 @@ class ASimulatorDecorator(ISimulator, ABC):
         if self.min_detected_photons_filter:
             results, physical_perf = filter_distribution_photon_count(results, self.min_detected_photons_filter)
         logical_perf = 1
-        if self._postselect is not None or self._heralds is not None:
-            # Only at last layer since postselect and heralds are not transmitted
+        if (self._compute_physical_logical_perf or not self._can_transmit_selection) and (self._postselect.has_condition or self._heralds):
+            # Only at last layer that can't transfer this responsibility to the next layer
             results, logical_perf = post_select_distribution(results, self._postselect, self._heralds, self._keep_heralds)
+        elif self._heralds and not self._keep_heralds:
+            new_res = BSDistribution()
+            for bs, p in results.items():
+                new_res[bs.remove_modes(list(self._heralds))] += p
+            results = new_res
         return results, logical_perf, physical_perf
 
     def _postprocess_sv(self, sv: StateVector) -> StateVector:
         sv = self._postprocess_sv_impl(sv)
-        if self._postselect is not None or self._heralds is not None:
+        if self._postselect.has_condition or self._heralds:
             sv, _ = post_select_statevector(sv, self._postselect, self._heralds, self._keep_heralds)
         return sv
 
     def compute_physical_logical_perf(self, value: bool):
+        super().compute_physical_logical_perf(value)
         self._simulator.compute_physical_logical_perf(value)
 
     def set_circuit(self, circuit, m=None):
         self._simulator.set_circuit(self._prepare_circuit(circuit, m))
 
     def probs(self, input_state) -> BSDistribution:
+        if self._can_transmit_selection:
+            self._transmit_heralds_postselect()
         results = self._simulator.probs(self._prepare_input(input_state))
         results = self._postprocess_bsd(results)[0]
         return results
 
     def probs_svd(self, svd: SVDistribution, detectors=None, progress_callback: callable = None) -> dict:
+        if not self._simulator._compute_physical_logical_perf and self._can_transmit_selection:
+            self._transmit_heralds_postselect()
         probs = self._simulator.probs_svd(self._prepare_input(svd),
                                           detectors=self._prepare_detectors(detectors),
                                           progress_callback=progress_callback)

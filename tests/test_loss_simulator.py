@@ -28,7 +28,8 @@
 # SOFTWARE.
 
 import pytest
-from perceval import Processor, Unitary, LC, Matrix, BSDistribution, BasicState, NoiseModel, Detector, SVDistribution
+from perceval import Processor, Unitary, LC, Matrix, BSDistribution, BasicState, NoiseModel, Detector, SVDistribution, \
+    PostSelect, post_select_distribution
 from perceval.algorithm import Sampler
 from perceval.simulators.loss_simulator import LossSimulator
 from perceval.simulators.simulator import Simulator
@@ -121,3 +122,51 @@ def test_lc_perf():
 
     assert res["logical_perf"] == pytest.approx(1), "Wrong logical perf with LC and heralds"
     assert res["physical_perf"] == pytest.approx(1 - loss), "Wrong physical_perf with LC and heralds"
+
+
+def test_logical_selection():
+    backend = SLOSBackend()
+    simulator = LossSimulator(Simulator(backend))
+
+    input_state = BasicState([1, 0])
+
+    input_circ = [((0, 1), Unitary(U)),
+                    ((0,), LC(loss)),
+                    ((1,), LC(loss / 2))]  # Break symmetry
+    simulator.set_circuit(input_circ)
+    non_filtered = simulator.probs(input_state)
+
+    heralds = {}
+    postselect = PostSelect('[1]>0')
+    simulator.set_selection(postselect=postselect, heralds=heralds)
+
+    res = simulator.probs_svd(SVDistribution(input_state))
+    filtered, perf = res["results"], res["global_perf"]
+    theo_filtered, theo_perf = post_select_distribution(non_filtered, postselect, heralds)
+
+    assert_bsd_close(theo_filtered, filtered)
+    assert theo_perf == pytest.approx(perf)
+
+    heralds = {1: 0}
+    postselect = PostSelect()
+    simulator.set_selection(postselect=postselect, heralds=heralds)
+    simulator.keep_heralds(False)
+
+    res = simulator.probs_svd(SVDistribution(input_state))
+    filtered, perf = res["results"], res["global_perf"]
+    theo_filtered, theo_perf = post_select_distribution(non_filtered, postselect, heralds, False)
+
+    assert_bsd_close(theo_filtered, filtered)
+    assert theo_perf == pytest.approx(perf)
+
+    heralds = {1: 0}
+    postselect = PostSelect("[0]>0")
+    simulator.set_selection(postselect=postselect, heralds=heralds)
+    simulator.keep_heralds(True)
+
+    res = simulator.probs_svd(SVDistribution(input_state))
+    filtered, perf = res["results"], res["global_perf"]
+    theo_filtered, theo_perf = post_select_distribution(non_filtered, postselect, heralds)
+
+    assert_bsd_close(theo_filtered, filtered)
+    assert theo_perf == pytest.approx(perf)

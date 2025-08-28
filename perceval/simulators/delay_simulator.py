@@ -26,11 +26,12 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from copy import copy
 
 from .simulator_interface import ASimulatorDecorator
 from ._simulator_utils import _retrieve_mode_count, _unitary_components_to_circuit
 from perceval.components import ACircuit, PERM, TD, IDetector
-from perceval.utils import FockState, BSDistribution, StateVector, global_params
+from perceval.utils import FockState, BSDistribution, StateVector, global_params, PostSelect
 
 from enum import Enum
 
@@ -75,6 +76,9 @@ def _compute_depth(component_list: list, mode_count: int) -> int:
 
 
 class DelaySimulator(ASimulatorDecorator):
+
+    _can_transmit_selection = True
+
     def __init__(self, simulator):
         super().__init__(simulator)
         self._original_m: int = 0
@@ -123,6 +127,16 @@ class DelaySimulator(ASimulatorDecorator):
                 reduced_out_state = out_state[m[0]:m[1]]
                 output += probampli * reduced_out_state
         return output
+
+    def _transmit_heralds_postselect(self):
+        heralds = {}
+        if self._heralds:
+            heralds = {m + self._mode_range()[0]: v for m, v in self._heralds.items()}
+        postselect = PostSelect()
+        if self._postselect.has_condition:
+            postselect = copy(self._postselect)
+            postselect.shift_modes(self._mode_range()[0])
+        self._simulator.set_selection(postselect=postselect, heralds=heralds)
 
     def _expand_td(self, component_list: list):
         mode_count = self._original_m
