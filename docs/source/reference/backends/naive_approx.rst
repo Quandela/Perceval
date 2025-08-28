@@ -4,7 +4,7 @@ NaiveApproxBackend
 Like the :ref:`NaiveBackend`, the :code:`NaiveApproxBackend` is a strong simulation backend that can compute a
 single output probability amplitude at a time, by computing the permanent of a :math:`n \times n` matrix.
 However, instead of computing exactly the permanent, the :code:`NaiveApproxBackend` uses the Gurvit estimate algorithm
-to approximate it with a 99% confidence interval.
+to approximate it with a 99% confidence interval (see :cite:t:`gurvits2002`).
 
 It is very efficient to compute very precise output states, but not to compute the whole distribution, and it can be used
 with more modes and photons than the :ref:`NaiveBackend` at the cost of losing precision on the result.

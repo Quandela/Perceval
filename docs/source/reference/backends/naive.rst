@@ -2,7 +2,8 @@ NaiveBackend
 ^^^^^^^^^^^^
 
 The :code:`NaiveBackend` is a strong simulation backend that can compute a single output probability amplitude at a time,
-by computing the permanent of a :math:`n \times n` matrix, with a time complexity of :math:`\mathrm{O}(n2^n)`.
+by computing the permanent of a :math:`n \times n` matrix, with a time complexity of :math:`\mathrm{O}(n2^n)` (see
+:cite:t:`ryser1963combinatorial` and :cite:t:`glynn2010permanent`).
 
 As such, it is very efficient to compute very precise output states, but not to compute the whole distribution.
 
