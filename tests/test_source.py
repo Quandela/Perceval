@@ -168,7 +168,7 @@ def test_source_samples_with_filter(brightness, g2, hom, losses, multiphoton_mod
     assert all(bs.n >= min_detected_photons for bs in samples_from_source)
 
     counter_samples = Counter(samples_from_source)
-    total = counter_samples.total()
+    total = sum(counter_samples.values())
     dist_samples = SVDistribution()
     for k, v in counter_samples.items():
         dist_samples.add(StateVector(k), v / total)
