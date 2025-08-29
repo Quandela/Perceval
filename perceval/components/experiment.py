@@ -809,10 +809,6 @@ class Experiment:
         self._input_state = FockState(input_list)
         self._input_changed()
 
-    @dispatch(NoisyFockState)
-    def with_input(self, input_state: NoisyFockState) -> None:
-        self.with_input(SVDistribution(input_state))
-
     @dispatch(AnnotatedFockState)
     def with_input(self, input_state: AnnotatedFockState) -> None:
         if input_state.has_polarization:
@@ -821,10 +817,10 @@ class Experiment:
         else:
             raise TypeError("Local simulations only support AnnotatedFockState in case of a polarized input state")
 
-    @dispatch(StateVector)
-    def with_input(self, sv: StateVector):
+    @dispatch((StateVector, NoisyFockState))
+    def with_input(self, sv: StateVector | NoisyFockState):
         r"""
-        Setting directly state vector as input of a experiment, use SVDistribution input
+        Setting directly state vector or NoisyFockState as input of a experiment, use SVDistribution input
 
         :param sv: the state vector
         """
