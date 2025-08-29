@@ -34,10 +34,9 @@ from dataclasses import dataclass
 from typing import Callable
 
 from multipledispatch import dispatch
-from numpy import inf
 
 from perceval.utils import FockState, AnnotatedFockState, Parameter, PostSelect, LogicalState, NoiseModel, ModeType, StateVector, \
-    SVDistribution
+    SVDistribution, NoisyFockState
 from perceval.utils.logging import get_logger, channel
 from perceval.utils.algorithms.simplification import perm_compose, simplify
 from ._mode_connector import ModeConnector, UnavailableModeException
@@ -810,6 +809,10 @@ class Experiment:
         self._input_state = FockState(input_list)
         self._input_changed()
 
+    @dispatch(NoisyFockState)
+    def with_input(self, input_state: NoisyFockState) -> None:
+        self.with_input(SVDistribution(input_state))
+
     @dispatch(AnnotatedFockState)
     def with_input(self, input_state: AnnotatedFockState) -> None:
         if input_state.has_polarization:
@@ -836,13 +839,7 @@ class Experiment:
         Every state vector size has to be equal to `self.circuit_size`
         """
         assert self.m is not None, "A circuit has to be set before the input distribution"
-        expected_photons = inf
-        for sv in svd:
-            for state in sv.keys():
-                expected_photons = min(expected_photons, state.n)
-                if state.m != self.circuit_size:
-                    raise ValueError(
-                        f'Input distribution contains states with a bad size ({state.m}), expected {self.circuit_size}')
+        assert svd.m == self.circuit_size, f'Input distribution contains states with a bad size ({svd.m}), expected {self.circuit_size}'
         self._input_state = svd
         self._input_changed()
 

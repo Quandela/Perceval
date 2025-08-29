@@ -32,7 +32,8 @@ import copy
 from abc import ABC, abstractmethod
 from enum import Enum
 
-from perceval.utils import BasicState, FockState, AnnotatedFockState, Parameter, PostSelect, LogicalState, NoiseModel, SVDistribution, StateVector
+from perceval.utils import (BasicState, FockState, AnnotatedFockState, Parameter, PostSelect, LogicalState, NoiseModel,
+                            SVDistribution, StateVector, NoisyFockState)
 from perceval.utils.logging import get_logger, channel
 from .abstract_component import AComponent
 from .detector import DetectionType
@@ -346,7 +347,7 @@ class AProcessor(ABC):
                 raise ValueError("The value of min_detected_photons is not set."
                                  " Use the method processor.min_detected_photons_filter(value).")
 
-    def with_input(self, input_state: FockState | AnnotatedFockState | LogicalState | StateVector | SVDistribution):
+    def with_input(self, input_state: FockState | NoisyFockState | AnnotatedFockState | LogicalState | StateVector | SVDistribution):
         """
         Simulates plugging the photonic source on certain modes and turning it on.
         Computes the input probability distribution
