@@ -43,6 +43,7 @@ class ISimulator(ABC):
         self._postselect: PostSelect = PostSelect()
         self._heralds: dict = {}
         self._min_detected_photons_filter: int = 0
+        self._compute_physical_logical_perf = False
 
     def set_silent(self, silent: bool):
         self._silent = silent
@@ -84,6 +85,14 @@ class ISimulator(ABC):
                       min_detected_photons_filter: int = None,
                       postselect: PostSelect = None,
                       heralds: dict[int, int] = None):
+        """
+        Set the min_detected_photons_filter, postselect, and heralds, if defined.
+
+        :param min_detected_photons_filter: The minimum photon count.
+        :param postselect: The postselect to apply at the end of the computation.
+        :param heralds: The heralds to apply at the end of the computation. Only the output heralds are considered here.
+         dictionary of the form {mode: expected}
+        """
         if min_detected_photons_filter is not None:
             self.set_min_detected_photons_filter(min_detected_photons_filter)
         if postselect is not None:
@@ -107,8 +116,34 @@ class ISimulator(ABC):
         """
         self._keep_heralds = value
 
+    def compute_physical_logical_perf(self, value: bool):
+        """
+        Tells the simulator to compute or not the physical and logical performances when possible
+
+        :param value: True to compute the physical and logical performances, False otherwise.
+        """
+        self._compute_physical_logical_perf = value
+
+    def format_results(self, results: dict(), physical_perf: float, logical_perf: float):
+        """
+            Format the simulation results by computing the global performance, and returning the physical and
+            logical performances only if needed.
+
+            :param results: the simulation results
+            :param physical_perf: the physical performance
+            :param logical_perf: the logical performance
+        """
+        result = {'results': results, 'global_perf': physical_perf * logical_perf}
+        if self._compute_physical_logical_perf:
+            result['physical_perf'] = physical_perf
+            result['logical_perf'] = logical_perf
+        return result
+
 
 class ASimulatorDecorator(ISimulator, ABC):
+
+    _can_transmit_selection = False
+
     def __init__(self, simulator: ISimulator):
         super().__init__()
         self._simulator: ISimulator = simulator
@@ -133,6 +168,9 @@ class ASimulatorDecorator(ISimulator, ABC):
     def _prepare_detectors_impl(self, detectors: list[IDetector]) -> list[IDetector] | None:
         pass
 
+    def _transmit_heralds_postselect(self):
+        pass
+
     def _prepare_detectors(self, detectors: list[IDetector] = None) -> list[IDetector] | None:
         if detectors is None:
             return None
@@ -144,33 +182,48 @@ class ASimulatorDecorator(ISimulator, ABC):
         if self.min_detected_photons_filter:
             results, physical_perf = filter_distribution_photon_count(results, self.min_detected_photons_filter)
         logical_perf = 1
-        if self._postselect is not None or self._heralds is not None:
-            # Only at last layer since postselect and heralds are not transmitted
+        if (self._compute_physical_logical_perf or not self._can_transmit_selection) and (self._postselect.has_condition or self._heralds):
+            # Only at last layer that can't transfer this responsibility to the next layer
             results, logical_perf = post_select_distribution(results, self._postselect, self._heralds, self._keep_heralds)
+        elif self._heralds and not self._keep_heralds:
+            new_res = BSDistribution()
+            for bs, p in results.items():
+                new_res[bs.remove_modes(list(self._heralds))] += p
+            results = new_res
         return results, logical_perf, physical_perf
 
     def _postprocess_sv(self, sv: StateVector) -> StateVector:
         sv = self._postprocess_sv_impl(sv)
-        if self._postselect is not None or self._heralds is not None:
+        if self._postselect.has_condition or self._heralds:
             sv, _ = post_select_statevector(sv, self._postselect, self._heralds, self._keep_heralds)
         return sv
+
+    def compute_physical_logical_perf(self, value: bool):
+        super().compute_physical_logical_perf(value)
+        self._simulator.compute_physical_logical_perf(value)
 
     def set_circuit(self, circuit, m=None):
         self._simulator.set_circuit(self._prepare_circuit(circuit, m))
 
     def probs(self, input_state) -> BSDistribution:
+        if self._can_transmit_selection:
+            self._transmit_heralds_postselect()
         results = self._simulator.probs(self._prepare_input(input_state))
         results = self._postprocess_bsd(results)[0]
         return results
 
     def probs_svd(self, svd: SVDistribution, detectors=None, progress_callback: callable = None) -> dict:
+        if not self._simulator._compute_physical_logical_perf and self._can_transmit_selection:
+            self._transmit_heralds_postselect()
         probs = self._simulator.probs_svd(self._prepare_input(svd),
                                           detectors=self._prepare_detectors(detectors),
                                           progress_callback=progress_callback)
         probs['results'], logical_perf_coeff, physical_perf_coeff = self._postprocess_bsd(probs['results'])
-        probs['physical_perf'] *= physical_perf_coeff
-        probs['logical_perf'] *= logical_perf_coeff
-        return probs
+        if self._simulator._compute_physical_logical_perf:
+            return self._simulator.format_results(probs['results'],
+                                                probs['physical_perf'] * physical_perf_coeff,
+                                                probs['logical_perf'] * logical_perf_coeff)
+        return {'results': probs['results'], 'global_perf': probs['global_perf'] * physical_perf_coeff * logical_perf_coeff}
 
     def evolve(self, input_state) -> StateVector:
         results = self._simulator.evolve(self._prepare_input(input_state))

@@ -112,8 +112,8 @@ def test_ccz_and_toffoli_phases_and_modulus():
     state_dict = {get_basic_state_from_ports(toffoli.experiment._out_ports, state): str(
         state) for state in generate_all_logical_states(3)}
     a_toffoli = Analyzer(toffoli, input_states=state_dict)
-    a_toffoli.compute(expected={"000": "000", "001": "001", "010": "010", "011": "011",
-                                "100": "100", "101": "101", "110": "111", "111": "110"})
+    a_toffoli.compute(expected={"|000>": "|000>", "|001>": "|001>", "|010>": "|010>", "|011>": "|011>",
+                                "|100>": "|100>", "|101>": "|101>", "|110>": "|111>", "|111>": "|110>"})
     assert a_toffoli.fidelity == 1
     # Checking that Toffoli performance is the modulus**2 of the CCZ gate (since Toffoli comes from CCZ gate)
     assert a_toffoli.performance == pytest.approx(modulus_ccz**2)

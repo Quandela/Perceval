@@ -32,10 +32,10 @@ from math import factorial, comb
 from collections import defaultdict
 
 from ._abstract_backends import AStrongSimulationBackend
-from perceval.utils import BasicState
+from perceval.utils import FockState
 from perceval.components import ACircuit
 from perceval.components.unitary_components import PERM, Barrier
-from perceval.components.comp_utils import decompose_perms
+from perceval.components._decompose_perms import decompose_perms
 
 
 class MPSBackend(AStrongSimulationBackend):
@@ -46,6 +46,8 @@ class MPSBackend(AStrongSimulationBackend):
     Approximate the probability amplitudes with a cutoff -> bond Dimension in an MPS.
     - For now only supports components for up to 2 modes
     (Phase shifters and Beam Splitters already implemented)
+
+    :param cutoff: The bond dimension. Higher values mean better precision but slower computation. Default input_state.n + 1
     """
 
     def __init__(self, cutoff : int = None):
@@ -90,11 +92,11 @@ class MPSBackend(AStrongSimulationBackend):
             # decompose any n(>2) mode perm into 2-mode perms in the circuit
             self._circuit = decompose_perms(C)
 
-    def set_input_state(self, input_state: BasicState):
+    def set_input_state(self, input_state: FockState):
         super().set_input_state(input_state)
         self._compile()
 
-    def prob_amplitude(self, output_state: BasicState) -> complex:
+    def prob_amplitude(self, output_state: FockState) -> complex:
         """
         Computes the probability for a given input output state from a circuit with m modes and
         n photons computed using MPS

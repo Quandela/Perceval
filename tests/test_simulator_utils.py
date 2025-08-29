@@ -26,9 +26,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import pytest
 from _test_utils import assert_sv_close
-from perceval.utils import StateVector
-from perceval.simulators._simulator_utils import _merge_sv
+from perceval.utils import BSDistribution, FockState, StateVector
+from perceval.simulators._simulator_utils import _merge_sv, _list_merge
 from math import sqrt
 
 
@@ -46,3 +47,46 @@ def test_merge_sv():
         sv_res,
         a1*a2 * StateVector([2, 0]) + (a1*b2 + b1*a2) * StateVector([1, 1]) + b1*b2 * StateVector([0, 2])
     )
+
+
+def test_list_merge():
+    bsd1 = BSDistribution()
+    bsd1.add(FockState([1, 1, 0]), 0.25)
+    bsd1.add(FockState([1, 0, 1]), 0.15)
+    bsd1.add(FockState([0, 1, 1]), 0.05)
+    bsd1.add(FockState([2, 0, 0]), 0.2)
+    bsd1.add(FockState([0, 2, 0]), 0.34999)
+    bsd1.add(FockState([0, 0, 2]), 0.00001)
+
+    bsd2 = BSDistribution()
+    bsd2.add(FockState([1, 0, 0]), 0.2)
+    bsd2.add(FockState([0, 0, 1]), 0.3)
+    bsd2.add(FockState([0, 1, 0]), 0.5)
+
+    input_lists = (
+        [(s, p) for s, p in bsd1.items()],
+        [(s, p) for s, p in bsd2.items()],
+    )
+
+    expected_res = BSDistribution.list_tensor_product([bsd1, bsd2], merge_modes=True)
+    expected_dict = {s: p for s, p in expected_res.items()}
+    res = _list_merge(input_lists)
+
+    assert expected_dict == pytest.approx(res)
+
+    # Change the order or input_lists
+    input_lists = (
+        [(s, p) for s, p in bsd2.items()],
+        [(s, p) for s, p in bsd1.items()],
+    )
+    res = _list_merge(input_lists)
+    assert expected_dict == pytest.approx(res)
+    len_without_threshold = len(res)
+
+    # With a probability threshold
+    prob_threshold = 1e-3
+    expected_res = BSDistribution.list_tensor_product([bsd1, bsd2], merge_modes=True, prob_threshold=prob_threshold)
+    expected_dict = {s: p for s, p in expected_res.items()}
+    res = _list_merge(input_lists, prob_threshold)
+    assert expected_dict == pytest.approx(res)
+    assert len(res) < len_without_threshold

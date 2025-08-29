@@ -36,15 +36,19 @@ from .job_status import JobStatus
 
 
 class Job(ABC):
-    def __init__(self, result_mapping_function: callable = None, delta_parameters=None, command_param_names=None):
+    def __init__(self, result_mapping_function: callable = None, delta_parameters: dict = None,
+                 command_param_names: list = None):
         self._results = None
         self._result_mapping_function = result_mapping_function
-        self._delta_parameters = delta_parameters or {"command": {}, "mapping": {}}
-        self._param_names = command_param_names or []
-        self._name = "Job"
+        self._delta_parameters: dict = delta_parameters or {"command": {}, "mapping": {}}
+        self._param_names: list = command_param_names or []
+        self._name: str = "Job"
 
     @property
-    def name(self):
+    def name(self) -> str:
+        """
+        The job name
+        """
         return self._name
 
     @name.setter
@@ -78,12 +82,17 @@ class Job(ABC):
             raise RuntimeError(f"Unused parameters in user call ({list(kwargs.keys())})")
 
     def __call__(self, *args, **kwargs) -> dict:
+        """
+        Execute the job synchronously
+        """
         return self.execute_sync(*args, **kwargs)
 
     @property
     @abstractmethod
     def status(self) -> JobStatus:
-        pass
+        """
+        The job status metadata structure
+        """
 
     @property
     def is_complete(self) -> bool:
@@ -111,17 +120,34 @@ class Job(ABC):
 
     @abstractmethod
     def execute_async(self, *args, **kwargs) -> Job:
-        pass
+        """
+        Execute the task asynchronously. This call is non-blocking allowing for concurrency. Results cannot be expected
+        to be ready as soon as this call ends. The results have to be retrieved only when the job status says it's
+        completed.
+
+        :param args: arguments to pass to the task function
+        :param kwargs: keyword arguments to pass to the task function
+        :return: self
+        """
 
     @abstractmethod
     def cancel(self):
-        pass
+        """
+        Request the cancellation of the job.
+        """
 
     @abstractmethod
     def _get_results(self):
-        pass
+        """Implemented get_results()"""
 
     def get_results(self) -> dict:
+        """
+        Retrieve the results of the job.
+
+        :return: results dictionary. You can expect a "results" or a "results_list" field, performance scores and other
+                 data corresponding to the job nature.
+        :raises: RuntimeError if the job hasn't finished running, or if the results data are empty or malformed.
+        """
         job_status = self.status
 
         if not job_status.maybe_completed:

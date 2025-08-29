@@ -28,15 +28,11 @@
 # SOFTWARE.
 
 import pytest
-from unittest.mock import patch
 
-import perceval as pcvl
 from perceval.utils.conversion import BSCount,  BSDistribution,  BSSamples, \
     probs_to_sample_count, probs_to_samples, \
     sample_count_to_probs, sample_count_to_samples, samples_to_probs, samples_to_sample_count
 from perceval.utils import BasicState
-
-from _test_utils import LogChecker
 
 
 b0 = BasicState([0, 0, 0, 1])
@@ -65,8 +61,7 @@ def test_samples_to_sample_count():
     assert len(samples_to_sample_count(BSSamples())) == 0
 
 
-@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
-def test_sample_count_to_probs(mock_warn):
+def test_sample_count_to_probs():
     sample_count = BSCount({
         b0: 280,
         b1: 120,
@@ -80,8 +75,7 @@ def test_sample_count_to_probs(mock_warn):
     assert output[b2] == pytest.approx(0.4)
     assert output[b3] == pytest.approx(0.2)
 
-    with LogChecker(mock_warn):
-        empty = sample_count_to_probs(BSCount())
+    empty = sample_count_to_probs(BSCount())
 
     assert len(empty) == 0
 
@@ -93,7 +87,7 @@ def test_probs_to_sample_count(count):
     bsd[b1] = 0.25
     bsd[b2] = 0.15
     bsd[b3] = 0.59
-    output = probs_to_sample_count(bsd, count)
+    output = probs_to_sample_count(bsd, max_samples=count)
     assert sum(output.values()) == count
     if count > 100:  # Need enough samples to be accurate
         assert output[b0] < output[b2]
@@ -120,7 +114,7 @@ def test_probs_to_samples():
     bsd[b1] = 0.25
     bsd[b2] = 0.15
     bsd[b3] = 0.5
-    output = probs_to_samples(bsd, 1000)
+    output = probs_to_samples(bsd, max_samples=1000)
     assert len(output) == 1000
 
 

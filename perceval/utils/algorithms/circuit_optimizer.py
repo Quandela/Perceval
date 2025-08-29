@@ -89,7 +89,8 @@ class CircuitOptimizer:
     def optimize(self,
                  target: ACircuit | Matrix,
                  template: ACircuit,
-                 empty_mode_list: list[int] = None
+                 empty_mode_list: list[int] = None,
+                 first_guess: list[float] = None,
                  ) -> tuple[ACircuit, float]:
         """
         Optimize a template circuit unitary's fidelity with a target matrix or circuit.
@@ -98,6 +99,8 @@ class CircuitOptimizer:
         :param template: A circuit with variable parameters (supports only beam splitters and phase shifters)
         :param empty_mode_list: list of the modes without input photon,
                                 which are ignored during optimisation as this does not alter the results (default [])
+        :param first_guess: list of starting real value for each parameter. Needs to be the same length as the number
+                            of variable parameters in the template circuit (default None, i.e. not using a first guess)
         :return: A tuple of the best optimized circuit and its fidelity to the target
 
         >>> def mzi(i):
@@ -123,7 +126,10 @@ class CircuitOptimizer:
         optimizer = xq.CircuitOptimizer(target, serialize_binary(template), empty_mode_list)
         optimizer.set_max_eval_per_trial(self._max_eval_per_trial)
         optimizer.set_threshold(self._threshold)
-        optimized_circuit = deserialize_circuit(optimizer.optimize(self._trials))
+        if first_guess is None:
+            optimized_circuit = deserialize_circuit(optimizer.optimize(self._trials))
+        else:
+            optimized_circuit = deserialize_circuit(optimizer.optimize(first_guess))
         return optimized_circuit, optimizer.fidelity
 
     def optimize_rectangle(self,

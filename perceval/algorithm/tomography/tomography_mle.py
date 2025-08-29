@@ -42,7 +42,12 @@ from ..abstract_algorithm import AAlgorithm
 
 
 class TomographyMLE(AAlgorithm):
-    # Maximum Likelihood Estimation
+    """
+    Maximum likelihood Estimation for Quantum Tomography with an
+    Accelerated Projected Gradient descent algorithm which takes an input guess and
+    uses measurements to reconstruct quantum maps - either state or process.
+
+    """
     def __init__(self, operator_processor: AProcessor, **kwargs):
 
         super().__init__(processor=operator_processor, **kwargs)
@@ -236,6 +241,12 @@ class TomographyMLE(AAlgorithm):
 
 
 class StateTomographyMLE(TomographyMLE):
+    """
+    Maximum likelihood estimations to reconstruct quantum state density matrices.
+
+    :param operator_processor: A perceval processor with gate (or operation) on which state tomography
+        needs to be performed.
+    """
     def __init__(self, operator_processor, **kwargs):
         super().__init__(operator_processor, **kwargs)
         self._guess_density_matrix = np.eye(2 ** self._nqubit) / (2 ** self._nqubit)
@@ -243,7 +254,7 @@ class StateTomographyMLE(TomographyMLE):
 
     def _povm_data(self):
         # Performing a POVM (positive operator value measure) on the quantum processor
-        # in the informationally complete Pauli basis, i.e. choosing all the eigenvectors of the PAuli operators.
+        # in the informationally complete Pauli basis, i.e. choosing all the eigenvectors of the Pauli operators.
         # They are |0>,|1>,|+>,|->,|i+>,|i->
 
         measurement_indices = _generate_pauli_index(self._nqubit)
@@ -299,6 +310,12 @@ class StateTomographyMLE(TomographyMLE):
 
 
 class ProcessTomographyMLE(TomographyMLE, AProcessTomography):
+    """
+    Maximum likelihood estimations to reconstruct a given quantum process.
+
+    :param operator_processor: A perceval processor with gate (or operation) on which state tomography
+        needs to be performed.
+    """
     def __init__(self, operator_processor, **kwargs):
         TomographyMLE.__init__(self, operator_processor=operator_processor, **kwargs)
         AProcessTomography.__init__(self, processor=operator_processor, **kwargs)

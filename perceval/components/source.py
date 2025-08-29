@@ -28,13 +28,10 @@
 # SOFTWARE.
 from __future__ import annotations
 
-import math
-import random
-
 from exqalibur import BSSamples
+import exqalibur as xq
 
-from perceval.utils import (SVDistribution, StateVector, BasicState, anonymize_annotations, NoiseModel, global_params,
-                            BSDistribution)
+from perceval.utils import SVDistribution, NoisyFockState, FockState, anonymize_annotations, NoiseModel, global_params
 from perceval.utils.logging import get_logger, channel
 
 DISTINGUISHABLE_KEY = 'distinguishable'
@@ -53,7 +50,6 @@ class Source:
     :param indistinguishability: 2-photon mean wavepacket overlap
     :param losses: optical losses
     :param multiphoton_model: `distinguishable` if additional photons are distinguishable, `indistinguishable` otherwise
-    :param context: gives a local context for source specific features, like `discernability_tag`
     """
 
     def __init__(self,
@@ -62,30 +58,18 @@ class Source:
                  indistinguishability: float = 1,
                  losses: float = 0,
                  multiphoton_model: str = DISTINGUISHABLE_KEY,  # Literal[DISTINGUISHABLE_KEY, INDISTINGUISHABLE_KEY]
-                 context: dict = None) -> None:
+                 ) -> None:
 
-        assert 0 < emission_probability <= 1, "emission_probability must be in ]0;1]"
-        assert 0 <= losses <= 1, "losses must be in [0;1]"
-        assert 0 <= multiphoton_component <= 1, "multiphoton_component must be in [0;1]"
-        assert emission_probability * multiphoton_component <= 0.5,\
-            "emission_probability * g2 higher than 0.5 can not be computed for now"
-        assert multiphoton_model in [DISTINGUISHABLE_KEY, INDISTINGUISHABLE_KEY], \
-            "invalid value for multiphoton_model"
-
-        self._emission_probability = emission_probability
-        self._losses = losses
-        self._multiphoton_component = multiphoton_component
-        self._multiphoton_model = multiphoton_model
-        self._indistinguishability = indistinguishability
-        self._context = context or {}
-        if "discernability_tag" not in self._context:
-            self._context["discernability_tag"] = 0
+        self._source = xq.Source(emission_probability,
+                                 multiphoton_component,
+                                 indistinguishability,
+                                 losses,
+                                 multiphoton_model == DISTINGUISHABLE_KEY)
 
         self.simplify_distribution = False  # Simplify the distribution by anonymizing photon annotations (can be
-                                             # time-consuming for larger distributions)
-        self._prob_table = None
-        self._prob_table_n = None
-        self._prob_table_filter = None
+                                            # time-consuming for larger distributions)
+
+        self._sampler : xq.SourceSampler | None = None
 
     @staticmethod
     def from_noise_model(noise: NoiseModel):
@@ -97,71 +81,29 @@ class Source:
                       losses=1 - noise.transmittance,
                       multiphoton_model=DISTINGUISHABLE_KEY if noise.g2_distinguishable else INDISTINGUISHABLE_KEY)
 
-    def get_tag(self, tag, add=False):
-        if add:
-            self._context[tag] += 1
-        return self._context[tag]
-
-    def _get_probs(self):
-        px = self._emission_probability
-        g2 = self._multiphoton_component
-        eta = 1 - self._losses
-
-        # Starting formulas
-        # g2 = 2p2/(p1+2p2)**2
-        # p1 + p2 + ... = px & pn<<p2 for n>2
-
-        p2 = (- px * g2 - math.sqrt(1 - 2 * px * g2) + 1) / g2 if g2 else 0
-        p1 = px - p2
-
-        p1to1 = eta * p1
-        p2to2 = eta ** 2 * p2
-        p2to1 = eta * (1 - eta) * p2
-        return p1to1, p2to1, p2to2
-
-    @staticmethod
-    def _add(plist: BSDistribution, annotations: int | list, probability: float):
-        # Add an annotation list (or a number of unannotated photons) and its probability to the in/out
-        # parameter `plist`
-        if probability > 0:
-            if isinstance(annotations, int):
-                plist[BasicState([annotations])] = probability
-                return
-            plist[BasicState([len(annotations)], {0: annotations})] = probability
-
-    def _generate_one_photon_distribution(self) -> BSDistribution:
-        # Generates a distribution of annotations given the source parameters for one photon in one mode
-        distinguishability = 1 - math.sqrt(self._indistinguishability)
-
-        # Approximation distinguishable photons are pure
-        distinguishable_photon = self.get_tag("discernability_tag", add=True)
-        second_photon = self.get_tag("discernability_tag", add=True) \
-            if self._multiphoton_model == DISTINGUISHABLE_KEY else 0  # Noise photon or signal
-
-        (p1to1, p2to1, p2to2) = self._get_probs()
-        p0 = 1 - (p1to1 + 2 * p2to1 + p2to2)  # 2 * p2to1 because of symmetry
-
-        dist = BSDistribution()
-        self._add(dist, 0, p0)
-        if self.partially_distinguishable:
-            self._add(dist, ["_:0", "_:%s" % second_photon], (1 - distinguishability) * p2to2)
-            self._add(dist, ["_:%s" % distinguishable_photon, "_:%s" % second_photon], distinguishability * p2to2)
-            if self._multiphoton_model == DISTINGUISHABLE_KEY:
-                self._add(dist, ["_:%s" % distinguishable_photon], distinguishability * (p1to1 + p2to1) + p2to1)
-                self._add(dist, ["_:0"], (1 - distinguishability) * (p1to1 + p2to1))
-            else:
-                self._add(dist, ["_:%s" % distinguishable_photon], distinguishability * (p1to1 + p2to1))
-                self._add(dist, ["_:0"], (1 - distinguishability) * (p1to1 + p2to1) + p2to1)
-        else:
-            # Just avoids annotations
-            self._add(dist, 2, p2to2)
-            self._add(dist, 1, p1to1 + 2 * p2to1)
-        return dist
-
     @property
     def partially_distinguishable(self):
-        return self._indistinguishability != 1 \
-            or (self._multiphoton_model == DISTINGUISHABLE_KEY and self._multiphoton_component)
+        return self._source.partially_distinguishable
+
+    @property
+    def emission_probability(self):
+        return self._source.emission_probability
+
+    @property
+    def multiphoton_component(self):
+        return self._source.multiphoton_component
+
+    @property
+    def indistinguishability(self):
+        return self._source.indistinguishability
+
+    @property
+    def losses(self):
+        return self._source.losses
+
+    @property
+    def multiphoton_model(self):
+        return DISTINGUISHABLE_KEY if self._source.is_g2_distinguishable else INDISTINGUISHABLE_KEY
 
     def probability_distribution(self, nphotons: int = 1, prob_threshold: float = 0) -> SVDistribution:
         r"""returns SVDistribution on 1 mode associated to the source
@@ -169,19 +111,14 @@ class Source:
         :param nphotons: Require `nphotons` in the mode (default 1).
         :param prob_threshold: Probability threshold under which the resulting state is filtered out.
         """
-        if nphotons == 0 or self.is_perfect():
-            return SVDistribution(StateVector([nphotons]))
-        dist_all = BSDistribution.list_tensor_product([self._generate_one_photon_distribution() for _ in range(nphotons)],
-                                                      merge_modes=True, prob_threshold=prob_threshold)
+        return self.generate_distribution(FockState([nphotons]), prob_threshold)
 
-        return SVDistribution(dist_all)
-
-    def generate_distribution(self, expected_input: BasicState, prob_threshold: float = 0):
+    def generate_distribution(self, expected_input: FockState, prob_threshold: float = 0) -> SVDistribution:
         """
         Simulates plugging the photonic source on certain modes and turning it on.
         Computes the input probability distribution
 
-        :param expected_input: Expected input BasicState
+        :param expected_input: Expected input FockState
             The properties of the source will alter the input state. A perfect source always delivers the expected state
             as an input. Imperfect ones won't.
         :param prob_threshold: Probability threshold under which the resulting state is filtered out. By default,
@@ -190,218 +127,90 @@ class Source:
         prob_threshold = max(prob_threshold, global_params['min_p'])
         get_logger().debug(f"Apply 'Source' noise model to {expected_input}", channel.general)
 
-        distributions = [self.probability_distribution(photon_count, prob_threshold) for photon_count in expected_input]
-        dist = SVDistribution.list_tensor_product(distributions, prob_threshold=prob_threshold)
+        dist = self._source.generate_distribution(expected_input, prob_threshold)
 
-        dist.normalize()
         if self.simplify_distribution and self.partially_distinguishable:
             dist = anonymize_annotations(dist, annot_tag='_')
         return dist
 
-    def _compute_prob_table(self, n: int, min_photons_filter: int = 0) -> tuple[dict[tuple[int, int, int], float], float, float]:
+    def create_iterator(self, expected_input: FockState, min_photons_filter: int = 0) -> xq.SimpleSourceIterator:
         """
-        Computes the table of probability of getting (i, j, k) events from n wanted photons where
-        i is the number of single signal photon events
-        j is the number of single g2 photon events
-        k is the number of signal + g2 photons events
+        Creates a source iterator that can generate all already separated noisy states according
+        to the probability distribution without representing them in memory.
 
-        Distinguishable photons are still counted as signal.
+        This is far more efficient than computing the whole distribution.
 
-        :param n: Number of photons wanted.
-        :param min_photons_filter: Minimum number of photons wanted.
+        Supports a min_photons_filter to avoid generating states having not enough photons.
 
-        :return: the probability table, the physical performance, and the zero-photon probability
-        """
+        >>> from perceval import BasicState, Source
+        >>>
+        >>> source = Source(indistinguishability=0.85, losses=0.56)
+        >>> iterator = source.create_iterator(BasicState([1, 0, 1]), 2)
+        >>> iterator.prob_threshold = iterator.max_p * 1e-5  # Generates only states having at most 1e-5 times the biggest probability.
+        >>> for separated_state, prob in iterator:
+        >>>     print(separated_state, prob)
 
-        p1to1, p2to1, p2to2 = self._get_probs()
-        p_signal = p1to1 + p2to1
-        p_g2 = p2to1
-        p_duo = p2to2
-        p0 = 1 - (p_signal + p_g2 + p_duo)
-
-        factorial_table = {0: 1}
-        def cache_factorial(m):
-            if m not in factorial_table:
-                factorial_table[m] = m * cache_factorial(m - 1)
-            return factorial_table[m]
-
-        prob_table = {}
-
-        fac_n = cache_factorial(n)  # Fills the table for all needed values
-        for i in range(n + 1):
-            fac_i = factorial_table[i]
-            for j in range(n + 1 - i if p_g2 else 1):
-                fac_j = factorial_table[j]
-                for k in range(n + 1 - i - j if p_duo else 1):
-                    fac_k = factorial_table[k]
-                    if i + j + 2 * k >= min_photons_filter:
-                        # TODO: remove low probability events ?
-                        n0 = n - i - j - k
-                        prob_table[(i, j, k)] = (fac_n * p_signal ** i * p_g2 ** j * p_duo ** k * p0 ** n0
-                                                 / (fac_i * fac_j * fac_k * factorial_table[n0]))
-
-        phys_perf = sum(prob_table.values())
-        if min_photons_filter:
-            for key, prob in prob_table.items():
-                prob_table[key] = prob / phys_perf
-
-        return prob_table, phys_perf, p0 ** n
-
-    def cache_prob_table(self, n: int, min_photons_filter: int = 0) -> tuple[float, float]:
-        """
-        Computes the prob_table. Removes the events having less than min_photons_filter photons.
-        Cache the result.
-
-        :return: the physical performance and the zero-photon probability
-        """
-
-        prob_table, phys_perf, zpp = self._compute_prob_table(n, min_photons_filter)
-        self._prob_table = prob_table
-        self._prob_table_n = n
-        self._prob_table_filter = min_photons_filter
-        return phys_perf, zpp
-
-    def _generate_distinguishability(self, n: int):
-        """Generate a random list of booleans of size n such that False means that a given photon is distinguishable
-        and True means that a given photon is indistinguishable."""
-        indistinguishability = math.sqrt(self._indistinguishability)
-
-        return random.choices([True, False], k=n, weights=[indistinguishability, 1 - indistinguishability])
-
-    def _events_to_samples(self, events: list[tuple[int, int, int]], expected_input: BasicState):
-        res = BSSamples()
-        dist_index = 0
-        dist_list = self._generate_distinguishability(sum(event[0] + event[2] for event in events))
-
-        first_tag = self.get_tag("discernability_tag")  # Just to avoid growing up too much the complex that represents the tag
-
-        empty_bs = BasicState([0])
-        signal_state = BasicState("|{_:0}>")  # Avoids creating many times the same states
-        expected_input_list = list(expected_input)
-
-        # TODO: parallelize this?
-        for event in events:
-            photons = []
-            for _ in range(event[0]):
-                # signal alone
-                if dist_list[dist_index]:
-                    photons.append(signal_state)
-                else:
-                    photons.append(BasicState([1], {0: [f"_:{self.get_tag('discernability_tag', add=True)}"]}))
-                dist_index += 1
-
-            for _ in range(event[1]):
-                # g2 alone
-                second_photon = self.get_tag("discernability_tag", add=True) \
-                    if self._multiphoton_model == DISTINGUISHABLE_KEY else 0  # Noise photon or signal
-                photons.append(BasicState([1], {0: [f"_:{second_photon}"]}))
-
-            for _ in range(event[2]):
-                # signal + g2
-                first_photon = 0 if dist_list[dist_index] else self.get_tag("discernability_tag", add=True)
-                second_photon = self.get_tag("discernability_tag", add=True) \
-                    if self._multiphoton_model == DISTINGUISHABLE_KEY else 0  # Noise photon or signal
-                photons.append(BasicState([2], {0: [f"_:{first_photon}", f"_:{second_photon}"]}))
-                dist_index += 1
-
-            photons += [empty_bs] * (expected_input.n - len(photons))
-            random.shuffle(photons)
-
-            index = 0
-            final_state = BasicState()
-            for n_photons in expected_input_list:
-                single_mode_state = empty_bs
-                for _ in range(n_photons):
-                    if single_mode_state.n:
-                        single_mode_state = single_mode_state.merge(photons[index])
-                    else:
-                        single_mode_state = photons[index]
-                    index += 1
-
-                if len(final_state):
-                    final_state *= single_mode_state
-                else:
-                    final_state = single_mode_state
-
-            res.append(final_state)
-            self._context["discernability_tag"] = first_tag
-
-        return res
-
-    def _generate_samples_no_filter(self, max_samples: int, expected_input: BasicState) -> BSSamples:
-        """
-        Generate samples directly from the source, without generating the source probability distribution first.
-
-        :param max_samples: Number of samples to generate
         :param expected_input: Expected input BasicState
-            The properties of the source will alter the input state. A perfect source always delivers the expected state
-            as an input. Imperfect ones won't.
+        :param min_photons_filter: The minimum number of photons required to generate a state.
         """
-        samples = BSSamples()
+        # TODO: chose iterator depending on the input state
+        return self._source.create_simple_iterator(expected_input, min_photons_filter)
 
-        if not self.partially_distinguishable:
-            bsd = self._generate_one_photon_distribution()
+    def create_sampler(self, expected_input: FockState, min_photons_filter: int = 0) -> xq.SourceSampler:
+        """
+        Creates a source sampler that will be able to generate states according to the source probability distribution
+        :param expected_input: The expected input BasicState to sample.
+        :param min_photons_filter: Minimum number of photons in a sampled state
+        """
+        return self._source.create_sampler(expected_input, min_photons_filter)
 
-        for photon_count in expected_input:
-            new_samples = BSSamples()
-            if photon_count == 0:
-                new_samples.extend([BasicState([photon_count])] * max_samples)
-            else:
-                for _ in range(photon_count):
-                    if self.partially_distinguishable:
-                        bsd = self._generate_one_photon_distribution()
-                    new_samples_one_mode = bsd.sample(max_samples, non_null=False)
-                    if len(new_samples) == 0:
-                        new_samples = new_samples_one_mode # first samples
-                        continue
-                    for i in range(len(new_samples_one_mode)):
-                        new_samples[i] = new_samples[i].merge(new_samples_one_mode[i])
-            if len(samples) == 0:
-                samples = new_samples # first samples
-                continue
-            for i in range(len(new_samples)):
-                samples[i] *= new_samples[i]
+    def generate_samples(self, max_samples: int, expected_input: FockState, min_detected_photons = 0) -> list[NoisyFockState]:
+        """
+        Samples states from the source probability distribution without representing the whole distribution in memory.
+        Creates a source sampler and store it in self for faster repeated sampling if necessary.
 
-        return samples
-
-    def generate_samples(self, max_samples: int, expected_input: BasicState, min_detected_photons = 0) -> BSSamples:
+        :param max_samples: Number of samples to generate.
+        :param expected_input: The nominal input state that the source should produce.
+        :param min_detected_photons: Minimum number of photons in a sampled state.
+        """
         if self.is_perfect():
-            return BSSamples([expected_input] * max_samples)
+            return [NoisyFockState(expected_input)] * max_samples
 
-        if min_detected_photons == 0:
-            return self._generate_samples_no_filter(max_samples, expected_input)
+        if self._sampler is None or min_detected_photons != self._sampler.min_photons_filter or expected_input != self._sampler.expected_input:
+            self._sampler = self.create_sampler(expected_input, min_detected_photons)
 
-        transmission = self._emission_probability * (1 - self._losses)
-        if transmission == 0 and min_detected_photons >= 1:
-            get_logger().warn(f"No useful state will be computed, aborting", channel.user)
-            return BSSamples()
+        return self._sampler.generate_samples(max_samples)
 
-        if self._prob_table is None or expected_input.n != self._prob_table_n or min_detected_photons != self._prob_table_filter:
-            self.cache_prob_table(expected_input.n, min_detected_photons)
+    def generate_separated_samples(self, max_samples: int, expected_input: FockState, min_detected_photons = 0) -> list[BSSamples]:
+        """
+        Samples separated states from the source probability distribution without representing the whole distribution in memory.
+        The sampled states are equivalent (up to permutation) to calling separate_state() on each state returned by generate_samples()
+        but this sampling process uses a simplified procedure to do it faster.
 
-        events = random.choices(list(self._prob_table.keys()), k=max_samples, weights=self._prob_table.values())
-        return self._events_to_samples(events, expected_input)
+        Creates a source sampler and store it in self for faster repeated sampling if necessary.
+
+        :param max_samples: Number of samples to generate.
+        :param expected_input: The nominal input state that the source should produce.
+        :param min_detected_photons: Minimum number of photons in a sampled state.
+        """
+        if self.is_perfect():
+            sample = BSSamples([expected_input])
+            return [sample] * max_samples
+
+        if self._sampler is None or min_detected_photons != self._sampler.min_photons_filter or expected_input != self._sampler.expected_input:
+            self._sampler = self.create_sampler(expected_input, min_detected_photons)
+
+        return self._sampler.generate_separated_samples(max_samples)
 
     def is_perfect(self) -> bool:
-        return \
-            self._emission_probability == 1 and \
-            self._multiphoton_component == 0 and \
-            self._indistinguishability == 1 and \
-            self._losses == 0
+        return self._source.is_perfect
 
-    def __eq__(self, value: object) -> bool:
-        return \
-            self._emission_probability == value._emission_probability and \
-            self._losses == value._losses and \
-            self._multiphoton_component == value._multiphoton_component and \
-            self._multiphoton_model == value._multiphoton_model and \
-            self._indistinguishability == value._indistinguishability and \
-            self._context == value._context and \
-            self.simplify_distribution == value.simplify_distribution
+    def __eq__(self, value: Source) -> bool:
+        return self._source == value._source and self.simplify_distribution == value.simplify_distribution
 
-    def __dict__(self) -> dict:
-        return {'g2': self._multiphoton_component,
-                'transmittance': 1 - self._losses,
-                'brightness': self._emission_probability,
-                'indistinguishability': self._indistinguishability,
-                'g2_distinguishable': self._multiphoton_model == DISTINGUISHABLE_KEY}
+    def to_dict(self) -> dict:
+        return {'g2': self.multiphoton_component,
+                'transmittance': 1 - self.losses,
+                'brightness': self.emission_probability,
+                'indistinguishability': self.indistinguishability,
+                'g2_distinguishable': self._source.is_g2_distinguishable}

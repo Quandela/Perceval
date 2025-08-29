@@ -29,13 +29,13 @@
 
 
 class LogicalState(list):
-    def __init__(self, state: list[int] or str = None):
-        """Represent a Logical state
+    """Represent a Logical state
 
-        :param state: Can be either None, a list or a str, defaults to None
-        :raises ValueError: Must have only 0 and 1 in a state
-        :raises TypeError: Supports only None, list or str as state type
-        """
+    :param state: Can be either None, a list or a str, defaults to None (empty list)
+    :raises ValueError: Must have only 0 and 1 in a state
+    :raises TypeError: Supports only None, list or str as state type
+    """
+    def __init__(self, state: list[int] or str = None):
         if state is None:
             super().__init__([])
             return
@@ -55,11 +55,17 @@ class LogicalState(list):
 
     def __str__(self):
         if not self:
-            return ""
-        return ''.join([str(x) for x in self])
+            return "|>"
+        return '|' + ''.join([str(x) for x in self]) + '>'
 
 
 def generate_all_logical_states(n : int) -> list[LogicalState]:
+    """
+    Generate all Logical states of size n
+
+    :param n: Size of the Logical states to generate
+    :return: List of all :math:`2^n` Logical states of size n
+    """
     format_str = f"#0{n+2}b"
     logical_state_list = []
     for i in range(2**n):

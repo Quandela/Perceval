@@ -36,7 +36,7 @@ from perceval.utils import BasicState, BSDistribution
 from perceval.components import catalog, Unitary
 from perceval.utils import Matrix, NoiseModel
 from perceval.algorithm import Sampler
-from perceval import Processor
+from perceval import Processor, Detector
 from perceval.utils.dist_metrics import tvd_dist, kl_divergence
 
 
@@ -44,7 +44,8 @@ def _sampler_setup_cnot(output_type: str):
     # Processor config
     processor = Processor("SLOS", noise=NoiseModel(transmittance=0.3))
     processor.min_detected_photons_filter(0)
-    processor.thresholded_output(True)
+    for m in range(processor.circuit_size):
+        processor.add(m, Detector.threshold())
 
     # Circuit
     circ = catalog['heralded cnot'].build_circuit()
@@ -122,7 +123,8 @@ def _compute_random_circ_probs(source_emission, num_photons):
     # Processor config
     processor = Processor("SLOS", random_loc, noise=NoiseModel(transmittance=source_emission))
     processor.min_detected_photons_filter(0)
-    processor.thresholded_output(True)
+    for m in range(processor.circuit_size):
+        processor.add(m, Detector.threshold())
 
     # Input state
     input_state = BasicState([1] * num_photons + [0] * (random_loc.m - num_photons))

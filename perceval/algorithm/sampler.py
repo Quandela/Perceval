@@ -39,15 +39,22 @@ from perceval.utils import BasicState, NoiseModel
 
 class Sampler(AAlgorithm):
     """
-    Base algorithm able to retrieve some sampling results via 3 methods
-    - samples(max_samples) : returns a list of sampled states
-    - sample_count(max_samples) : return a table (output state) : (sampled count)
-                            the sum of 'sampled counts' can slightly differ from requested 'count'
-    - probs() : returns a probability distribution of output states
+    Basic algorithm able to retrieve some sampling data via 3 main methods.
+
+    * samples(max_samples): returns a list of sampled states
+    * sample_count(max_samples): return a mapping {(output state) : (sampled count)}
+    * probs(): returns a probability distribution of output states
 
     The form of the output for all 3 sampling methods is a dictionary containing a 'results' key and several performance
     values.
+
+    The Sampler also supports batch jobs, where several computations can be stored in a single job.
+
+    :param processor: the processor to sample on
+    :param kwargs: when the processor is remote, a "max_shots_per_call" should be passed in order to
+                   limit the shots usage.
     """
+
     PROBS_SIMU_SAMPLE_COUNT = 10000  # Arbitrary value
     # Absolute maximum of samples for local sampling simulation (should be thresholded by a max_shot value)
     SAMPLES_MAX_COUNT = int(1e8)
@@ -140,14 +147,26 @@ class Sampler(AAlgorithm):
 
     @property
     def samples(self) -> Job:
+        """Create a sample stream job
+
+        :return: A job where chronologically ordered samples are expected as result
+        """
         return self._create_job("samples")
 
     @property
     def sample_count(self) -> Job:
+        """Create a sample count job
+
+        :return: A job where sample counts are expected as result
+        """
         return self._create_job("sample_count")
 
     @property
     def probs(self) -> Job:
+        """Create a sample count job
+
+        :return: A job where sample counts are expected as result
+        """
         return self._create_job("probs")
 
     # Iterator construction methods
@@ -180,25 +199,32 @@ class Sampler(AAlgorithm):
 
     def add_iteration(self, **kwargs):
         """
-        Currently accepted keywords:
+        Add a single iteration to future jobs.
 
-        - circuit_params: dict containing pairs (parameter_name: str - value : number)
-        - input_state: BasicState
-        - min_detected_photons: int
-        - max_samples: int
-        - max_shots: int
-        - noise: NoiseModel
+        :param kwargs: List of accepted keywords:
+
+           - circuit_params: dict containing pairs (parameter_name: str - value : number)
+           - input_state: BasicState
+           - min_detected_photons: int
+           - max_samples: int
+           - max_shots: int
+           - noise: NoiseModel
         """
         get_logger().info("Add 1 iteration to Sampler", channel.general)
         self._add_iteration(kwargs)
 
     def add_iteration_list(self, iterations: list[dict]):
+        """
+        Add multiple iterations to future jobs.
+        """
         get_logger().info(f"Add {len(iterations)} iterations to Sampler", channel.general)
         for iter_params in iterations:
             self._add_iteration(iter_params)
 
     def clear_iterations(self):
-        # In case, the user wants to use the same sampler instance, but with a new iterator
+        """
+        Clear all prepared iterations.
+        """
         get_logger().info(f"Clear all iterations in Sampler", channel.general)
         self._iterator = []
 
@@ -274,8 +300,6 @@ class Sampler(AAlgorithm):
 
     def _set_min_detected_photons(self, count: int):
         self._processor.min_detected_photons_filter(count)
-        if count is None:
-            self._processor.parameters.pop("min_detected_photons")
 
     def _set_max_samples(self, val: int):
         self._max_samples = val

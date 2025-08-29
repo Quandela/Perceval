@@ -32,60 +32,54 @@ from abc import abstractmethod, ABC
 
 
 class AValidatedParam(ABC):
-    def __init__(self, name: str, value=None, default_value=None):
+
+    def __init__(self, default_value = None):
+        if default_value is not None:
+            self._validate(default_value)
+        self.default_value = default_value
+
+    def __set_name__(self, owner, name):
+        self.private_name = '_' + name
         self.name = name
-        self._value = None if value is None else self._validate(value)
-        self._default = None if default_value is None else self._validate(default_value)
 
-    def __eq__(self, other):
-        return self.name == other.name and self._value == other._value
+    def __get__(self, obj, objtype=None):
+        value = getattr(obj, self.private_name)
+        if value is None:
+            return self.default_value
+        return value
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
+    def __set__(self, obj, value):
+        if value is not None:
+            self._validate(value)
+        setattr(obj, self.private_name, value)
 
     @abstractmethod
     def _validate(self, value):
         pass
 
-    @property
     def is_default(self):
-        return self._value is None
-
-    @property
-    def default(self):
-        return self._default
-
-    def get(self):
-        if self._value is None:
-            return self._default
-        return self._value
-
-    def set(self, value):
-        self._value = self._validate(value)
-
-    def __str__(self):
-        return f"'{self.name}': {self.get()}"
+        return self.default_value is not None
 
 
 class ValidatedBool(AValidatedParam):
-    def __init__(self, name: str, value=None, default_value=None):
-        super().__init__(name, value, default_value)
+    def __init__(self, default_value=None):
+        super().__init__(default_value)
 
     def _validate(self, value):
         if not isinstance(value, bool):
-            raise TypeError(f"Expected a boolean value, got {type(value)}")
+            raise TypeError(f"{self.name} expected a boolean value, got {type(value)}")
         return value
 
 
 class ValidatedFloat(AValidatedParam):
-    def __init__(self, name: str, value=None, min_value=None, max_value=None, default_value=None):
+    def __init__(self, min_value=None, max_value=None, default_value=None):
         self._min = min_value
         self._max = max_value
-        super().__init__(name, value, default_value)
+        super().__init__(default_value)
 
     def _validate(self, value):
         if not isinstance(value, Number):
-            raise TypeError(f"Expected a numerical value, got {type(value)}")
+            raise TypeError(f"{self.name} expected a numerical value, got {type(value)}")
         if (self._min is None or self._min <= value) and (self._max is None or value <= self._max):
             return value
         raise ValueError(f"{self.name} value out of bound: {value} not in [{self._min}, {self._max}]")

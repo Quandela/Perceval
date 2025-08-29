@@ -27,7 +27,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from matplotlib import ticker
 from matplotlib import colormaps
 from cmath import phase, pi
 import numpy as np

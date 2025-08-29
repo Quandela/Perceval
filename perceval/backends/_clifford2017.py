@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 import exqalibur as xq
-from perceval.utils import BasicState
+from perceval.utils import FockState
 from perceval.components import ACircuit
 from ._abstract_backends import ASamplingBackend
 
@@ -42,7 +42,7 @@ class Clifford2017Backend(ASamplingBackend):
         super().set_circuit(circuit)  # Computes circuit unitary as _umat
         self._clifford.set_unitary(self._umat)
 
-    def set_input_state(self, input_state: BasicState):
+    def set_input_state(self, input_state: FockState):
         super().set_input_state(input_state)
         self._clifford.set_input_state(input_state)
 
@@ -50,6 +50,10 @@ class Clifford2017Backend(ASamplingBackend):
         return self._clifford.sample()
 
     def samples(self, count: int):
+        """
+        Request `count` samples from the circuit given an input state.
+        Uses parallel processing, so it is much more efficient than calling `self.sample()` several times.
+        """
         return self._clifford.samples(count)
 
     @property

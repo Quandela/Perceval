@@ -42,13 +42,10 @@
 import os
 import sys
 import re
-from datetime import datetime
 from pathlib import Path
 from git import Repo
 
 sys.path.insert(0, os.path.relpath("../"))
-
-from perceval import PMetadata
 
 
 def version_highter_then(v1, v2):

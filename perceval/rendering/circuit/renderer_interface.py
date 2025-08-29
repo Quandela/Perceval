@@ -149,13 +149,13 @@ class ICircuitRenderer(ABC):
         """
 
     @abstractmethod
-    def add_mode_index(self) -> None:
+    def add_mode_index(self, input_mode_style = None) -> None:
         """
         Render mode indexes on the right and left side of a previously rendered circuit
         """
 
     @abstractmethod
-    def display_input_photons(self, input_pos) -> None:
+    def display_input_photons(self, input_pos, mode_style: list[ModeType]) -> None:
         """
         Display photons on input modes
         """

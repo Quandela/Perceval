@@ -30,13 +30,17 @@
 from .simulator_interface import ASimulatorDecorator
 from ._simulator_utils import _retrieve_mode_count, _unitary_components_to_circuit
 from perceval.components import ACircuit, LC, PERM, BS, IDetector
-from perceval.utils import BasicState, BSDistribution, StateVector
+from perceval.utils import FockState, BSDistribution, StateVector
 
 
 class LossSimulator(ASimulatorDecorator):
 
+    _can_transmit_selection = True
+
     def _prepare_input(self, input_state):
-        return input_state * BasicState([0] * (self._expanded_m - self._original_m))
+        if isinstance(input_state, tuple):
+            return input_state[0], input_state[1] * FockState([0] * (self._expanded_m - self._original_m))
+        return input_state * FockState([0] * (self._expanded_m - self._original_m))
 
     def _prepare_circuit(self, circuit, m = None):
         if m is None:
@@ -63,6 +67,9 @@ class LossSimulator(ASimulatorDecorator):
             reduced_out_state = out_state[0:self._original_m]
             output += probampli*reduced_out_state
         return output
+
+    def _transmit_heralds_postselect(self):
+        self._simulator.set_selection(postselect=self._postselect, heralds=self._heralds)
 
     def _simulate_losses_with_beam_splitters(self, components: list) -> ACircuit:
         output = []

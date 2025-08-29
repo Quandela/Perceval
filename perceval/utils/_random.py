@@ -35,11 +35,18 @@ from .logging import get_logger, channel
 
 def random_seed(seed: int = None):
     """
-    seed: int = None
-    Initialize the seed used for random number generation
+    Initialize the seed used for random number generation (RNG)
 
-    :param seed: if None, use a time-based seed
-    :return: the actual seed used
+    Impacts the RNG in:
+
+      * Python core `random` package
+      * numpy
+      * exqalibur
+
+    .. note::
+       With a fixed seed, exqalibur RNG is deterministic even inside multithreaded algorithms
+
+    :param seed: The seed value. If ``None``, use a time-based seed
     """
     random.seed(seed)
     np.random.seed(seed)

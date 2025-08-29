@@ -10,3 +10,4 @@ venv*
 .ipynb_checkpoints/
 .coverage
 .vscode*
+.venv

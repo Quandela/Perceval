@@ -34,13 +34,20 @@ from perceval.components.linear_circuit import ACircuit, Circuit
 from perceval.utils.logging import get_logger, channel
 
 
-def simplify(circuit: list | ACircuit, m: int=None, display: bool=False) -> list | Circuit:
+def simplify(circuit: list | ACircuit, m: int = None, display: bool = False) -> list | Circuit:
     r"""
-    Tries to simplify a circuit when simplifications are possible
+    Simplify a circuit when possible
 
-    :param circuit: the circuit to simplify
-    :param display: Slightly changes the behaviour of the func, should give a better visualisation. Use False for computing
-    :return: The simplified circuit
+    :param circuit: the circuit to simplify. This input can be:
+
+                    * a unitary ``Circuit``
+                    * a list of positioned components. These components do not have to be unitary
+                      (e.g. [((0,1), BS()), ((0,), PS(phi=0.5)), ((1,), TD(1))])
+
+    :param m: the circuit size (in modes), required only when ``circuit`` is a list.
+    :param display: Slightly changes the behaviour of the function, give a circuit which is displayed more similarly
+                    than the input. Use ``False`` when computing. Default is ``False``.
+    :return: The simplified circuit (same type as the input)
     """
     final_circuit_comp = []
 

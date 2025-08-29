@@ -198,14 +198,14 @@ class TextRenderer(ICircuitRenderer):
         for nl in range(len(self._h)):
             self._h[nl] = ' ' * offset_diff + self._h[nl]
 
-    def add_mode_index(self):
+    def add_mode_index(self, input_mode_style = None):
         offset = len(str(self._nsize)) + 1
         self._set_offset(offset)
         for k in range(self._nsize):
             self._h[self._hc * k + 2] = f'{k:{offset-1}d}:' + self._h[self._hc * k + 2][offset:]
             self._h[self._hc * k + 2] += ':' + str(k) + f" (depth {self._depth[k]})"
 
-    def display_input_photons(self, input_pos) -> None:
+    def display_input_photons(self, input_pos, mode_style) -> None:
         pass  # Don't display input photons in text mode
 
     def add_out_port(self, n_mode: int, port: APort):

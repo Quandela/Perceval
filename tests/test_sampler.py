@@ -28,7 +28,7 @@
 # SOFTWARE.
 import pytest
 
-from perceval import NoiseModel
+from perceval import NoiseModel, Detector
 from perceval.algorithm.sampler import Sampler
 import perceval as pcvl
 from perceval.components import BS, PS, Processor, catalog
@@ -136,6 +136,7 @@ def test_sampler_iterator(backend_name):
     p = pcvl.Processor(backend_name, c, noise=pcvl.NoiseModel(.5))
     p.min_detected_photons_filter(2)
     p.with_input(pcvl.BasicState([1, 1]))
+    p.compute_physical_logical_perf(True)
     sampler = Sampler(p)
     iteration_list = [
         {"circuit_params": {"phi1": 0.5}, "input_state": pcvl.BasicState([1, 1]), "min_detected_photons": 1},
@@ -220,7 +221,8 @@ def test_iterator_with_heralds():
 def test_sampler_shots(backend_name):
     p = Processor(backend_name, BS(theta=0.8))
     p.with_input(pcvl.BasicState([1, 1]))
-    p.thresholded_output(True)
+    for m in range(p.circuit_size):
+        p.add(m, Detector.threshold())
     sampler = Sampler(p)  # Without a max_shots_per_call value
     samples = sampler.samples(max_samples=100)
     assert len(samples['results']) == 100  # You get the number of samples you asked for

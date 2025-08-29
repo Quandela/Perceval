@@ -35,23 +35,16 @@ BRIGHTNESS_KEY = "brightness"
 BRIGHTNESS_DEF = 1
 PHASE_IMPRECISION_KEY = "phase_imprecision"
 G2_KEY = "g2"
-G2_DIST_KEY = "g2_distinguishable"
 
 
 def test_noise_model_default():
     nm = NoiseModel()
     assert len(nm.__dict__()) == 0
     assert nm.brightness == BRIGHTNESS_DEF
-    b = nm[BRIGHTNESS_KEY]
-    assert b.is_default  # No value was passed
-    brightness_new = 0.1
-    b.set(brightness_new)
-    assert not b.is_default
-    assert nm.brightness == brightness_new
 
-    brightness_new = 0.2
-    nm[BRIGHTNESS_KEY].set(brightness_new)
-    assert nm.brightness == brightness_new
+    # Test we can assign a value using setattr
+    nm.g2 = 0.1
+    assert nm.g2 == 0.1
 
 
 def test_noise_model_init():
@@ -59,9 +52,7 @@ def test_noise_model_init():
     assert PHASE_IMPRECISION_KEY in nm.__dict__()
     assert G2_KEY in nm.__dict__()
     assert BRIGHTNESS_KEY not in nm.__dict__()
-    assert not nm[PHASE_IMPRECISION_KEY].is_default
-    assert not nm[G2_KEY].is_default
-    assert nm[BRIGHTNESS_KEY].is_default
+    assert nm.brightness == BRIGHTNESS_DEF
 
 
 def test_noise_model_errors():
@@ -84,17 +75,17 @@ def test_noise_model_errors():
 
     nm = NoiseModel()
     with pytest.raises(ValueError):
-        nm.set_value(BRIGHTNESS_KEY, 1.3)
+        nm.brightness = 1.3
 
     with pytest.raises(TypeError):
-        nm.set_value(G2_DIST_KEY, 1.3)
+        nm.g2_distinguishable = 1.3
 
 
 def test_noise_model_eq():
     nm1 = NoiseModel(brightness=0.15, indistinguishability=0.89, g2=0.01, g2_distinguishable=False)
     nm2 = NoiseModel(brightness=0.15, indistinguishability=0.89, g2=0.01, g2_distinguishable=False)
     assert nm1 == nm2
-    nm2.set_value(BRIGHTNESS_KEY, 0.2)
+    nm2.brightness = 0.2
     assert nm1 != nm2
     nm2 = NoiseModel(brightness=0.15, indistinguishability=0.89, g2=0.01)
     assert nm1 != nm2

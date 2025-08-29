@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from perceval import Detector, SVDistribution
+from perceval import Detector, SVDistribution, post_select_distribution
 from perceval.simulators.delay_simulator import _retrieve_mode_count, DelaySimulator
 from perceval.simulators.simulator import Simulator
 from perceval.backends import SLOSBackend
@@ -34,6 +34,8 @@ from perceval.components import Circuit, BS, TD
 from perceval.utils import BasicState, BSDistribution, PostSelect
 
 import pytest
+
+from _test_utils import assert_bsd_close
 
 
 def test_retrieve_mode_count():
@@ -69,7 +71,7 @@ def test_delay_simulation():
     expected[BasicState([2, 0])] = 0.125
     expected[BasicState([0, 2])] = 0.125
 
-    assert pytest.approx(res) == expected
+    assert_bsd_close(res, expected)
 
     simulator.set_selection(postselect=PostSelect('[1]>0'))
 
@@ -77,10 +79,10 @@ def test_delay_simulation():
     expected = BSDistribution()
     expected[BasicState([0, 1])] = 0.666666666666667
     expected[BasicState([0, 2])] = 0.333333333333333
-    assert pytest.approx(heralded_res) == expected
+    assert_bsd_close(heralded_res, expected)
 
     sv = simulator.evolve(BasicState([1, 0]))
-    assert len(sv.keys()) == 2
+    assert len(sv) == 2
     assert BasicState([0, 1]) in sv.keys()
     assert BasicState([0, 2]) in sv.keys()
 
@@ -103,7 +105,7 @@ def test_delay_detectors_simulation():
     expected[BasicState([1, 0])] = 0.25 + 0.125
     expected[BasicState([0, 1])] = 0.25 + 0.125
 
-    assert pytest.approx(res["results"]) == expected
+    assert_bsd_close(res["results"], expected)
 
 
 def test_invalid_delay():
@@ -113,3 +115,49 @@ def test_invalid_delay():
 
     with pytest.raises(ValueError):  # TD parameter has to be an integer (number of periods)
         simulator.set_circuit(input_circ)
+
+
+def test_logical_selection():
+    backend = SLOSBackend()
+    simulator = DelaySimulator(Simulator(backend))
+
+    input_state = BasicState([1, 0])
+
+    input_circ = [((0, 1), BS(1.54)), ((0,), TD(1)), ((0, 1), BS(1.58))]  # Break symmetry
+    simulator.set_circuit(input_circ)
+    non_filtered = simulator.probs(input_state)
+
+    heralds = {}
+    postselect = PostSelect('[1]>0')
+    simulator.set_selection(postselect=postselect, heralds=heralds)
+
+    res = simulator.probs_svd(SVDistribution(input_state))
+    filtered, perf = res["results"], res["global_perf"]
+    theo_filtered, theo_perf = post_select_distribution(non_filtered, postselect, heralds)
+
+    assert_bsd_close(theo_filtered, filtered)
+    assert theo_perf == pytest.approx(perf)
+
+    heralds = {1: 0}
+    postselect = PostSelect()
+    simulator.set_selection(postselect=postselect, heralds=heralds)
+    simulator.keep_heralds(False)
+
+    res = simulator.probs_svd(SVDistribution(input_state))
+    filtered, perf = res["results"], res["global_perf"]
+    theo_filtered, theo_perf = post_select_distribution(non_filtered, postselect, heralds, False)
+
+    assert_bsd_close(theo_filtered, filtered)
+    assert theo_perf == pytest.approx(perf)
+
+    heralds = {1: 0}
+    postselect = PostSelect("[0]>0")
+    simulator.set_selection(postselect=postselect, heralds=heralds)
+    simulator.keep_heralds(True)
+
+    res = simulator.probs_svd(SVDistribution(input_state))
+    filtered, perf = res["results"], res["global_perf"]
+    theo_filtered, theo_perf = post_select_distribution(non_filtered, postselect, heralds)
+
+    assert_bsd_close(theo_filtered, filtered)
+    assert theo_perf == pytest.approx(perf)

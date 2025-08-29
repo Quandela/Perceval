@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+from perceval import NoisyFockState
 from perceval.simulators.noisy_sampling_simulator import SamplesProvider
 from perceval.backends import Clifford2017Backend
 from perceval.components import Circuit, Source
@@ -36,7 +36,12 @@ from perceval.utils import BasicState, NoiseModel, BSDistribution
 def _svd_to_bsd(svd):
     res = BSDistribution()
     for state, prob in svd.items():
-        res.add(state[0], prob)
+        if isinstance(state[0], NoisyFockState):
+            bs_list = state[0].separate_state()
+        else:
+            bs_list = [state[0]]
+        for bs in bs_list:
+            res.add(bs, prob)
     return res
 
 
@@ -54,7 +59,7 @@ def test_samples_provider_distribution():
     noisy_input = source.generate_distribution(ideal_input)
 
     provider = SamplesProvider(clifford)
-    provider.estimate_weights_from_distribution(_svd_to_bsd(noisy_input), 1000)
+    provider.estimate_weights_from_distribution(noisy_input, 1000)
     provider.prepare()
 
     assert provider._pools and provider._weights
@@ -66,7 +71,7 @@ def test_samples_provider_distribution():
 
 def test_samples_provider_source():
     provider = SamplesProvider(clifford)
-    sampler = lambda i: source.generate_samples(i, ideal_input, 0)
+    sampler = lambda i: source.generate_separated_samples(i, ideal_input, 0)
 
     provider.estimate_weights_from_source(sampler, 1000)
     provider.prepare()

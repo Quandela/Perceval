@@ -54,25 +54,25 @@ class ModeConnector:
     """
     Resolves a mapping, supporting multiple syntaxes, to connect two objects.
     The left object must be an Experiment
-    The right object can be a Processor, an Experiment, a (unitary or non-unitary) component
+    The right object can be an Experiment or a (unitary or non-unitary) component
     """
 
-    def __init__(self, left_processor, right_obj, mapping):
+    def __init__(self, left_experiment, right_obj, mapping):
         """
-        :param left_processor: any experiment on which to plug `right_obj`
-        :param right_obj: the component or processor to plug on the left of `left_processor`
+        :param left_experiment: any experiment on which to plug `right_obj`
+        :param right_obj: the component or processor to plug on the right of `left_experiment`
         :param mapping: the user mapping defining the plugging rules (see resolve method doc for more info)
         """
         from .abstract_processor import AProcessor
-        if isinstance(left_processor, AProcessor):
-            left_processor = left_processor.experiment
-        self._lp = left_processor
+        if isinstance(left_experiment, AProcessor):
+            left_experiment = left_experiment.experiment
+        self._le = left_experiment
         self._ro = right_obj  # Can either be a component or a processor
-        self._r_is_component = isinstance(right_obj, AComponent)  # False means it is a Processor
+        self._r_is_component = isinstance(right_obj, AComponent)  # False means it is an Experiment
         self._map = mapping
         self._l_port_names = None
         self._r_port_names = None
-        self._n_modes_to_connect = right_obj.m
+        self._n_modes_to_connect = right_obj.m if self._r_is_component else right_obj.m_in
 
     def _mapping_type_checks(self):
         assert isinstance(self._map, dict), f"Mapping should be a Python dictionary, got {type(self._map)}"
@@ -92,7 +92,7 @@ class ModeConnector:
         if self._r_is_component:
             return list(range(self._n_modes_to_connect))
         r_list = list(range(self._ro.circuit_size))
-        return [x for x in r_list if x not in self._ro.heralds.keys()]
+        return [x for x in r_list if x not in self._ro.in_heralds.keys()]
 
     def resolve(self) -> dict[int, int]:
         """
@@ -122,8 +122,14 @@ class ModeConnector:
             map_begin = self._map
             self._map = {}
             r_list = self._get_ordered_rmodes()
+            herald_offset = 0
+            le_heralds = self._le.heralds
             for i in range(self._n_modes_to_connect):
-                self._map[map_begin + i] = r_list[i]
+                pos = map_begin + i + herald_offset
+                while pos in le_heralds:
+                    herald_offset += 1
+                    pos += 1
+                self._map[pos] = r_list[i]
             self._check_consistency()
             return self._map
 
@@ -175,7 +181,7 @@ class ModeConnector:
         if min_out < 0:
             raise UnavailableModeException(min_out)
         for m_out, m_in in self._map.items():
-            if not self._lp.is_mode_connectible(m_out):
+            if not self._le.is_mode_connectible(m_out):
                 raise UnavailableModeException(m_out)
         m_in = self._map.values()
         if len(m_in) != len(list(dict.fromkeys(m_in))):  # suppress duplicates and check length
@@ -186,7 +192,7 @@ class ModeConnector:
         Resolves mode indexes from an output port name of the left processor
         """
         if self._l_port_names is None:
-            self._l_port_names = self._lp.out_port_names
+            self._l_port_names = self._le.out_port_names
         count = self._l_port_names.count(name)
         if count == 0:
             return None
@@ -221,12 +227,12 @@ class ModeConnector:
         if self._r_is_component:
             get_logger().warn("Right object is not a processor, thus doesn't contain heralded modes", channel.user)
             return 0
-        other_herald_pos = list(self._ro.heralds.keys())
-        new_mode_index = self._lp.circuit_size
+        other_herald_pos = list(self._ro.in_heralds.keys())
+        new_mode_index = self._le.circuit_size
         for pos in other_herald_pos:
             mapping[new_mode_index] = pos
             new_mode_index += 1
-        return new_mode_index - self._lp.circuit_size
+        return new_mode_index - self._le.circuit_size
 
     @staticmethod
     def generate_permutation(mode_mapping: dict[int, int]):
@@ -247,3 +253,27 @@ class ModeConnector:
         if perm_vect == list(range(len(perm_modes))):
             return perm_modes, None  # No need for a permutation, modes are already sorted
         return perm_modes, PERM(perm_vect)
+
+    def compose_lists(self, mode_mapping: dict[int, int], l: list, r: list):
+        """
+        Takes a list of object from the left experiment and the right experiment, as well as the mode mapping.
+        Applies the mapping to the list of the left experiment
+        then adds the members of the list of the right experiment
+        so that the resulting list should be given to the composed experiment
+        (in the case no inverse permutation is added afterward)
+        """
+        res = [None] * self._le.circuit_size
+        mode_0 = min(mode_mapping)
+
+        for i, o in enumerate(l):
+            if i in mode_mapping:
+                mode = mode_mapping[i] + mode_0
+            else:
+                mode = i
+            res[mode] = o
+
+        for i, o in enumerate(r):
+            mode = mode_0 + i
+            res[mode] = o
+
+        return res

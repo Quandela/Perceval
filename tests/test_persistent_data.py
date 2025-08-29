@@ -85,19 +85,24 @@ def test_basic_methods(tmp_path):
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="chmod doesn't works on windows")
 def test_access(tmp_path):
-    persistent_data = PersistentData(directory=tmp_path)
+    # pytest creates tmp_path with access mode depending on temp files management
+
+    persistent_data = PersistentData(directory=tmp_path) # tmp_path is already created, PersistentData will not create it here
+    # (if tmp_path was not created, it would have been created with mode=0o777 here)
     directory = persistent_data.directory
 
     os.chmod(directory, 0o000)
     assert not persistent_data.is_writable()
     assert not persistent_data.is_readable()
 
-    os.chmod(directory, 0o444)
+    os.chmod(directory, 0o400)
     assert not persistent_data.is_writable()
     assert persistent_data.is_readable()
 
-    os.chmod(directory, 0o777)
+    os.chmod(directory, 0o700)
     assert persistent_data.is_writable()
     assert persistent_data.is_readable()
+    persistent_data.write_file("test_read_write", "test", FileFormat.TEXT)
+    assert persistent_data.read_file("test_read_write", FileFormat.TEXT) == "test"
 
     persistent_data.clear_all_data()
