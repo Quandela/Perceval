@@ -44,9 +44,9 @@ Perceval aims to be a companion tool for developing discrete-variable photonic c
 See also:
     - Perceval user documentation: https://perceval.quandela.net/docs/
     - Quandela cloud documentation: https://cloud.quandela.com/webide/documentation (requires a free account to access)
+    - Perceval bridge with other quantum frameworks: https://github.com/quandela/Perceval_Interop
 """
 
-from importlib import import_module
 from .utils import PMetadata
 
 __version__ = PMetadata.version()
@@ -59,15 +59,6 @@ from .rendering import *
 from .runtime import *
 from .error_mitigation import photon_recycling
 from .simulators import Simulator, SimulatorFactory, FFSimulator, NoisySamplingSimulator, Stepper
-
-
-def register_plugin(name, silent=False):
-    try:
-        plugin = import_module(name)
-        assert plugin.register(silent) is True
-    except Exception as e:
-        raise RuntimeError("cannot import %s: %s" % (name, str(e)))
-    return True
 
 
 get_logger().info(f"=== Starting Perceval session - process ID: {payload_generator.__process_id__} ===",
