@@ -292,7 +292,7 @@ class Simulator(ISimulator):
                 self._evolve[state] = self._backend.evolve()
                 self.DEBUG_evolve_count += 1
 
-    def _evolve_cache_with_n(self, input_list: set[tuple[FockState, int]]):
+    def _evolve_cache_with_n(self, input_list: set[tuple[FockState, int]], non_pnr_detector_modes: list[int] | None = None):
         previous_n = None
         for state, n in sorted(input_list, key=lambda x: x[1]):
             if (state, n) not in self._evolve:
@@ -301,7 +301,7 @@ class Simulator(ISimulator):
                     # The backend init the mask when setting the state and when setting the mask if there is an input state,
                     # no need to do it twice
                     self._backend._input_state = None
-                    self.use_mask(n)
+                    self.use_mask(n, non_pnr_detector_modes)
 
                 self._backend.set_input_state(state)
                 self._evolve[(state, n)] = self._backend.evolve()
@@ -344,7 +344,8 @@ class Simulator(ISimulator):
             return self.probs(input_state[0])
         return _to_bsd(self.evolve(input_state))
 
-    def _probs_svd_generic(self, input_dist, p_threshold, progress_callback: callable = None):
+    def _probs_svd_generic(self, input_dist, p_threshold, non_pnr_detector_modes: list[int] | None,
+                        progress_callback: callable = None):
         """decomposed input:
         From a SVD = {
             pa_11*bs_11 + ... + pa_n1*bs_n1: p1,
@@ -374,7 +375,7 @@ class Simulator(ISimulator):
 
         # If sv.n >= state.n + n_heralds, we get all the Fock space in the result
         input_set = set([(state, self._best_n(s[2], state.n)) for s in decomposed_input for t in s[1] for state in t[1].values()])
-        self._evolve_cache_with_n(input_set)
+        self._evolve_cache_with_n(input_set, non_pnr_detector_modes)
 
         """Reconstruct output probability distribution"""
         res = BSDistribution()
@@ -409,7 +410,8 @@ class Simulator(ISimulator):
             res.normalize()
         return res
 
-    def _probs_svd_fast(self, input_dist, p_threshold, progress_callback: callable = None):
+    def _probs_svd_fast(self, input_dist, p_threshold, non_pnr_detector_modes: list[int] | None,
+                        progress_callback: callable = None):
         """decomposed input:
            From a SVD = {
                bs_1: p1,
@@ -435,7 +437,7 @@ class Simulator(ISimulator):
             state = decomposed_input[0][1][0]
             n = decomposed_input[0][2]
             n = self._best_n(n, n)
-            self.use_mask(n)
+            self.use_mask(n, non_pnr_detector_modes)
             self._backend.set_input_state(state)
             res = self._backend.prob_distribution()
             self._logical_perf += sum(res.values()) * decomposed_input[0][0]
@@ -464,7 +466,7 @@ class Simulator(ISimulator):
                 # The backend init the mask when setting the state and when setting the mask if there is an input state,
                 # no need to do it twice
                 self._backend._input_state = None
-                self.use_mask(n)
+                self.use_mask(n, non_pnr_detector_modes)
 
             self._backend.set_input_state(state)
             cache[(state, n)] = self._backend.prob_iterator(p_threshold / (10 * prob0))
@@ -600,7 +602,7 @@ class Simulator(ISimulator):
 
         is_pnr = get_detection_type(detectors) == DetectionType.PNR
 
-        self.init_use_mask(is_pnr)
+        self.init_use_mask(is_pnr or not self._compute_physical_logical_perf)
 
         if is_pnr:
             prog_cb = progress_callback
@@ -608,10 +610,13 @@ class Simulator(ISimulator):
             prog_cb = partial_progress_callable(progress_callback, max_val=self.detector_cb_start)
 
         self._logical_perf = 0
+        non_pnr_detector_modes = [m for m, d in enumerate(detectors) if d is not None and d.type != DetectionType.PNR] \
+            if self._can_use_mask and detectors else None
+
         if has_superposed_states:
-            res = self._probs_svd_generic(svd, p_threshold, prog_cb)
+            res = self._probs_svd_generic(svd, p_threshold, non_pnr_detector_modes, prog_cb)
         else:
-            res = self._probs_svd_fast(svd, p_threshold, prog_cb)
+            res = self._probs_svd_fast(svd, p_threshold, non_pnr_detector_modes, prog_cb)
 
         if self._logical_perf > 0 and physical_perf > 0:
             self._logical_perf /= physical_perf
@@ -632,7 +637,7 @@ class Simulator(ISimulator):
         self.log_resources(sys._getframe().f_code.co_name, {'n': n})
         return self.format_results(res, physical_perf, self._logical_perf)
 
-    def _setup_heralds(self, n=None):
+    def _setup_heralds(self, n=None, non_pnr_detector_modes=None):
         # Set up a mask corresponding to heralds:
         mask_str = ""
         for i in range(self._backend._circuit.m):
@@ -644,14 +649,14 @@ class Simulator(ISimulator):
                 mask_str += f"{chr(0x30 + herald_expectation)}"
             else:
                 mask_str += " "
-        self._backend.set_mask(mask_str, n)
+        self._backend.set_mask(mask_str, n, non_pnr_detector_modes)
 
     def init_use_mask(self, is_pnr) -> None:
         self._can_use_mask = self._heralds and is_pnr
 
-    def use_mask(self, n=None):
+    def use_mask(self, n=None, non_pnr_detector_modes=None):
         if self._can_use_mask:
-            self._setup_heralds(n)
+            self._setup_heralds(n, non_pnr_detector_modes)
         elif self._backend._masks_str is not None:
             self._backend.clear_mask()
 
