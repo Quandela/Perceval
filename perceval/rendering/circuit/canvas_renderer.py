@@ -171,6 +171,7 @@ class CanvasRenderer(ICircuitRenderer):
         start = lines[0]
         end = lines[-1]
         subblock_start = self.max_pos(start, end)
+        self.extend_pos(start, end)
         area = (
             subblock_start,
             start,
@@ -373,6 +374,7 @@ class PreRenderer(ICircuitRenderer):
         start = lines[0]
         end = lines[-1]
         self._subblock_start = self.max_pos(start, end)
+        self.extend_pos(start, end)
         self._herald_range = [1 << 32, -1]
 
     def close_subblock(self, lines):
