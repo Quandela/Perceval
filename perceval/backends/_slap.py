@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
 import exqalibur as xq
 from perceval.utils import FockState, BSDistribution, StateVector
@@ -69,13 +70,7 @@ class SLAPBackend(AStrongSimulationBackend):
             return all_pa[xq.FSArray(self._input_state.m, self._input_state.n).find(output_state)]
 
     def prob_distribution(self) -> BSDistribution:
-        istate = self._input_state
-        all_probs = self._slap.all_prob(istate)
-
-        bsd = BSDistribution()
-        for output_state, probability in zip(self._get_iterator(istate), all_probs):
-            bsd.add(output_state, probability)
-        return bsd
+        return self._slap.prob_distribution(self._input_state)
 
     @property
     def name(self) -> str:

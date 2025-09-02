@@ -23,6 +23,12 @@ automatic normalization is called, allowing the composition of state vectors thr
 >>> print(sv)
 0.319I*|1,1>-0.903*|2,0>+0.287*|0,2>
 
+.. warning::
+  When multiplying a state by a numpy scalar (such as one returned by a numpy function), numpy takes precedence over
+  the state arithmetics and tries to convert the state to a numpy array. This results in an exception with potentially
+  obscure message. Two solutions exist: putting the numpy number on the right of the :code:`*` operand, or converting the numpy
+  scalar to a python type using the :code:`.item()` method.
+
 * **Comparison operators**
 
 Comparing two :code:`StateVector` with operator :code:`==` or :code:`!=` compare normalised copies of each. probability

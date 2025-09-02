@@ -39,6 +39,11 @@ from perceval.rendering.circuit import SymbSkin
 
 from _test_utils import _save_or_check, save_figs
 
+# Avoid an arbitrary issue on windows-latest runner with TCL/Tk
+if sys.platform == 'win32':
+    import matplotlib
+    matplotlib.use('Agg')
+
 
 @pytest.mark.rendering
 def test_svg_dump_phys_bs(tmp_path, save_figs):

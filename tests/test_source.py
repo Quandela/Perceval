@@ -26,8 +26,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from collections import defaultdict
-
 import pytest
 import math
 from collections import Counter
@@ -35,7 +33,6 @@ from collections import Counter
 from perceval import filter_distribution_photon_count, SVDistribution, \
     anonymize_annotations, FockState, NoisyFockState, StateVector
 from perceval.components import Source
-from perceval.utils.conversion import samples_to_probs
 from perceval.utils.dist_metrics import tvd_dist
 from perceval.rendering.pdisplay import pdisplay_state_distrib
 from _test_utils import strip_line_12, assert_svd_close, dict2svd
@@ -113,7 +110,7 @@ def test_source_sample_no_filter():
     assert len(samples_from_source) == nb_samples
 
     counter_samples = Counter(samples_from_source)
-    total = counter_samples.total()
+    total = sum(counter_samples.values())
     dist_samples = SVDistribution()
     for k, v in counter_samples.items():
         dist_samples.add(StateVector(k), v / total)
@@ -168,7 +165,7 @@ def test_source_samples_with_filter(brightness, g2, hom, losses, multiphoton_mod
     assert all(bs.n >= min_detected_photons for bs in samples_from_source)
 
     counter_samples = Counter(samples_from_source)
-    total = counter_samples.total()
+    total = sum(counter_samples.values())
     dist_samples = SVDistribution()
     for k, v in counter_samples.items():
         dist_samples.add(StateVector(k), v / total)
