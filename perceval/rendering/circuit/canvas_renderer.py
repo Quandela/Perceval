@@ -171,7 +171,6 @@ class CanvasRenderer(ICircuitRenderer):
         start = lines[0]
         end = lines[-1]
         subblock_start = self.max_pos(start, end)
-        self.extend_pos(start, end)
         area = (
             subblock_start,
             start,
@@ -196,15 +195,14 @@ class CanvasRenderer(ICircuitRenderer):
         self._canvas.add_text(
             (4, CanvasRenderer.SCALE * (end - start + 1) + 5),
             name.upper(), 8)
-        # Extend lines on the left side
-        if margins[0]:
-            self.extend_pos(start, end, margins[0])
+        # Extend the chart on the left side of the subblock
+        self.extend_pos(start, end, margins[0])
 
     def close_subblock(self, lines: tuple[int, ...]):
         start = lines[0]
         end = lines[-1]
         right_margins = self._current_subblock_info.get('margins', (0, 0))[1]
-        # Extend lines on the right side
+        # Extend the chart on the right side of the subblock
         self.extend_pos(start, end, right_margins)
 
     def max_pos(self, start, end, _=None):

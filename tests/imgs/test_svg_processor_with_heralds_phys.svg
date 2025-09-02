@@ -495,16 +495,13 @@ L 2650.382393 657.518615
 L 2760.709766 782.481385
 L 2768.232087 782.481385
 " clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
-    <path d="M 2642.860073 532.555845
-L 2768.232087 532.555845
-" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 2773.246968 475.072971
 L 3640.821308 475.072971
 L 3640.821308 715.001489
 L 2773.246968 715.001489
 z
 " clip-path="url(#staticClipPath)" style="fill: #add8e6; stroke: #000000"/>
-    <path d="M 2768.232087 532.555845
+    <path d="M 2642.860073 532.555845
 L 2893.604102 532.555845
 " clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 2893.604102 532.555845
