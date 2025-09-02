@@ -610,8 +610,11 @@ class Simulator(ISimulator):
             prog_cb = partial_progress_callable(progress_callback, max_val=self.detector_cb_start)
 
         self._logical_perf = 0
-        non_pnr_detector_modes = [m for m, d in enumerate(detectors) if d is not None and d.type != DetectionType.PNR] \
-            if self._can_use_mask and detectors else None
+
+        # Note: we should test for each detector if it can detect 0 photons from at least 1 or not.
+        # If it does, we need to include this mode in the list (or, to be faster, not put this herald in the mask)
+        non_pnr_detector_modes = [m for m, d in enumerate(detectors) if d is not None and d.type != DetectionType.PNR
+                                  and self._heralds.get(m, 0) > 0] if self._can_use_mask and detectors else None
 
         if has_superposed_states:
             res = self._probs_svd_generic(svd, p_threshold, non_pnr_detector_modes, prog_cb)
