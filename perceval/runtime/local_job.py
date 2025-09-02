@@ -137,6 +137,9 @@ class LocalJob(Job):
         if self._result_mapping_function:
             get_logger().info(
                 f"Converting local job results with {self._result_mapping_function.__name__}", channel.general)
+            if self._results is None:
+                self._result_mapping_function = None
+                return self._results
             if 'results' in self._results:
                 self._results['results'] = self._result_mapping_function(self._results['results'],
                                                                          **self._delta_parameters['mapping'])
