@@ -84,7 +84,7 @@ class ICircuitRenderer(ABC):
                             self.append_subcircuit(shiftr, c)
                 else:
                     self.append_circuit(shiftr, c)
-        self.extend_pos(0, circuit.m - 1)
+        self.extend_pos(shift, shift + circuit.m - 1)
 
     @abstractmethod
     def get_circuit_size(self, circuit: ACircuit, recursive: bool = False) -> tuple[int, int]:
