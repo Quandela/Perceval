@@ -26,30 +26,50 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import copy
 from collections import defaultdict
-
-from perceval.utils import BasicState, BSDistribution, StateVector, Annotation, SVDistribution
-from perceval.components import Circuit
 from math import sqrt
+from multipledispatch import dispatch
+from typing import Iterable
+
+from perceval.utils import FockState, NoisyFockState, AnnotatedFockState, BSDistribution, StateVector, Annotation, SVDistribution
+from perceval.components import Circuit
 
 
 def _to_bsd(sv: StateVector) -> BSDistribution:
     res = BSDistribution()
     for state, pa in sv.unnormalized_iterator():
-        state.clear_annotations()
+        if not isinstance(state, FockState):
+            state = state.clear_annotations()
         res.add(state, abs(pa) ** 2)
     return res
 
 
+@dispatch(StateVector, Annotation)
 def _inject_annotation(sv: StateVector, annotation: Annotation) -> StateVector:
+    if isinstance(annotation, int):
+        res_sv = StateVector()
+        for s, pa in sv.unnormalized_iterator():
+            s = NoisyFockState(s, [annotation]*s.n)
+            res_sv += pa * s
+        return res_sv
     if len(annotation):
         res_sv = StateVector()
-        for s in sv.keys():
-            pa = sv[s]
+        for s, pa in sv.unnormalized_iterator():
+            s = copy.copy(s)
             s.inject_annotation(annotation)
             res_sv += pa * s
         return res_sv
     return sv
+
+
+@dispatch(StateVector, int)
+def _inject_annotation(sv: StateVector, annotation: int) -> StateVector:
+    res_sv = StateVector()
+    for s, pa in sv.unnormalized_iterator():
+        s = NoisyFockState(s, [annotation]*s.n)
+        res_sv += pa * s
+    return res_sv
 
 
 def _merge_sv(sv1: StateVector, sv2: StateVector, prob_threshold: float = 0) -> StateVector:
@@ -65,17 +85,19 @@ def _merge_sv(sv1: StateVector, sv2: StateVector, prob_threshold: float = 0) -> 
     return res
 
 
-def _annot_state_mapping(bs_with_annots: BasicState):
-    bs_list = bs_with_annots.separate_state(keep_annotations=True)
-    mapping = {}
-    for bs in bs_list:
-        if bs.n == 0:
-            mapping[Annotation()] = bs
-            continue
-        annot = bs.get_photon_annotation(0)
-        bs.clear_annotations()
-        mapping[annot] = bs
-    return mapping
+@dispatch(FockState)
+def _annot_state_mapping(bs_with_annots: FockState):
+    return {Annotation(): bs_with_annots}
+
+
+@dispatch(NoisyFockState)
+def _annot_state_mapping(bs_with_annots: NoisyFockState):
+    return bs_with_annots.split_state()
+
+
+@dispatch(AnnotatedFockState)
+def _annot_state_mapping(bs_with_annots: AnnotatedFockState): # TODO if needed + separate_state() does not exist for AnnotatedFockState anymore
+    return {bs_with_annots.get_photon_annotation(0): bs_with_annots.clear_annotations()}
 
 
 def _retrieve_mode_count(component_list: list) -> int:
@@ -104,5 +126,30 @@ def _split_by_photon_count(sv: StateVector) -> SVDistribution:
     for (state, prob) in counter.values():
         state.normalize()
         res[state] = prob
+
+    return res
+
+def _list_merge(distributions: list[Iterable[tuple[FockState, float]]], prob_threshold: float = 0) -> dict[FockState, float]:
+    # Note: the iterable must reset each time we call it
+    if len(distributions) == 0:
+        return dict()
+
+    res = defaultdict(float)
+
+    def _inner_tensor_product(dist: list[Iterable[tuple[FockState, float]]], current_state: FockState, current_prob: float):
+        if len(dist) == 0:
+            res[current_state] += current_prob
+            return
+
+        for bs, p in dist[0]:
+            prob = current_prob * p
+            if prob < prob_threshold:
+                continue
+            _inner_tensor_product(dist[1:], current_state.merge(bs), prob)
+
+    for bs, p in distributions[0]:
+        if p < prob_threshold:
+            continue
+        _inner_tensor_product(distributions[1:], bs, p)
 
     return res

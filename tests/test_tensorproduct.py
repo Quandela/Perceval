@@ -28,10 +28,8 @@
 # SOFTWARE.
 
 import pytest
-from perceval import BasicState, StateVector, tensorproduct, BSDistribution, SVDistribution
-from unittest.mock import patch
-from perceval.utils.logging import ExqaliburLogger
-from _test_utils import LogChecker
+from perceval import BasicState, StateVector, BSDistribution, SVDistribution
+from _test_utils import assert_svd_close, assert_bsd_close
 
 sv0 = StateVector([0, 1]) + StateVector([1, 1]) * 1j
 sv1 = StateVector([2, 3]) + StateVector([4, 5])
@@ -65,18 +63,13 @@ def test_mul():
     _assert_sv_approx_eq(result, expected, "BS with SV multiplication is wrong")
 
 
-def test_tensorproduct():
-    result = tensorproduct([sv0, sv1, bs])
-    expected = sv0 * sv1 * bs
-    _assert_sv_approx_eq(result, expected, "tensor product is wrong")
-
-
 def test_power():
     power = 5
-    sv_list = power * [sv0]
 
     result = sv0 ** power
-    expected = tensorproduct(sv_list)
+    expected = sv0
+    for _ in range(power - 1):
+        expected *= sv0
     _assert_sv_approx_eq(result, expected, "SV pow is wrong")
 
     result = bs ** power
@@ -95,31 +88,29 @@ def test_bsd_tensor_product():
                             BasicState([10, 11]): .5,
                             BasicState([12, 13]): .2})
 
-    assert BSDistribution.tensor_product(bsd_1, bsd_2) == pytest.approx(bsd_1 * bsd_2), "BSD tensor product is wrong"
+    assert_bsd_close(BSDistribution.tensor_product(bsd_1, bsd_2), bsd_1 * bsd_2)
 
-    assert BSDistribution.tensor_product(bsd_1, bsd_2, merge_modes=True) == pytest.approx(BSDistribution({
-        BasicState([6, 8]): .4 * .3 + .6 * .7,
-        BasicState([8, 10]): .4 * .7,
-        BasicState([4, 6]): .6 * .3,
-    })), "Wrong tensor product result when merge_modes is True"
+    assert_bsd_close(BSDistribution.tensor_product(bsd_1, bsd_2, merge_modes=True),
+                     BSDistribution({
+                         BasicState([6, 8]): .4 * .3 + .6 * .7,
+                         BasicState([8, 10]): .4 * .7,
+                         BasicState([4, 6]): .6 * .3,
+    }))
 
-    assert (BSDistribution.tensor_product(bsd_1, bsd_2, merge_modes=True)
-            == pytest.approx(BSDistribution.tensor_product(bsd_2, bsd_1, merge_modes=True))), \
-        "BSD tensor product is not symmetric when merge_modes is True"
+    assert_bsd_close(BSDistribution.tensor_product(bsd_1, bsd_2, merge_modes=True),
+                     BSDistribution.tensor_product(bsd_2, bsd_1, merge_modes=True))
 
-    assert BSDistribution.list_tensor_product([bsd_1, bsd_2, bsd_3]) == pytest.approx(bsd_1 * bsd_2 * bsd_3), \
-        "BSD list tensor product is wrong"
+    assert_bsd_close(BSDistribution.list_tensor_product([bsd_1, bsd_2, bsd_3]), bsd_1 * bsd_2 * bsd_3)
 
-    product = BSDistribution()
+    product = BSDistribution(BasicState(bsd_1.m))
     for bsd in [bsd_1, bsd_2, bsd_3]:
         product = BSDistribution.tensor_product(product, bsd, merge_modes=True)
 
-    assert BSDistribution.list_tensor_product([bsd_1, bsd_2, bsd_3], merge_modes=True) == pytest.approx(product), \
-        "Wrong list tensor product result when merge_modes is True"
+    assert_bsd_close(BSDistribution.list_tensor_product([bsd_1, bsd_2, bsd_3], merge_modes=True), product)
 
     # Now with empty BSD
     bsd_list = [bsd_1, bsd_2, BSDistribution(), bsd_3]
-    assert BSDistribution.list_tensor_product(bsd_list, merge_modes=True) == pytest.approx(BSDistribution()), \
+    assert BSDistribution.list_tensor_product(bsd_list, merge_modes=True) == BSDistribution(), \
         "Wrong list tensor product result when merge_modes is True and there are empty BSD"
 
 
@@ -134,13 +125,11 @@ def test_svd_tensor_product():
                             StateVector([10, 11]): .5,
                             StateVector([12, 13]): .2})
 
-    assert SVDistribution.tensor_product(svd_1, svd_2) == pytest.approx(svd_1 * svd_2), "SVD tensor product is wrong"
+    assert_svd_close(SVDistribution.tensor_product(svd_1, svd_2), svd_1 * svd_2)
 
-    assert SVDistribution.list_tensor_product([svd_1, svd_2, svd_3]) == pytest.approx(svd_1 * svd_2 * svd_3), \
-        "SVD list tensor product is wrong"
+    assert_svd_close(SVDistribution.list_tensor_product([svd_1, svd_2, svd_3]), svd_1 * svd_2 * svd_3)
 
     # Now with empty SVD
     bsd_list = [svd_1, svd_2, SVDistribution(), svd_3]
 
-    assert SVDistribution.list_tensor_product(bsd_list) == pytest.approx(SVDistribution()), \
-        "Wrong list tensor product result when there are empty BSD"
+    assert_svd_close(SVDistribution.list_tensor_product(bsd_list), SVDistribution())

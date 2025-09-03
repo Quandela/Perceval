@@ -39,7 +39,7 @@ from scipy.sparse.linalg import LinearOperator, eigsh
 from scipy.sparse import dok_array, csr_array, kron
 
 import exqalibur as xq
-from .statevector import StateVector, SVDistribution, BasicState, max_photon_state_iterator, BSSamples
+from .states import StateVector, SVDistribution, BasicState, max_photon_state_iterator, BSSamples, FockState
 from .density_matrix_utils import array_to_statevector, is_hermitian, sparray
 
 # In all the DensityMatrix Class, there is a compromise between csr_array and dok_array.
@@ -170,7 +170,7 @@ class DensityMatrix:
             raise TypeError("mixed_state must be a BasicState, a StateVector a SVDistribution or a 2d array")
 
         for key in svd.keys():
-            if any([bs[0].has_annotations for bs in key]):
+            if any([not isinstance(bs[0], FockState) for bs in key]):
                 raise ValueError("annotations are not supported yet in DensityMatrix")
 
         m = svd.m
@@ -182,9 +182,9 @@ class DensityMatrix:
         l = []
         for sv, p in svd.items():
             vector = np.zeros((size, 1), dtype=complex)
-            for bst in sv.keys():
+            for bst, pa in sv:
                 idx = index[bst]
-                vector[idx, 0] = sv[bst]
+                vector[idx, 0] = pa
             vector = csr_array(vector)
             l.append((vector, p))
         matrix = sum([p * (vector @ conj(vector.T)) for vector, p in l])  # This avoids the SparseEfficiencyWarning
@@ -281,13 +281,14 @@ class DensityMatrix:
 
     def to_svd(self, threshold: float | None = None, batch_size: int = 1):
         """
-            Gives back an SVDistribution from the density_matrix
+        Gives back an SVDistribution from the density_matrix
 
-            :param threshold: the threshold when the search for eigen values is stopped.
-            :param batch_size: the number of eigen values at each Arnoldi's algorithm iteration.
-                Only used if matrix is large enough.
-            :return: The SVD object corresponding to the DensityMatrix.
-                The StateVector with probability < threshold are removed.
+        :param threshold: the threshold when the search for eigen values is stopped.
+        :param batch_size: the number of eigen values at each Arnoldi's algorithm iteration.
+            Only used if matrix is large enough.
+
+        :return: The SVD object corresponding to the DensityMatrix.
+            The StateVector with probability < threshold are removed.
         """
         if threshold is None:
             threshold = self.precision
@@ -403,6 +404,7 @@ class DensityMatrix:
     def measure(self, modes: list[int] | int):
         """
         Makes a measure on a list of modes.
+
         :param modes: a list of integer for the modes you want to measure
         """
         self.normalize()

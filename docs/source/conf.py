@@ -91,7 +91,8 @@ extensions = [
 
 suppress_warnings = ['autosectionlabel.*']
 bibtex_bibfiles = ["references.bib"]
-bibtex_reference_style = "author_year"
+bibtex_default_style = "plain"
+bibtex_reference_style = "label"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -117,7 +118,6 @@ html_static_path = ["_static"]
 html_theme_options = {
     "navigation_depth": 2,
     "titles_only": False,
-    "display_version": True,
 }
 
 html_style = "css/style.css"

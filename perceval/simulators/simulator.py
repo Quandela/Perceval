@@ -29,22 +29,23 @@
 from __future__ import annotations
 
 import sys
+from collections import defaultdict
 
-from copy import copy
+from exqalibur import SimpleSourceIterator
 from multipledispatch import dispatch
 from numbers import Number
-from collections.abc import Callable
 from scipy.sparse import csc_array, csr_array
 
 from perceval.backends import AStrongSimulationBackend
-from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType, check_heralds_detectors
-from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, \
+from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType, check_heralds_detectors, Source
+from perceval.utils import BasicState, FockState, NoisyFockState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, \
     DensityMatrix, post_select_distribution, post_select_statevector, partial_progress_callable
 from perceval.utils.density_matrix_utils import extract_upper_triangle
 from perceval.utils.logging import get_logger
 from perceval.runtime import cancel_requested
 
-from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping, _split_by_photon_count
+from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping, _split_by_photon_count, \
+    _list_merge
 from ._simulate_detectors import simulate_detectors
 from .simulator_interface import ISimulator
 
@@ -79,9 +80,18 @@ class Simulator(ISimulator):
         self._rel_precision = value
 
     def set_precision(self, precision: float):
+        """
+        Set the precision of the simulator.
+        When using probs_svd, states having a probability inferior to the precision times the highest probability
+        will be discarded.
+        """
         self.precision = precision
 
     def set_heralds(self, heralds):
+        """
+        Set the output heralds of the simulator. Any output that does not match the heralds will be discarded.
+        Only used in probs, probs_svd, evolve, evolve_svd
+        """
         self._invalidate_cache()
         self._n_heralds = sum(heralds.values())
         super().set_heralds(heralds)
@@ -124,18 +134,31 @@ class Simulator(ISimulator):
         self._invalidate_cache()
         self._backend.set_circuit(circuit)
 
-    @dispatch(BasicState, BasicState)
-    def prob_amplitude(self, input_state: BasicState, output_state: BasicState) -> complex:
+    @dispatch(FockState, FockState)
+    def prob_amplitude(self, input_state: FockState, output_state: FockState) -> complex:
         """Compute the probability amplitude of an output fock state versus an input fock state.
 
-        :param input_state: A fock state with or without photon annotations
-        :param output_state: A fock state with or without photon annotations. If the input state holds annotations,
-            the output state must hold the same ones, otherwise the computed probability amplitude is 0.
+        :param input_state: A fock state
+        :param output_state: A fock state
+
+        :return: The complex probability amplitude
+        """
+        if input_state.n == 0:
+            return complex(1) if output_state.n == 0 else complex(0)
+        self._backend.set_input_state(input_state)
+        return self._backend.prob_amplitude(output_state)
+
+    @dispatch(NoisyFockState, NoisyFockState)
+    def prob_amplitude(self, input_state: NoisyFockState, output_state: NoisyFockState) -> complex:
+        """Compute the probability amplitude of an output fock state versus an input fock state.
+
+        :param input_state: A noisy fock state
+        :param output_state: A noisy fock state.
 
             >>> simulator.set_circuit(Circuit(1))  # One mode identity
-            >>> simulator.prob_amplitude(BasicState('|{_:0}>'), BasicState('|{_:1}>'))
+            >>> simulator.prob_amplitude(NoisyFockState('|{0}>'), NoisyFockState('|{1}>'))
             0
-            >>> simulator.prob_amplitude(BasicState('|{_:0}>'), BasicState('|{_:0}>'))
+            >>> simulator.prob_amplitude(NoisyFockState('|{0}>'), NoisyFockState('|{0}>'))
             1
 
         :return: The complex probability amplitude
@@ -154,15 +177,44 @@ class Simulator(ISimulator):
             probampli *= self._backend.prob_amplitude(output_map[annot])
         return probampli
 
-    @dispatch(StateVector, BasicState)
-    def prob_amplitude(self, input_state: StateVector, output_state: BasicState) -> complex:
+    @dispatch(NoisyFockState, FockState)
+    def prob_amplitude(self, input_state: NoisyFockState, output_state: FockState) -> complex:
+        """Compute the probability amplitude of an output fock state versus an input fock state.
+
+        :param input_state: A fock state with or without photon annotations
+        :param output_state: A fock state with or without photon annotations. If the input state holds annotations,
+            the output state must hold the same ones, otherwise the computed probability amplitude is 0.
+        :return: The complex probability amplitude
+        """
+        return complex(0)
+
+    @dispatch(FockState, NoisyFockState)
+    def prob_amplitude(self, input_state: FockState, output_state: NoisyFockState) -> complex:
+        """Compute the probability amplitude of an output fock state versus an input fock state.
+
+        :param input_state: A fock state with or without photon annotations
+        :param output_state: A fock state with or without photon annotations. If the input state holds annotations,
+            the output state must hold the same ones, otherwise the computed probability amplitude is 0.
+        :return: The complex probability amplitude
+        """
+        return complex(0)
+
+    @dispatch(StateVector, FockState)
+    def prob_amplitude(self, input_state: StateVector, output_state: FockState) -> complex:
         result = complex(0)
         for state, pa in input_state:
             result += self.prob_amplitude(state, output_state) * pa
         return result
 
-    @dispatch(BasicState, BasicState)
-    def probability(self, input_state: BasicState, output_state: BasicState) -> float:
+    @dispatch(StateVector, NoisyFockState)
+    def prob_amplitude(self, input_state: StateVector, output_state: NoisyFockState) -> complex:
+        result = complex(0)
+        for state, pa in input_state:
+            result += self.prob_amplitude(state, output_state) * pa
+        return result
+
+    @dispatch(FockState, FockState)
+    def probability(self, input_state: FockState, output_state: FockState) -> float:
         """Compute the probability of an output fock state versus an input fock state, simulating a measure.
         This call does not take heralding, post-selection or detector types into account
 
@@ -172,7 +224,7 @@ class Simulator(ISimulator):
         """
         if input_state.n == 0:
             return 1 if output_state.n == 0 else 0
-        input_list = input_state.separate_state(keep_annotations=False)
+        input_list = [input_state]
         result = 0
         for p_output_state in output_state.partition(
                 [input_state.n for input_state in input_list]):
@@ -183,13 +235,47 @@ class Simulator(ISimulator):
             result += prob
         return result
 
-    @dispatch(StateVector, BasicState)
-    def probability(self, input_state: StateVector, output_state: BasicState) -> float:
-        output_state.clear_annotations()
+    @dispatch(NoisyFockState, FockState)
+    def probability(self, input_state: NoisyFockState, output_state: FockState) -> float:
+        """Compute the probability of an output fock state versus an input fock state, simulating a measure.
+        This call does not take heralding, post-selection or detector types into account
+
+        :param input_state: A fock state with or without photon annotations
+        :param output_state: A fock state, annotations are ignored
+        :return: The probability (float between 0 and 1)
+        """
+        if input_state.n == 0:
+            return 1 if output_state.n == 0 else 0
+        input_list = input_state.separate_state()
+        result = 0
+        for p_output_state in output_state.partition(
+                [input_state.n for input_state in input_list]):
+            prob = 1
+            for i_state, o_state in zip(input_list, p_output_state):
+                self._backend.set_input_state(i_state)
+                prob *= self._backend.probability(o_state)
+            result += prob
+        return result
+
+    @dispatch(StateVector, FockState)
+    def probability(self, input_state: StateVector, output_state: FockState) -> float:
         sv_out = self.evolve(input_state)  # This is not as optimized as it could be
         result = 0
         for state, pa in sv_out:
-            state.clear_annotations()
+            if isinstance(state, NoisyFockState):
+                state = state.clear_annotations()
+            if state == output_state:
+                result += abs(pa) ** 2
+        return result
+
+    @dispatch(StateVector, NoisyFockState)
+    def probability(self, input_state: StateVector, output_state: NoisyFockState) -> float:
+        output_state = output_state.clear_annotations()
+        sv_out = self.evolve(input_state)  # This is not as optimized as it could be
+        result = 0
+        for state, pa in sv_out:
+            if isinstance(state, NoisyFockState):
+                state = state.clear_annotations()
             if state == output_state:
                 result += abs(pa) ** 2
         return result
@@ -199,14 +285,14 @@ class Simulator(ISimulator):
         self.DEBUG_evolve_count = 0
         self.DEBUG_merge_count = 0
 
-    def _evolve_cache(self, input_list: set[BasicState]):
+    def _evolve_cache(self, input_list: set[FockState]):
         for state in input_list:
             if state not in self._evolve:
                 self._backend.set_input_state(state)
                 self._evolve[state] = self._backend.evolve()
                 self.DEBUG_evolve_count += 1
 
-    def _evolve_cache_with_n(self, input_list: set[tuple[BasicState, int]]):
+    def _evolve_cache_with_n(self, input_list: set[tuple[FockState, int]]):
         previous_n = None
         for state, n in sorted(input_list, key=lambda x: x[1]):
             if (state, n) not in self._evolve:
@@ -221,19 +307,32 @@ class Simulator(ISimulator):
                 self._evolve[(state, n)] = self._backend.evolve()
                 self.DEBUG_evolve_count += 1
 
-    def _merge_probability_dist(self, input_list) -> BSDistribution:
+    def _merge_probability_dist(self, input_list: list[FockState]) -> BSDistribution:
         distributions = [_to_bsd(self._evolve[input_state]) for input_state in input_list]
         self.DEBUG_merge_count += len(distributions) - 1
         return BSDistribution.list_tensor_product(distributions, merge_modes=True)
 
-    @dispatch(BasicState)
-    def probs(self, input_state: BasicState) -> BSDistribution:
+    @dispatch(FockState)
+    def probs(self, input_state: FockState) -> BSDistribution:
         """
         Compute the probability distribution from a state input
         :param input_state: The input fock state or state vector
         :return: The post-selected output state distribution (BSDistribution)
         """
-        input_list = input_state.separate_state(keep_annotations=False)
+        input_list = [input_state]
+        self._evolve_cache(set(input_list))
+        result = self._merge_probability_dist(input_list)
+        result, self._logical_perf = post_select_distribution(result, self._postselect, self._heralds, self._keep_heralds)
+        return result
+
+    @dispatch(NoisyFockState)
+    def probs(self, input_state: NoisyFockState) -> BSDistribution:
+        """
+        Compute the probability distribution from a state input
+        :param input_state: The input fock state or state vector
+        :return: The post-selected output state distribution (BSDistribution)
+        """
+        input_list = input_state.separate_state()
         self._evolve_cache(set(input_list))
         result = self._merge_probability_dist(input_list)
         result, self._logical_perf = post_select_distribution(result, self._postselect, self._heralds, self._keep_heralds)
@@ -245,7 +344,7 @@ class Simulator(ISimulator):
             return self.probs(input_state[0])
         return _to_bsd(self.evolve(input_state))
 
-    def _probs_svd_generic(self, input_dist, p_threshold, progress_callback: Callable | None = None):
+    def _probs_svd_generic(self, input_dist, p_threshold, progress_callback: callable = None):
         """decomposed input:
         From a SVD = {
             pa_11*bs_11 + ... + pa_n1*bs_n1: p1,
@@ -310,7 +409,7 @@ class Simulator(ISimulator):
             res.normalize()
         return res
 
-    def _probs_svd_fast(self, input_dist, p_threshold, progress_callback: Callable = None):
+    def _probs_svd_fast(self, input_dist, p_threshold, progress_callback: callable = None):
         """decomposed input:
            From a SVD = {
                bs_1: p1,
@@ -326,15 +425,40 @@ class Simulator(ISimulator):
            ]
            where [bs_x,] is the list of the un-annotated separated basic state (result of bs_x.separate_state())
         """
-        decomposed_input = [(prob, sv[0].separate_state(keep_annotations=False), sv[0].n) for sv, prob in input_dist.items()]
+        if isinstance(input_dist, SVDistribution):
+            decomposed_input = [(prob, sv[0].separate_state() if isinstance(sv[0], NoisyFockState) else [sv[0]], sv[0].n) for sv, prob in input_dist.items()]
+        else:
+            decomposed_input = [(prob, states, sum(state.n for state in states)) for states, prob in input_dist]
+
+        if len(decomposed_input) == 1 and len(decomposed_input[0][1]) == 1:
+            # Shortcut: avoid recombination
+            state = decomposed_input[0][1][0]
+            n = decomposed_input[0][2]
+            n = self._best_n(n, n)
+            self.use_mask(n)
+            self._backend.set_input_state(state)
+            res = self._backend.prob_distribution()
+            self._logical_perf += sum(res.values()) * decomposed_input[0][0]
+            if len(res):
+                res.normalize()
+            return res
 
         """Create a cache with strong simulation of all unique input"""
         cache = {}
-        input_set = set((state, self._best_n(s[2], state.n)) for s in decomposed_input for state in s[1])
-        len_input_set = len(input_set)
+
+        input_dict = defaultdict(float)
+        for (prob, states, n) in decomposed_input:
+            for state in states:
+                s = (state, self._best_n(n, state.n))
+                current_prob = input_dict[s]
+                if prob > current_prob:
+                    input_dict[s] = prob
+
+        len_input_set = len(input_dict)
+
         prog_cb = partial_progress_callable(progress_callback, max_val=0.5)  # From 0. to 0.5
         previous_n = None
-        for idx, (state, n) in enumerate(sorted(input_set, key=lambda x: x[1])):
+        for idx,((state, n), prob0) in enumerate(sorted(input_dict.items(), key=lambda x: x[0][1])):
             if n != previous_n and n != 0:
                 previous_n = n
                 # The backend init the mask when setting the state and when setting the mask if there is an input state,
@@ -343,7 +467,7 @@ class Simulator(ISimulator):
                 self.use_mask(n)
 
             self._backend.set_input_state(state)
-            cache[(state, n)] = self._backend.prob_distribution()
+            cache[(state, n)] = self._backend.prob_iterator(p_threshold / (10 * prob0))
             if prog_cb and idx % 10 == 0:
                 progress = (idx + 1) / len_input_set
                 exec_request = prog_cb(progress, 'compute probability distributions')
@@ -355,9 +479,8 @@ class Simulator(ISimulator):
         prog_cb = partial_progress_callable(progress_callback, min_val=0.5)  # From 0.5 to 1
         for idx, (prob0, bs_data, n) in enumerate(decomposed_input):
             """First, recombine evolved state vectors given a single input"""
-            probs_in_s = BSDistribution.list_tensor_product([cache[(state, self._best_n(n, state.n))] for state in bs_data],
-                                                            merge_modes=True,
-                                                            prob_threshold=p_threshold / (10 * prob0))
+            probs_in_s = _list_merge([cache[(state, self._best_n(n, state.n))] for state in bs_data],
+                                     prob_threshold=p_threshold / (10 * prob0))
             self.DEBUG_merge_count += len(bs_data) - 1
 
             """
@@ -389,7 +512,16 @@ class Simulator(ISimulator):
             res.normalize()
         return res
 
-    def _preprocess_svd(self, svd: SVDistribution) -> tuple[SVDistribution, float, bool, bool, float]:
+    def _get_prob_threshold(self, max_p: float) -> float:
+        return max(global_params['min_p'], max_p * self._rel_precision)
+
+    def _preprocess_iterator(self, svd: tuple[Source, FockState]) -> tuple[SimpleSourceIterator, float, float]:
+        iterator = svd[0].create_iterator(svd[1], self.min_detected_photons_filter)
+        iterator.prob_threshold = self._get_prob_threshold(iterator.max_p)
+
+        return iterator, iterator.prob_threshold, iterator.physical_perf
+
+    def _preprocess_svd(self, svd: SVDistribution) -> tuple[SVDistribution, float, bool, float]:
         """Trim input SVD given _rel_precision threshold and extract characteristics from it"""
         max_p = 0
         to_remove = set()  # O(1) to test __contains__ against O(n) for a list
@@ -401,7 +533,7 @@ class Simulator(ISimulator):
             else:
                 phys_perf -= p
                 to_remove.add(sv)
-        p_threshold = max(global_params['min_p'], max_p * self._rel_precision)
+        p_threshold = self._get_prob_threshold(max_p)
         if len(to_remove):
             trimmed_svd = SVDistribution({state: pr for state, pr in svd.items() if pr > p_threshold and state not in to_remove})
         else:
@@ -413,8 +545,8 @@ class Simulator(ISimulator):
         to_add = SVDistribution()
         for sv, p in trimmed_svd.items():
             if len(sv) != 1 and len(sv.n) != 1:
-                to_remove.add(sv)
                 new_svd = _split_by_photon_count(sv)
+                to_remove.add(sv)
                 for split_sv, ps in new_svd.items():
                     prob = p * ps
                     # split_sv.n is a set so we can't use [0]
@@ -428,19 +560,18 @@ class Simulator(ISimulator):
                 trimmed_svd[sv] += p
                 max_p = max(trimmed_svd[sv], max_p)
 
-            p_threshold = max(global_params['min_p'], max_p * self._rel_precision)
+            p_threshold = self._get_prob_threshold(max_p)
             trimmed_svd = SVDistribution({state: pr for state, pr in trimmed_svd.items()
                                           if pr > p_threshold and state not in to_remove})
 
         has_superposed_states = any(len(sv) > 1 for sv in trimmed_svd)
-        has_annotations = any(bs.has_annotations for sv in trimmed_svd for bs in sv.keys())
 
-        return trimmed_svd, p_threshold, has_superposed_states, has_annotations, phys_perf
+        return trimmed_svd, p_threshold, has_superposed_states, phys_perf
 
     def probs_svd(self,
-                  input_dist: SVDistribution,
+                  input_dist: SVDistribution | tuple[Source, FockState],
                   detectors: list[IDetector] = None,
-                  progress_callback: Callable = None) -> dict[str, any]:
+                  progress_callback: callable = None) -> dict[str, any]:
         """
         Compute the probability distribution from a SVDistribution input and as well as performance scores
 
@@ -455,9 +586,17 @@ class Simulator(ISimulator):
             * logical_perf is the performance computed from the post-selection
         """
         if not check_heralds_detectors(self._heralds, detectors):
-            return {'results': BSDistribution(), 'physical_perf': 1, 'logical_perf': 0}
+            return self.format_results(BSDistribution(), 1, 0)
 
-        svd, p_threshold, has_superposed_states, has_annotations, physical_perf = self._preprocess_svd(input_dist)
+        if isinstance(input_dist, SVDistribution):
+            svd, p_threshold, has_superposed_states, physical_perf = self._preprocess_svd(input_dist)
+            n = input_dist.n_max
+        else:
+            svd, p_threshold, physical_perf = self._preprocess_iterator(input_dist)
+            has_superposed_states = False
+            n = input_dist[1].n
+            if input_dist[0].partially_distinguishable:
+                n *= 2
 
         is_pnr = get_detection_type(detectors) == DetectionType.PNR
 
@@ -478,20 +617,20 @@ class Simulator(ISimulator):
             self._logical_perf /= physical_perf
 
         if not len(res):
-            return {'results': res, 'physical_perf': physical_perf, 'logical_perf': 0}
+            return self.format_results(res, physical_perf, 0)
 
         if detectors:
             prog_cb = partial_progress_callable(progress_callback, min_val=self.detector_cb_start)
-            res, phys_perf = simulate_detectors(res, detectors, self.min_detected_photons_filter, p_threshold, prog_cb)
+            res, phys_perf = simulate_detectors(res, detectors, self.min_detected_photons_filter,
+                                                p_threshold, self._heralds if not self._compute_physical_logical_perf else {},
+                                                prog_cb)
             physical_perf *= phys_perf
 
         res, logical_perf_contrib = post_select_distribution(res, self._postselect, self._heralds, self._keep_heralds)
         self._logical_perf *= logical_perf_contrib
 
-        self.log_resources(sys._getframe().f_code.co_name, {'n': input_dist.n_max})
-        return {'results': res,
-                'physical_perf': physical_perf,
-                'logical_perf': self._logical_perf}
+        self.log_resources(sys._getframe().f_code.co_name, {'n': n})
+        return self.format_results(res, physical_perf, self._logical_perf)
 
     def _setup_heralds(self, n=None):
         # Set up a mask corresponding to heralds:
@@ -529,6 +668,12 @@ class Simulator(ISimulator):
         """
         gives the output probability distribution, after evolving some density matrix through the simulator
         :param dm: the input DensityMatrix
+
+        :return: A dictionary of the form { "results": BSDistribution, "physical_perf": float, "logical_perf": float }
+
+            * results is the post-selected output state distribution
+            * physical_perf is the performance computed from the detected photon filter
+            * logical_perf is the performance computed from the post-selection
         """
         if not isinstance(dm, DensityMatrix):
             raise TypeError(f"dm must be a DensityMatrix object, {type(dm)} was given")
@@ -552,23 +697,19 @@ class Simulator(ISimulator):
 
         res_bsd, logical_perf_coeff = post_select_distribution(
             res_bsd, self._postselect, self._heralds, self._keep_heralds)
-        return {'results': res_bsd,
-                'physical_perf': physical_perf,
-                'logical_perf': self._logical_perf * logical_perf_coeff}
+        return self.format_results(res_bsd, physical_perf, self._logical_perf * logical_perf_coeff)
 
-    def _evolve_no_compute(self, decomposed_input, input_state):
+    def _evolve_no_compute(self, decomposed_input, input_state): # TODO : input_state is needed only for log, use input_state.n instead
         """Uses the cached results to compute the evolution of the state described in decomposed_input"""
         result_sv = StateVector()
-        for probampli, instate_list, n in decomposed_input:
+        for probampli, instate_map, n in decomposed_input:
             reslist = []
-            for in_s in instate_list:
+            for annot in instate_map:
+                in_s = instate_map[annot]
                 if in_s.n == 0:
                     reslist.append(in_s)
                     continue
-                annotation = in_s.get_photon_annotation(0)
-                in_s.clear_annotations()
-                reslist.append(_inject_annotation(self._evolve[(in_s, self._best_n(n, in_s.n))], annotation))
-
+                reslist.append(_inject_annotation(self._evolve[(in_s, self._best_n(n, in_s.n))], annot))
             # Recombine results for one basic state input
             evolved_in_s = reslist.pop(0)
             for sv in reslist:
@@ -585,11 +726,9 @@ class Simulator(ISimulator):
 
     def _prepare_decomposed_input(self, input_state: SVDistribution):
         """Decay input to a list of basic states without annotations and evolve each of them"""
-        decomposed_input = [(pa, st.separate_state(keep_annotations=True), max(sv.n)) for sv in input_state
+        decomposed_input = [(pa, _annot_state_mapping(st), max(sv.n)) for sv in input_state
                             for st, pa in sv]
-        input_list = [(copy(state), self._best_n(t[2], state.n)) for t in decomposed_input for state in t[1]]
-        for state, _ in input_list:
-            state.clear_annotations()
+        input_list = [(FockState(t[1][annot]), self._best_n(t[2], t[1][annot].n)) for t in decomposed_input for annot in t[1]]
 
         self._evolve_cache_with_n(set(input_list))
 
@@ -611,9 +750,9 @@ class Simulator(ISimulator):
 
     def evolve_svd(self,
                    svd: SVDistribution | StateVector | BasicState,
-                   progress_callback: Callable = None) -> dict:
+                   progress_callback: callable = None) -> dict:
         """
-        Compute the SVDistribution evolved through a Linear Optical circuit
+        Compute the SVDistribution evolved through a linear optics circuit
 
         :param svd: The input StateVector distribution
         :param progress_callback: A function with the signature `func(progress: float, message: str)`
@@ -624,7 +763,7 @@ class Simulator(ISimulator):
             * logical_perf is the performance computed from the post-selection
         """
         if not isinstance(svd, SVDistribution):
-            return SVDistribution(self.evolve(svd))
+            svd = SVDistribution(svd)
 
         self.init_use_mask(True)  # No detectors when using evolve
 
@@ -636,7 +775,7 @@ class Simulator(ISimulator):
         for idx, (sv, p) in enumerate(svd.items()):
             # It is intended to reject if any of the component doesn't have enough photons
             if min(sv.n) >= self.min_detected_photons_filter:
-                decomposed_input = [(pa, st.separate_state(keep_annotations=True), max(sv.n)) for st, pa in sv]
+                decomposed_input = [(pa, _annot_state_mapping(st), max(sv.n)) for st, pa in sv]
                 new_sv = self._evolve_no_compute(decomposed_input, sv)
                 success_prob = p * self._logical_perf
                 global_perf += success_prob
@@ -650,13 +789,11 @@ class Simulator(ISimulator):
         self._logical_perf = global_perf / physical_perf if physical_perf != 0 else 0
         if len(new_svd):
             new_svd.normalize()
-        return {'results': new_svd,
-                'physical_perf': physical_perf,
-                'logical_perf': self._logical_perf}
+        return self.format_results(new_svd, physical_perf, self._logical_perf)
 
     def evolve_density_matrix(self, dm: DensityMatrix) -> DensityMatrix:
         """
-        Compute the DensityMatrix evolved from "dm" through a Linear optical circuit
+        Compute the DensityMatrix evolved from "dm" through a linear optics circuit
 
         :param dm: The density Matrix to evolve
         :return: The evolved DensityMatrix

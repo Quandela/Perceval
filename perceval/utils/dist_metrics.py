@@ -37,7 +37,7 @@ def tvd_dist(dist_lh: BSDistribution, dist_rh: BSDistribution) -> float:
 
     :param dist_lh: First BSDistribution
     :param dist_rh: Second BSDistribution
-    :return : total variation distance between the two BSDistributions (value between 0 and 1)
+    :return: total variation distance between the two BSDistributions (value between 0 and 1)
     """
     only_dist_lh_states = set(dist_lh.keys()) - set(dist_rh.keys())
     only_dist_rh_states = set(dist_rh.keys()) - set(dist_lh.keys())
@@ -54,9 +54,9 @@ def tvd_dist(dist_lh: BSDistribution, dist_rh: BSDistribution) -> float:
 
 def kl_divergence(ideal_dist: BSDistribution, est_dist: BSDistribution) -> float:
     """
-    Computes the Kullback-Leibler (KL) divergence of a model (simulated/observed) BSdistribution with respect to
-     an ideal BSDistribution.
-     Our computation ignores states absent from the estimated distribution or have null probabilities.
+    Computes the Kullback-Leibler (KL) divergence of a model (simulated/observed) BSDistribution with respect to
+    an ideal BSDistribution.
+    Our computation ignores states absent from the estimated distribution or have null probabilities.
 
     :param ideal_dist: Ideal BSDistribution (known from theory or an ideal computation)
     :param est_dist: Estimated BSDistribution (simulated or observed from experiment)

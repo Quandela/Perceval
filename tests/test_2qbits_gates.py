@@ -41,11 +41,10 @@ def test_fidelity_and_performance_cnot():
     ports = [pcvl.Port(pcvl.Encoding.DUAL_RAIL, "")] * 2
     state_dict = {pcvl.components.get_basic_state_from_ports(ports, state): str(
         state) for state in pcvl.utils.generate_all_logical_states(2)}
-    expected = {"00": "00", "01": "01", "10": "11", "11": "10"}
+    expected = {"|00>": "|00>", "|01>": "|01>", "|10>": "|11>", "|11>": "|10>"}
 
     # KLM CNOT
-    analyzer_klm_cnot = Analyzer(
-        catalog["klm cnot"].build_processor(), state_dict)
+    analyzer_klm_cnot = Analyzer(catalog["klm cnot"].build_processor(), state_dict)
     analyzer_klm_cnot.compute(expected=expected)
 
     assert pytest.approx(analyzer_klm_cnot.fidelity) == 1

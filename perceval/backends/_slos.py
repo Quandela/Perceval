@@ -26,9 +26,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
 from ._abstract_backends import AStrongSimulationBackend
-from perceval.utils import Matrix, BasicState, BSDistribution, StateVector
+from perceval.utils import Matrix, FockState, BSDistribution, StateVector
 from perceval.utils.logging import get_logger, channel
 
 import exqalibur as xq
@@ -104,15 +103,12 @@ class _Path:
 
 
 class SLOSBackend(AStrongSimulationBackend):
-    def __init__(self, mask=None, n=None, use_symbolic=False):
+    def __init__(self, mask=None, use_symbolic=False):
         super().__init__()
         self._reset()
         self._symb = use_symbolic
         if mask is not None:
             self.set_mask(mask)
-        if n is not None:
-            get_logger().warn(
-                f"DeprecationWarning: 'n' parameter is now ignored and deprecated. version=0.12", channel.user)
 
     @property
     def name(self) -> str:
@@ -123,7 +119,7 @@ class SLOSBackend(AStrongSimulationBackend):
         self._fsas: dict[int, xq.FSArray] = {}
         self._mk_l: list[int] = [1]
         self._path_roots: list[_Path] = []
-        self._state_mapping: dict[BasicState, _Path] = {}
+        self._state_mapping: dict[FockState, _Path] = {}
         self._mask: xq.FSMask = None
         self.clear_iterator_cache()
 
@@ -144,7 +140,7 @@ class SLOSBackend(AStrongSimulationBackend):
         else:
             self._reset()
 
-    def set_input_state(self, input_state: BasicState):
+    def set_input_state(self, input_state: FockState):
         super().set_input_state(input_state)
         self.preprocess([input_state])
 
@@ -152,7 +148,7 @@ class SLOSBackend(AStrongSimulationBackend):
         super().clear_mask()
         self._reset()
 
-    def _deploy(self, input_list: list[BasicState]):
+    def _deploy(self, input_list: list[FockState]):
         # allocate the fsas and fsms for covering all the input_states respecting possible mask
         # after calculation, we only need to keep fsa for input_state n
         # during calculation we need to keep current fsa and previous fsa
@@ -171,7 +167,7 @@ class SLOSBackend(AStrongSimulationBackend):
             if n not in self._fsas:
                 self._fsas[n] = current_fsa
 
-    def preprocess(self, input_list: list[BasicState]) -> bool:
+    def preprocess(self, input_list: list[FockState]) -> bool:
         # now check if we have a path for the input states
         found_new = False
         for input_state in input_list:
@@ -188,7 +184,7 @@ class SLOSBackend(AStrongSimulationBackend):
         self._path_roots.append(new_path)
         return True
 
-    def prob_amplitude(self, output_state: BasicState) -> complex:
+    def prob_amplitude(self, output_state: FockState) -> complex:
         if self._input_state.n != output_state.n:
             return complex(0)
         output_idx = self._fsas[output_state.n].find(output_state)
@@ -202,11 +198,11 @@ class SLOSBackend(AStrongSimulationBackend):
         c = abs(c) ** 2 / istate.prodnfact()
         xq.all_prob_normalize_output(c, self._fsas[istate.n])
         bsd = BSDistribution()
-        for output_state, probability in zip(self._get_iterator(self._input_state), c):
+        for output_state, probability in zip(self._get_iterator(istate), c):
             bsd.add(output_state, probability)
         return bsd
 
-    def all_prob(self, input_state: BasicState = None):
+    def all_prob(self, input_state: FockState = None):
         """SLOS specific signature, to enhance optimization in some computations"""
         if input_state is not None:
             self.set_input_state(input_state)
@@ -215,13 +211,13 @@ class SLOSBackend(AStrongSimulationBackend):
         c = self._state_mapping[input_state].coefs.reshape(self._fsas[input_state.n].count())
         c = abs(c)**2 / self._input_state.prodnfact()
         xq.all_prob_normalize_output(c, self._fsas[input_state.n])
-        return c
+        return c.tolist()
 
     def evolve(self) -> StateVector:
         istate = self._input_state
         c = self._state_mapping[istate].coefs.reshape(self._fsas[istate.n].count())
         res = StateVector()
         iprodnfact = istate.prodnfact()
-        for output_state, pa in zip(self._get_iterator(self._input_state), c):
+        for output_state, pa in zip(self._fsas[istate.n], c):
             res += output_state * (pa * math.sqrt(output_state.prodnfact() / iprodnfact))
         return res

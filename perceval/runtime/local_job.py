@@ -36,19 +36,20 @@ from .job_status import JobStatus, RunningStatus
 
 
 class LocalJob(Job):
+    r"""
+    Handle a computation task locally (i.e. on the computer running Perceval)
+
+    :param fn: Function to be called by the job when run, aka "the task"
+    :param result_mapping_function: Optional results post-processing function (e.g. can be used to convert results)
+    :param delta_parameters: mapping of {'param_name': param_value} redirected to either the function or the mapping
+                             function
+    :param command_param_names: names of `fn` parameters which can be mapped from the \*args of __call__
+    """
     def __init__(self,
                  fn: callable,
                  result_mapping_function: callable = None,
                  delta_parameters: dict = None,
                  command_param_names: list = None):
-        """
-        Runs a task locally (i.e. on the computer running Perceval)
-
-        :param fn: Function to be called by the job
-        :param result_mapping_function: Optional results post-processing function (e.g. can be used to convert results)
-        :param delta_parameters: mapping of {'param_name': param_value}
-        :param command_param_names: names of `fn` parameters which can be mapped from the *args of __call__
-        """
         super().__init__(result_mapping_function=result_mapping_function,
                          delta_parameters=delta_parameters,
                          command_param_names=command_param_names)
@@ -59,11 +60,17 @@ class LocalJob(Job):
         self._cancel_requested = False
 
     def set_progress_callback(self, callback: callable):  # Signature must be (float, str | None)
+        """
+        Set a progress callback function with the following signature:
+
+        `def progress_callback(progress: float, message: str) -> dict | None`
+
+        :param callback: callback function
+        """
         self._user_cb = callback
 
     @property
     def status(self) -> JobStatus:
-        # for local job
         if self._status.running and not self._worker.is_alive():
             self._status.stop_run()
         return self._status
@@ -76,7 +83,16 @@ class LocalJob(Job):
             return self._user_cb(progress, phase)
         return None
 
-    def execute_sync(self, *args, **kwargs):
+    def execute_sync(self, *args, **kwargs) -> dict:
+        """
+        Execute the task synchronously. This call is blocking and immediately returns a results dictionary.
+
+        .. note:: This method has exactly the same effect as __call__.
+
+        :param args: arguments to pass to the task function
+        :param kwargs: keyword arguments to pass to the task function
+        :return: the results
+        """
         assert self._status.waiting, "job has already been executed"
 
         if 'progress_callback' in kwargs:
@@ -87,7 +103,7 @@ class LocalJob(Job):
         return self.get_results()
 
     def _call_fn_safe(self, *args, **kwargs):
-        r"""
+        """
         Wrapping function called in the job thread in charge of catching exception and correctly setting status
         """
         try:
@@ -102,7 +118,7 @@ class LocalJob(Job):
             get_logger().warn(f"An exception was raised during job execution.\n{type(e).__name__}: {e}", channel.user)
             self._status.stop_run(RunningStatus.ERROR, type(e).__name__+": "+str(e))
 
-    def execute_async(self, *args, **kwargs) -> Job:
+    def execute_async(self, *args, **kwargs) -> LocalJob:
         assert self._status.waiting, "job has already been executed"
         if 'progress_callback' in kwargs:
             self._user_cb = kwargs['progress_callback']
@@ -118,6 +134,8 @@ class LocalJob(Job):
         self._cancel_requested = True
 
     def _get_results(self):
+        if self._results is None:
+            return self._results
         if self._result_mapping_function:
             get_logger().info(
                 f"Converting local job results with {self._result_mapping_function.__name__}", channel.general)

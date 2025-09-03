@@ -29,20 +29,8 @@
 
 
 from perceval.utils import PersistentData, LoggerConfig
-from perceval.utils.logging import ExqaliburLogger, deprecated
-from perceval.runtime._token_management import TokenProvider
+from perceval.utils.logging import ExqaliburLogger
 from perceval.runtime.remote_config import RemoteConfig
-
-
-@deprecated(version="0.13.0", reason="Use RemoteConfigForTest class instead")
-class TokenProviderForTest(TokenProvider):
-    """
-    Overrides the file used for token to target a file in temporary sub-folder.
-    This allows to run tests without removing actual persistent data or risking messing up system or user directories
-    """
-
-    def __init__(self, temp_dir, env_var: str = "PCVL_CLOUD_TOKEN"):
-        super().__init__(env_var, RemoteConfigForTest(temp_dir))
 
 
 class RemoteConfigForTest(RemoteConfig):

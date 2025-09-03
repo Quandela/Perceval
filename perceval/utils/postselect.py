@@ -28,31 +28,15 @@
 # SOFTWARE.
 from __future__ import annotations
 
-from perceval.utils.logging import deprecated
-
 import exqalibur as xq
 
-from .statevector import BSDistribution, StateVector
+from .states import BSDistribution, StateVector
 try:
     from typing import TypeAlias
 except ImportError:
     from typing_extensions import TypeAlias  # Only used with python 3.9
 
 PostSelect: TypeAlias = xq.PostSelect
-# Temporary implementation of __deepcopy__ until exqalibur release
-# PCVL-969
-PostSelect.__deepcopy__ = lambda self, memo : self.__copy__()
-
-@deprecated(version="0.12.0", reason="Use instead PostSelect class method `is_independent_with`")
-def postselect_independent(ps1: PostSelect, ps2: PostSelect) -> bool:
-    """ Check if two PostSelect instances are independent.
-
-    :param ps1: First post selection
-    :param ps2: Second post selection
-    :return: `True` if PostSelect instances are independent, `False` otherwise
-    """
-    return ps1.is_independent_with(ps2)
-
 
 def post_select_distribution(
         bsd: BSDistribution,
@@ -69,7 +53,8 @@ def post_select_distribution(
     :return: A tuple containing post-selected BSDistribution and logical performance
     """
     if not (postselect.has_condition or heralds):
-        bsd.normalize()
+        if len(bsd):
+            bsd.normalize()
         return bsd, 1
 
     if heralds is None:
@@ -87,7 +72,8 @@ def post_select_distribution(
             result[state] = prob
         else:
             logical_perf -= prob
-    result.normalize()
+    if len(result):
+        result.normalize()
     return result, logical_perf
 
 
@@ -106,7 +92,8 @@ def post_select_statevector(
     :return:  A tuple containing the post-selected StateVector and logical performance
     """
     if not (postselect.has_condition or heralds):
-        sv.normalize()
+        if len(sv):
+            sv.normalize()
         return sv, 1
 
     if heralds is None:
@@ -123,5 +110,6 @@ def post_select_statevector(
                 state = state.remove_modes(list(heralds.keys()))
             result += ampli * state
             logical_perf += abs(ampli) ** 2
-    result.normalize()
+    if len(result):
+        result.normalize()
     return result, logical_perf

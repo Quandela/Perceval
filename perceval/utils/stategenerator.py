@@ -30,7 +30,7 @@
 import networkx as nx
 import numpy as np
 
-from .statevector import BasicState, StateVector
+from .states import BasicState, StateVector
 from .qmath import distinct_permutations
 from ._enums import Encoding
 from .logging import get_logger, channel
@@ -45,7 +45,9 @@ class StateGenerator:
     :param polarization_base: (optional) you can provide your own polarization basis as a tuple of BasicStates.
         default=(BasicState("`|{P:H}>`"), BasicState("`|{P:V}>`")
     """
-    def __init__(self, encoding, polarization_base=(BasicState("|{P:H}>"), BasicState("|{P:V}>"))):
+    def __init__(self, encoding, polarization_base = None):
+
+        polarization_base = polarization_base or (BasicState("|{P:H}>"), BasicState("|{P:V}>"))
 
         assert isinstance(encoding, Encoding), "You need to provide an encoding"
         if encoding == Encoding.RAW:
@@ -82,15 +84,16 @@ class StateGenerator:
         return sv
 
     def bell_state(self, state: str):
-        """
-        Generate a StateVector representing a Bell state
+        r"""
+        Generate a StateVector representing a Bell state from its name:
 
-        :param state: name of the bell state you want to generate:
+        - "phi+" = :math:`\frac{|0,0>+|1,1>}{\sqrt{2}}`
+        - "phi-" = :math:`\frac{|0,0>-|1,1>}{\sqrt{2}}`
+        - "psi+" = :math:`\frac{|0,1>+|1,0>}{\sqrt{2}}`
+        - "psi-" = :math:`\frac{|0,1>-|1,0>}{\sqrt{2}}`
 
-            * "phi+" = :math:`\\frac{|0,0>+|1,1>}{\sqrt{2}}`
-            * "phi-" = :math:`\\frac{|0,0>-|1,1>}{\sqrt{2}}`
-            * "psi+" = :math:`\\frac{|0,1>+|1,0>}{\sqrt{2}}`
-            * "psi-" = :math:`\\frac{|0,1>-|1,0>}{\sqrt{2}}`
+        :param state: name of the bell state you want to generate
+
         :return: StateVector for a bell state
         """
 
@@ -197,12 +200,13 @@ class StateGenerator:
 
     @staticmethod
     def zero_padded_state(n: int, m: int = None) -> BasicState:
-        """
-        Generate a |111...10...0> BasicState with n photons and m modes. The result is independent of the encoding.
+        r"""
+        Generate a :math:`|111...10...0>` BasicState with n photons and m modes. The result is independent of the
+        encoding.
 
         :param n: Number of photons
         :param m: Number of modes. Default :math:`n`
-        :return: BasicState of the shape |111...10...0>
+        :return: BasicState of the shape :math:`|111...10...0>`
         """
         if m is None:
             return BasicState(n * [1])
@@ -211,13 +215,13 @@ class StateGenerator:
 
     @staticmethod
     def periodic_state(n: int, m: int = None) -> BasicState:
-        """
-        Generate a BasicState consisting of repeating |10> n times. Pads the end of the state with zero photon modes.
-        The result is independent of the encoding.
+        r"""
+        Generate a BasicState consisting of repeating :math:`|10>` n times. Pads the end of the state with zero photon
+        modes. The result is independent of the encoding.
 
         :param n: Number of photons
         :param m: Number of modes. Default :math:`2n` (no padding at the end)
-        :return: BasicState of the shape |1010...000>
+        :return: BasicState of the shape :math:`|1010...000>`
         """
         state = BasicState([1, 0] * n)
         if m is not None:

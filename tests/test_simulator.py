@@ -29,16 +29,14 @@
 
 import math
 import pytest
-from unittest.mock import patch
 
-import perceval as pcvl
-from perceval import catalog
+from perceval import catalog, NoisyFockState, AnnotatedFockState
 from perceval.backends import AStrongSimulationBackend, SLOSBackend
 from perceval.simulators import Simulator
 from perceval.components import Circuit, BS, PS, Source, unitary_components
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, Matrix, DensityMatrix
 
-from _test_utils import assert_sv_close, assert_svd_close, LogChecker
+from _test_utils import assert_sv_close, assert_svd_close
 
 
 class MockBackend(AStrongSimulationBackend):
@@ -74,13 +72,13 @@ def test_simulator_probs_mock():
     assert list(output_dist.keys())[0] == BasicState([0, 0, 3])
     assert simulator.DEBUG_evolve_count == 1
 
-    input_state = BasicState('|{_:1},{_:2},{_:3}>')
+    input_state = BasicState('|{1},{2},{3}>')
     output_dist = simulator.probs(input_state)
     assert len(output_dist) == 1
     assert list(output_dist.keys())[0] == BasicState([3, 0, 0])
     assert simulator.DEBUG_evolve_count == 4
 
-    input_state = BasicState('|{_:1}{_:2}{_:3},0,0>')
+    input_state = BasicState('|{1}{2}{3},0,0>')
     output_dist = simulator.probs(input_state)
     assert len(output_dist) == 1
     assert list(output_dist.keys())[0] == BasicState([3, 0, 0])
@@ -105,13 +103,13 @@ def test_simulator_probs_svd_indistinguishable():
     # remove the |0, 1> state from the second sv, and the first sv
     simulator.set_min_detected_photons_filter(2)
     res = simulator.probs_svd(svd)
-    assert res["physical_perf"] == pytest.approx(0.55)
+    assert res["global_perf"] == pytest.approx(0.55)
     assert len(res["results"]) == 3
 
 
 def test_simulator_probs_svd_distinguishable():
     in_svd = SVDistribution({
-        BasicState('|{_:0}{_:1},{_:0}>'): 1
+        StateVector(BasicState('|{0}{1},{0}>')): 1
     })
     circuit = BS.H(theta=BS.r_to_theta(0.4))
     sim = Simulator(SLOSBackend())
@@ -125,7 +123,7 @@ def test_simulator_probs_svd_distinguishable():
 
 
 def test_simulator_probs_svd_superposed():
-    superposed_state = StateVector("|0,{_:0},{_:1},0>") + StateVector("|0,{_:1},{_:0},0>")
+    superposed_state = StateVector(NoisyFockState("|0,{0},{1},0>")) + StateVector(NoisyFockState("|0,{1},{0},0>"))
     in_svd = SVDistribution({superposed_state: 1})
     circuit = Circuit(4)
     circuit.add(1, BS.H()).add(0, BS.H(BS.r_to_theta(1/3), phi_tl=-math.pi / 2, phi_bl=math.pi, phi_tr=math.pi / 2))
@@ -144,7 +142,7 @@ def test_simulator_probs_svd_superposed():
 
 
 def test_simulator_probs_distinguishable():
-    in_state = BasicState('|{_:0}{_:1},{_:0}>')
+    in_state = BasicState('|{0}{1},{0}>')
     circuit = BS.H(theta=BS.r_to_theta(0.4))
     sim = Simulator(SLOSBackend())
     sim.set_circuit(circuit)
@@ -156,27 +154,25 @@ def test_simulator_probs_distinguishable():
     assert res[BasicState("|0,3>")] == pytest.approx(0.288)
 
 
-@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
-def test_simulator_probs_postselection(mock_warn):
+def test_simulator_probs_postselection():
     input_state = BasicState([1, 1, 1])
     ps = PostSelect("[2] < 2")  # At most 1 photon on mode #2
     simulator = Simulator(MockBackend())
     simulator.set_postselection(ps)
     simulator.set_circuit(Circuit(3))
 
-    with LogChecker(mock_warn):
-        output_dist = simulator.probs(input_state)
+    output_dist = simulator.probs(input_state)
 
     assert len(output_dist) == 0
     assert simulator.logical_perf == pytest.approx(0)
 
-    input_state = BasicState('|{_:1},{_:2},{_:3}>')
+    input_state = BasicState('|{1},{2},{3}>')
     output_dist = simulator.probs(input_state)
     assert len(output_dist) == 1
     assert list(output_dist.keys())[0] == BasicState([3, 0, 0])
     assert simulator.logical_perf == pytest.approx(1)
 
-    input_state = BasicState('|{_:1}{_:2}{_:3},0,0>')
+    input_state = BasicState('|{1}{2}{3},0,0>')
     output_dist = simulator.probs(input_state)
     assert len(output_dist) == 1
     assert list(output_dist.keys())[0] == BasicState([3, 0, 0])
@@ -184,46 +180,46 @@ def test_simulator_probs_postselection(mock_warn):
 
 
 def test_simulator_probampli():
-    input_state = BasicState("|{_:0},{_:1}>")
+    input_state = BasicState("|{0},{1}>")
     simulator = Simulator(SLOSBackend())
     simulator.set_circuit(BS())
-    assert simulator.prob_amplitude(input_state, BasicState("|{_:0}{_:1},0>")) == pytest.approx(0.5j)
-    assert simulator.prob_amplitude(input_state, BasicState("|0,{_:0}{_:1}>")) == pytest.approx(0.5j)
-    assert simulator.prob_amplitude(input_state, BasicState("|{_:0},{_:1}>")) == pytest.approx(0.5)
-    assert simulator.prob_amplitude(input_state, BasicState("|{_:1},{_:0}>")) == pytest.approx(-0.5)
+    assert simulator.prob_amplitude(input_state, BasicState("|{0}{1},0>")) == pytest.approx(0.5j)
+    assert simulator.prob_amplitude(input_state, BasicState("|0,{0}{1}>")) == pytest.approx(0.5j)
+    assert simulator.prob_amplitude(input_state, BasicState("|{0},{1}>")) == pytest.approx(0.5)
+    assert simulator.prob_amplitude(input_state, BasicState("|{1},{0}>")) == pytest.approx(-0.5)
     assert simulator.prob_amplitude(input_state, BasicState("|2,0>")) == pytest.approx(0)
     assert simulator.prob_amplitude(input_state, BasicState("|1,1>")) == pytest.approx(0)
     # prob_amplitude call is strict on annotations name
-    assert simulator.prob_amplitude(input_state, BasicState("|{_:0}{_:2},0>")) == pytest.approx(0)
+    assert simulator.prob_amplitude(input_state, BasicState("|{0}{2},0>")) == pytest.approx(0)
 
-    input_state = StateVector("|{_:0},{_:1}>")
-    assert simulator.prob_amplitude(input_state, BasicState("|{_:0}{_:1},0>")) == pytest.approx(0.5j)
-    assert simulator.prob_amplitude(input_state, BasicState("|0,{_:0}{_:1}>")) == pytest.approx(0.5j)
-    assert simulator.prob_amplitude(input_state, BasicState("|{_:0},{_:1}>")) == pytest.approx(0.5)
-    assert simulator.prob_amplitude(input_state, BasicState("|{_:1},{_:0}>")) == pytest.approx(-0.5)
+    input_state = StateVector(NoisyFockState("|{0},{1}>"))
+    assert simulator.prob_amplitude(input_state, BasicState("|{0}{1},0>")) == pytest.approx(0.5j)
+    assert simulator.prob_amplitude(input_state, BasicState("|0,{0}{1}>")) == pytest.approx(0.5j)
+    assert simulator.prob_amplitude(input_state, BasicState("|{0},{1}>")) == pytest.approx(0.5)
+    assert simulator.prob_amplitude(input_state, BasicState("|{1},{0}>")) == pytest.approx(-0.5)
     assert simulator.prob_amplitude(input_state, BasicState("|2,0>")) == pytest.approx(0)
     assert simulator.prob_amplitude(input_state, BasicState("|1,1>")) == pytest.approx(0)
     # prob_amplitude call is strict on annotations name
-    assert simulator.prob_amplitude(input_state, BasicState("|{_:0}{_:2},0>")) == pytest.approx(0)
+    assert simulator.prob_amplitude(input_state, BasicState("|{0}{2},0>")) == pytest.approx(0)
 
 def test_simulator_probability():
-    input_state = BasicState("|{_:0},{_:1}>")
+    input_state = BasicState("|{0},{1}>")
     simulator = Simulator(SLOSBackend())
     simulator.set_circuit(BS())
     # Output annotations are ignored for a probability call
-    assert simulator.probability(input_state, BasicState("|{_:0}{_:1},0>")) == pytest.approx(0.25)
+    assert simulator.probability(input_state, BasicState("|{0}{1},0>").clear_annotations()) == pytest.approx(0.25)
     assert simulator.probability(input_state, BasicState("|2,0>")) == pytest.approx(0.25)
     assert simulator.probability(input_state, BasicState("|0,2>")) == pytest.approx(0.25)
     assert simulator.probability(input_state, BasicState("|1,1>")) == pytest.approx(0.5)
 
     input_state = BasicState("|1,1>")
-    assert simulator.probability(input_state, BasicState("|{_:0}{_:1},0>")) == pytest.approx(0.5)
+    assert simulator.probability(input_state, BasicState("|{0}{1},0>").clear_annotations()) == pytest.approx(0.5)
     assert simulator.probability(input_state, BasicState("|2,0>")) == pytest.approx(0.5)
     assert simulator.probability(input_state, BasicState("|0,2>")) == pytest.approx(0.5)
     assert simulator.probability(input_state, BasicState("|1,1>")) == pytest.approx(0.0)
 
-    input_state = StateVector("|{_:0},{_:1}>")
-    assert simulator.probability(input_state, BasicState("|{_:0}{_:1},0>")) == pytest.approx(0.25)
+    input_state = StateVector(NoisyFockState("|{0},{1}>"))
+    assert simulator.probability(input_state, BasicState("|{0}{1},0>").clear_annotations()) == pytest.approx(0.25)
     assert simulator.probability(input_state, BasicState("|2,0>")) == pytest.approx(0.25)
     assert simulator.probability(input_state, BasicState("|0,2>")) == pytest.approx(0.25)
     assert simulator.probability(input_state, BasicState("|1,1>")) == pytest.approx(0.5)
@@ -240,7 +236,7 @@ def test_simulator_probs_sv():
     assert len(result) == 1
     assert result[BasicState("|1,0>")] == pytest.approx(1)
 
-    input_state = BasicState("|{_:0},{_:1}>") + BasicState([1, 1])
+    input_state = BasicState("|{0},{1}>") + BasicState([1, 1])
     simulator.set_circuit(c)
     result = simulator.probs(input_state)
     assert len(result) == 3
@@ -249,8 +245,8 @@ def test_simulator_probs_sv():
     assert result[BasicState("|1,1>")] == pytest.approx(1/4)
 
     simulator.set_circuit(BS())
-    s_boson = StateVector("|{Q:0},{Q:1}>") + StateVector("|{Q:1},{Q:0}>")
-    s_fermion = StateVector("|{Q:0},{Q:1}>") - StateVector("|{Q:1},{Q:0}>")
+    s_boson = StateVector(NoisyFockState("|{0},{1}>")) + StateVector(NoisyFockState("|{1},{0}>"))
+    s_fermion = StateVector(NoisyFockState("|{0},{1}>")) - StateVector(NoisyFockState("|{1},{0}>"))
     result_boson = simulator.probs(s_boson)
     assert len(result_boson) == 2
     assert result_boson[BasicState("|2,0>")] == pytest.approx(1/2)
@@ -279,29 +275,14 @@ def test_evolve_indistinguishable():
 def test_evolve_distinguishable():
     simulator = Simulator(SLOSBackend())
     simulator.set_circuit(BS.H())
-    sv2 = StateVector("|{a:0},{a:0}{a:1}>")
+    sv2 = StateVector(NoisyFockState("|{0},{0}{1}>"))
     sv2_out = simulator.evolve(sv2)
-    assert pytest.approx(sv2_out[BasicState('|2{a:0}{a:1},0>')]) == 1/2
-    assert pytest.approx(sv2_out[BasicState('|2{a:0},{a:1}>')]) == -1/2
-    assert pytest.approx(sv2_out[BasicState('|{a:1},2{a:0}>')]) == -1/2
-    assert pytest.approx(sv2_out[BasicState('|0,2{a:0}{a:1}>')]) == 1/2
+    assert pytest.approx(sv2_out[BasicState('|2{0}{1},0>')]) == 1/2
+    assert pytest.approx(sv2_out[BasicState('|2{0},{1}>')]) == -1/2
+    assert pytest.approx(sv2_out[BasicState('|{1},2{0}>')]) == -1/2
+    assert pytest.approx(sv2_out[BasicState('|0,2{0}{1}>')]) == 1/2
     sv2_out_out = simulator.evolve(sv2_out)
     assert_sv_close(sv2_out_out, sv2)
-
-
-def test_statevector_polar_evolve():
-    simulator = Simulator(SLOSBackend())
-    simulator.set_circuit(BS())
-    st1 = StateVector("|{P:H},{P:H}>")
-    st2 = StateVector("|{P:H},{P:V}>")
-    gamma = math.pi / 2
-    input_state = math.cos(gamma) * st1 + math.sin(gamma) * st2
-
-    sum_p = sum(list(simulator.probs(input_state).values()))
-    assert pytest.approx(1) == sum_p
-
-    sum_p = sum(list(simulator.probs(st2).values()))
-    assert pytest.approx(1) == sum_p
 
 
 def test_evolve_phase():
@@ -343,6 +324,7 @@ def test_probs_svd_with_heralds():
     sim.set_circuit(Circuit(4) // BS() // (2, BS()))
     heralds = {1: 0, 3: 0}
     sim.set_selection(heralds=heralds)
+    sim.compute_physical_logical_perf(True)
     results = sim.probs_svd(SVDistribution(BasicState([1]*4)))
     assert results["logical_perf"] == pytest.approx(0.5 ** 2)
     assert results["results"][BasicState([2, 0, 2, 0])] == 1
@@ -367,7 +349,7 @@ def test_probs_svd_with_heralds():
     assert results["logical_perf"] == pytest.approx(0.5)
     assert results["results"][BasicState([2, 0, 0, 0])] == pytest.approx(.6)
 
-    superposed_state = StateVector("|0,{_:0},{_:1},0>") + StateVector("|0,{_:1},{_:0},0>")
+    superposed_state = StateVector(NoisyFockState("|0,{0},{1},0>")) + StateVector(NoisyFockState("|0,{1},{0},0>"))
     in_svd = SVDistribution({superposed_state: 1})
     circuit = Circuit(4)
     circuit.add(1, BS.H()).add(0, BS.H(BS.r_to_theta(1 / 3), phi_tl=-math.pi / 2, phi_bl=math.pi, phi_tr=math.pi / 2))
@@ -375,6 +357,7 @@ def test_probs_svd_with_heralds():
     sim = Simulator(SLOSBackend())
     sim.set_circuit(circuit)
     sim.set_selection(heralds={1: 0, 2: 0})
+    sim.compute_physical_logical_perf(True)
     res = sim.probs_svd(in_svd)
     assert len(res['results']) == 2
     assert res['results'][BasicState("|2,0,0,0>")] == pytest.approx(.5)
@@ -410,10 +393,10 @@ def test_evolve_with_heralds():
     discard_heralds_output = sim.evolve_svd(svd)
     assert discard_heralds_output['results'].m == 4
 
-    for kh_state, dh_state in zip(keep_heralds_output['results'].keys(), discard_heralds_output['results'].keys()):
-        assert_sv_close(kh_state, dh_state * StateVector([1, 1]))
+    assert_svd_close(keep_heralds_output['results'], discard_heralds_output['results'] * StateVector([1, 1]))
 
     sim.set_min_detected_photons_filter(2)
+    sim.compute_physical_logical_perf(True)
     result = sim.evolve_svd(svd)
     assert_svd_close(result["results"], SVDistribution(BasicState([0, 1, 1, 0])))
     assert result["physical_perf"] == pytest.approx(brightness ** 4)

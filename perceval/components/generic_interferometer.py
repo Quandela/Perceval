@@ -49,12 +49,12 @@ class GenericInterferometer(Circuit):
     :param phase_shifter_fun_gen: a function generating a phase_shifter circuit.
     :param phase_at_output: if True creates a layer of phase shifters at the output of the generated interferometer
                             else creates it in the input (default: False)
-    :param upper_component_gen fun_gen: generator function for the building the upper component, index is an integer allowing to generate
+    :param upper_component_gen: generator function for the building the upper component, index is an integer allowing to generate
                     named parameters - for instance:
-                    :code:`fun_gen=lambda idx: pcvl.PS(pcvl.P(f"phi_upper_{idx}"))`
+                    :code:`upper_component_gen=lambda idx: pcvl.PS(pcvl.P(f"phi_upper_{idx}"))`
     :param lower_component_gen: generator function for the building the lower component, index is an integer allowing to generate
                     named parameters - for instance:
-                    :code:`fun_gen=lambda idx: pcvl.PS(pcvl.P(f"phi_lower_{idx}"))`
+                    :code:`lower_component_gen=lambda idx: pcvl.PS(pcvl.P(f"phi_lower_{idx}"))`
 
     See :cite:`fldzhyan2020optimal`, :cite:`clements2016optimal` and :cite:`reck1994experimental`
     """
@@ -205,8 +205,8 @@ class GenericInterferometer(Circuit):
 
         :param param_list: List of numerical values for the parameters
         :param top_left_pos: Starting position of the insertion (column#, row#). Position is handled MZI-wise (i.e.
-        (0,0) starts inserting values on the top-left-most MZI of the interferometer whereas (1,0) starts on top of the
-        2nd MZI column). The optional phase layer is ignored in the position handling.
+           (0,0) starts inserting values on the top-left-most MZI of the interferometer whereas (1,0) starts on top of
+           the 2nd MZI column). The optional phase layer is ignored in the position handling.
         :param m: Mode count on where to insert the parameter values
         """
         col, lin = top_left_pos
