@@ -300,11 +300,14 @@ class RemoteJob(Job):
         job_dict['status'] = RunningStatus.WAITING.name
         return RemoteJob._from_dict(job_dict, self._rpc_handler)
 
-    def _get_results(self) -> None:
+    def _get_results(self) -> dict | None:
         if self._results and self.status.completed:
             return self._results
         response = self._rpc_handler.get_job_results(self._id)
         self._results = deserialize(json.loads(response['results']))
+        if not isinstance(self._results, dict):
+            self._results = None
+            return self._results
         if "job_context" in self._results and 'result_mapping' in self._results["job_context"]:
             path_parts = self._results["job_context"]["result_mapping"]
             get_logger().info(f"Converting job {self._id} results with {path_parts[1]}", channel.general)

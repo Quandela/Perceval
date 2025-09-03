@@ -134,6 +134,8 @@ class LocalJob(Job):
         self._cancel_requested = True
 
     def _get_results(self):
+        if self._results is None:
+            return self._results
         if self._result_mapping_function:
             get_logger().info(
                 f"Converting local job results with {self._result_mapping_function.__name__}", channel.general)
