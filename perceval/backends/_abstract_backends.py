@@ -98,8 +98,9 @@ class AStrongSimulationBackend(ABackend):
         self._cache_iterator: dict = dict()
         self._masks_str: list[str] | None = None
         self._mask: xq.FSMask | None = None
+        self._no_limit_modes: list[int] | None = None
 
-    def set_mask(self, masks: str | list[str], n = None):
+    def set_mask(self, masks: str | list[str], n = None, at_least_modes = None):
         r"""
         Sets new masks, replacing the former ones if they exist. Clear possible cached data that depend on the mask.
         Masks are useful to limit strong simulation to only a part of the Fock space, ultimately saving memory and
@@ -111,6 +112,8 @@ class AStrongSimulationBackend(ABackend):
             empty modes.
         :param n: The number of photons to instantiate the mask with.
             This corresponds to the total number of photons in your non-separated state.
+        :param at_least_modes: A list containing the modes on which the accepted number of photons cn be anything higher
+            than or equal to the given value in the condition.
         """
         self.clear_mask()
         if isinstance(masks, str):
@@ -121,13 +124,17 @@ class AStrongSimulationBackend(ABackend):
             assert len(m) == mask_length, "Inconsistent mask lengths"
         self._masks_str = masks
         self._mask_n = n
+        self._no_limit_modes = at_least_modes
         self._init_mask()
 
     def _init_mask(self):
         if self._masks_str is not None and self._input_state is not None:
             instate = self._input_state
             assert len(self._masks_str[0]) == instate.m, "Mask and input state lengths have to be the same"
-            self._mask = xq.FSMask(instate.m, self._mask_n or instate.n, self._masks_str)
+            if self._no_limit_modes:
+                self._mask = xq.FSMask(instate.m, self._mask_n or instate.n, self._masks_str, self._no_limit_modes)
+            else:
+                self._mask = xq.FSMask(instate.m, self._mask_n or instate.n, self._masks_str)
 
     def clear_mask(self):
         """
