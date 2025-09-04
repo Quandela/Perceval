@@ -61,7 +61,7 @@ strong simulation back-end.
 >>>
 >>> input_state = pcvl.BasicState("|1,1>")  # Inject one photon on each input mode...
 >>> circuit = pcvl.BS()                     # ... of a perfect beam splitter
->>> noise_model = pcvl.NoiseModel(transmittance=0.05, indistinguishability=0.85)  # Define some noise level
+>>> noise_model = pcvl.NoiseModel(transmittance=0.2, indistinguishability=0.96, g2=0.03)  # Define some noise level
 >>>
 >>> processor = pcvl.Processor("SLOS", circuit, noise=noise_model)  # Use SLOS, a strong simulation back-end
 >>> processor.min_detected_photons_filter(1)  # Accept all output states containing at least 1 photon
