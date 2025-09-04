@@ -27,18 +27,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from __future__ import annotations
-
 from collections import defaultdict
 
 from exqalibur import Annotation
 from multipledispatch import dispatch
-from typing import Generator, Union, final
-
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias  # Only used with python 3.9
+from typing import Generator, Union, final, TypeAlias
 
 import exqalibur as xq
 
@@ -144,7 +137,7 @@ class BasicState(metaclass=BasicStateMeta):
     def __iter__(self) -> Generator[int, None, None]:
         yield 0
 
-    def merge(self, other: BasicState) -> State:
+    def merge(self, other: State) -> State:
         """
         :param other: a BasicState with the same number of modes than self.
         :return: A new state for which the photons in one mode are the photons in this mode in ``self`` and in ``other``.

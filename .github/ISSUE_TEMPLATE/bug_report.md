@@ -29,7 +29,7 @@ If applicable, add screenshots to help explain your problem.
 **Desktop (please complete the following information):**
  - OS: [e.g. macOS, Ubuntu]
  - CPU Arch: [e.g. x86_64, Apple M1, ARMv7]
- - Python Version: [e.g. 3.9]
+ - Python Version: [e.g. 3.13]
  - Perceval Version: [e.g. 0.3.3]
 
 

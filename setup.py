@@ -65,7 +65,6 @@ setuptools.setup(
         "Tracker": "https://github.com/Quandela/Perceval/issues"
     },
     classifiers=[
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
@@ -76,10 +75,9 @@ setuptools.setup(
     packages=package_list,
     install_requires=['sympy~=1.12', 'numpy>=1.26,<3', 'scipy~=1.13', 'tabulate~=0.9', 'matplotlib<4', 'exqalibur~=0.8.3',
                       'multipledispatch<2', 'protobuf>=3.20.3', 'drawsvg>=2.0', 'requests<3',
-                      'networkx>=3.1,<4', 'latexcodec<4', 'platformdirs<5', 'tqdm',
-                      "typing_extensions; python_version == '3.9'"  # TODO: remove when dropping 3.9
+                      'networkx>=3.1,<4', 'latexcodec<4', 'platformdirs<5', 'tqdm'
                       ],
     setup_requires=["scmver"],
-    python_requires=">=3.9,<3.14",
+    python_requires=">=3.10,<3.14",
     scmver=True
 )
