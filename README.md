@@ -39,7 +39,7 @@ practitioners.
 
 Perceval requires:
 
-* Python between 3.9 and 3.13
+* Python between 3.10 and 3.13
 
 ## PIP
 We recommend installing it with `pip`:

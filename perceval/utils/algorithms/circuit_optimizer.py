@@ -26,12 +26,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
-
 from collections.abc import Callable
 
 import exqalibur as xq
-from perceval.components import ACircuit, Circuit, GenericInterferometer, BS, PS, catalog
+from perceval.components import ACircuit, GenericInterferometer, PS, catalog
 from perceval.utils import Matrix, P
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import serialize_binary, deserialize_circuit

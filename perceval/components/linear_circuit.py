@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from __future__ import annotations
+from __future__ import annotations  # Python 3.11 : Replace using Self typing
 
 import copy
 import random

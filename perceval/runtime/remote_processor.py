@@ -26,10 +26,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
-
 from perceval.components.abstract_processor import AProcessor, ProcessorType
-from perceval.components import ACircuit, Processor, AComponent,  Experiment, IDetector, Detector
+from perceval.components import ACircuit, Processor, AComponent,  Experiment, Detector
 from perceval.utils import FockState, NoiseModel
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import deserialize

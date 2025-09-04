@@ -27,8 +27,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from __future__ import annotations
-
 from perceval.components.component_catalog import CatalogItem
 from ._helpers import generate_chained_controlled_ops, generalized_cz, apply_rotations_to_qubits
 from perceval.components import Circuit, Processor, Port, Experiment

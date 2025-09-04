@@ -26,8 +26,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
-
 import sympy as sp
 from perceval.utils import Parameter, Expression
 from perceval.serialization import _schema_circuit_pb2 as pb

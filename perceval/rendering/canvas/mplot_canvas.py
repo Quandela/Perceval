@@ -27,7 +27,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from __future__ import annotations
 from .canvas import Canvas
 
 from ..mplotlib_renderers._mplot_utils import autoselect_backend

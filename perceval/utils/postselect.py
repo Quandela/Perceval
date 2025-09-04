@@ -26,15 +26,11 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
+from typing import TypeAlias
 
 import exqalibur as xq
 
 from .states import BSDistribution, StateVector
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias  # Only used with python 3.9
 
 PostSelect: TypeAlias = xq.PostSelect
 
