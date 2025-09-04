@@ -171,13 +171,14 @@ class Detector(IDetector):
 
     :param n_wires: Number of detecting wires in the interleaved detector. (defaults to infinity)
     :param max_detections: Max number of photons the user is willing to read. The `|max_detection>` state would then mean "max_detection or more photons were detected". (defaults to None)
+    :param sde: Single pixel system detection efficiency (defaults to 1)
 
-    See :code:`pnr()`, :code:`threshold()` and :code:`ppnr(n_wires, max_detections)` static methods for easy detector initialization.
+    See :code:`pnr()`, :code:`threshold()` and :code:`ppnr(n_wires, max_detections, sde)` static methods for easy detector initialization.
 
     Example:
 
     >>> from perceval.components import Detector
-    >>> ppnr_detector = Detector.ppnr(5, 2)  # Create a 5-wires interleaved detector, able to detect 1 or 2+ photons
+    >>> ppnr_detector = Detector.ppnr(5, 2)  # Create a 5-wires interleaved detector, able to detect 1 or 2+ photons with unity efficiency
     >>> print(ppnr_detector.detect(3))       # and simulate the outcome of 3 photons hitting it at once
     {
       |1>: 0.04
@@ -185,13 +186,15 @@ class Detector(IDetector):
     }
     """
 
-    def __init__(self, n_wires: int = None, max_detections: int = None):
+    def __init__(self, n_wires: int = None, max_detections: int = None, sde: float = 1):
         super().__init__()
         assert n_wires is None or n_wires > 0, f"A detector requires at least 1 wire (got {n_wires})"
         assert max_detections is None or n_wires is None or max_detections <= n_wires, \
             f"Max detections has to be lower or equal than the number of wires (got {max_detections} > {n_wires} wires)"
+        assert sde > 0 and sde <= 1, f"Single pixel system detection efficiency has to be between 0 and 1"
         self._wires = n_wires
         self._max = None
+        self._sde = sde
         if self._wires is not None:
             self._max = self._wires if max_detections is None else min(max_detections, self._wires)
         self._cache = {}
@@ -216,9 +219,9 @@ class Detector(IDetector):
         return d
 
     @staticmethod
-    def ppnr(n_wires: int, max_detections: int = None) -> Detector:
+    def ppnr(n_wires: int, max_detections: int = None, sde: float = 1) -> Detector:
         """Builds an interleaved pseudo-PNR detector."""
-        d = Detector(n_wires, max_detections)
+        d = Detector(n_wires, max_detections, sde)
         d.name = f"PPNR"
         return d
 
@@ -232,7 +235,7 @@ class Detector(IDetector):
 
     def detect(self, theoretical_photons: int) -> BSDistribution | FockState:
         detector_type = self.type
-        if theoretical_photons < 2 or detector_type == DetectionType.PNR:
+        if (theoretical_photons < 2 and self._sde == 1) or detector_type == DetectionType.PNR:
             return FockState([theoretical_photons])
 
         if detector_type == DetectionType.Threshold:
@@ -244,7 +247,7 @@ class Detector(IDetector):
         remaining_p = 1
         result = BSDistribution()
         max_detectable = min(self._max, theoretical_photons)
-        for i in range(1, max_detectable):
+        for i in range(0, max_detectable):
             p_i = self._cond_probability(i, theoretical_photons)
             result.add(FockState([i]), p_i)
             remaining_p -= p_i
@@ -260,16 +263,16 @@ class Detector(IDetector):
         This uses a recurrence formula set to compute each conditional probability from the ones with one less photon.
 
         Hitting `i` wires with `n` photons is:
-            - hitting `i - 1` wires with `n - 1` photons AND hitting a new wire with the nth photon
+            - hitting `i - 1` wires with `n - 1` photons AND hitting a new wire with the nth photon, with a successful absorption
             OR
-            - hitting `i` wires with `n - 1` photons AND hitting one of the wire that were already hit with the nth photon
+            - hitting `i` wires with `n - 1` photons AND hitting one of the wire that were already hit with the nth photon, or an unsuccessful absorption
         """
         if det == 0:
-            return 1 if nph == 0 else 0
+            return 1 if nph == 0 else (1 - self._sde) ** nph
         if nph < det:
             return 0
-        return self._cond_probability(det - 1, nph - 1) * (self._wires - det + 1) / self._wires \
-            + self._cond_probability(det, nph - 1) * det / self._wires
+        return self._cond_probability(det - 1, nph - 1) * (self._wires - det + 1) * self._sde / self._wires \
+            + self._cond_probability(det, nph - 1) * (self._sde * det / self._wires + 1 - self._sde)
 
 
 def get_detection_type(detectors: list[IDetector]) -> DetectionType:
