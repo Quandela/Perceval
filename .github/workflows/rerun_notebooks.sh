@@ -18,7 +18,7 @@ for entry in `ls $nb_dir | grep \.ipynb`; do
         elif [ "$notebook" = "docs/source/notebooks/Gedik_qudit.ipynb" ]
         then
             echo $notebook is ignore
-        elif [ "$notebook" = "docs/source/notebooks/Remote_computing.ipynb" ]
+        elif [ "$notebook" = "docs/source/notebooks/Remote_Computation_Tutorial.ipynb" ]
         then
             echo $notebook is ignore
         else
