@@ -47,15 +47,8 @@ class SLAPBackend(AStrongSimulationBackend):
         super().set_circuit(circuit)  # Computes circuit unitary as _umat
         self._slap.set_unitary(self._umat)
 
-    def set_mask(self, masks: str | list[str], n = None):
-        super().set_mask(masks, n)
-        if self._mask:
-            self._slap.set_mask(self._mask)
-        else:
-            self._slap.reset_mask()
-
-    def set_input_state(self, input_state: FockState):
-        super().set_input_state(input_state)
+    def _init_mask(self):
+        super()._init_mask()
         if self._mask:
             self._slap.set_mask(self._mask)
         else:
