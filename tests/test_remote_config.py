@@ -30,16 +30,10 @@
 import os
 import pytest
 import platform
-from unittest.mock import patch
-
-import perceval as pcvl
 
 from perceval.utils.persistent_data import _CONFIG_FILE_NAME
 
 from _mock_persistent_data import RemoteConfigForTest
-
-from _test_utils import LogChecker
-
 
 
 MISSING_KEY = "MISSING_ENV_VAR"
@@ -51,6 +45,9 @@ TOKEN_FROM_FILE = "DUMMY_TOKEN_FROM_FILE"
 PROXY_FROM_CACHE = {'https': 'socks5h://USER:PWD@DUMMY_PROXY_FROM_CACHE:1080/'}
 PROXY_FROM_FILE = {'https': 'socks5h://USER:PWD@DUMMY_PROXY_FROM_FILE:1080/'}
 
+URL_FROM_CACHE = "DUMMY_URL_FROM_CACHE"
+URL_FROM_FILE = "DUMMY_URL_FROM_FILE"
+
 
 def test_remote_config_env_var_vs_cache(tmp_path):
     os.environ[ENV_VAR_KEY] = TOKEN_FROM_ENV  # Write a temporary environment variable
@@ -59,6 +56,7 @@ def test_remote_config_env_var_vs_cache(tmp_path):
     assert remote_config._get_token_from_env_var() is None
     assert remote_config._token is None
     assert remote_config._proxies is None
+    assert remote_config._url is None
 
     remote_config.set_token_env_var(ENV_VAR_KEY)
     assert remote_config.get_token() == TOKEN_FROM_ENV
@@ -68,12 +66,16 @@ def test_remote_config_env_var_vs_cache(tmp_path):
     assert remote_config.get_token() == TOKEN_FROM_CACHE
     remote_config.set_proxies(PROXY_FROM_CACHE)
     assert remote_config.get_proxies() == PROXY_FROM_CACHE
+    remote_config.set_url(URL_FROM_CACHE)
+    assert remote_config.get_url() == URL_FROM_CACHE
 
     remote_config.clear_cache()
     assert remote_config._token is None
     assert remote_config.get_token() == TOKEN_FROM_ENV
     assert remote_config._proxies is None
     assert remote_config.get_proxies() == {}
+    assert remote_config._url is None
+    assert remote_config.get_url() == ""
 
     del os.environ[ENV_VAR_KEY]  # Remove the environment variable
     remote_config.clear_cache()
@@ -89,39 +91,48 @@ def test_remote_config_from_file(tmp_path):
 
     assert remote_config.get_token() == ''
     assert remote_config.get_proxies() == {}
+    assert remote_config.get_url() == ''
     remote_config.set_token(TOKEN_FROM_FILE)
     remote_config.set_proxies(PROXY_FROM_FILE)
+    remote_config.set_url(URL_FROM_FILE)
     remote_config.save()
     assert remote_config.get_token() == TOKEN_FROM_FILE
     assert remote_config.get_proxies() == PROXY_FROM_FILE
+    assert remote_config.get_url() == URL_FROM_FILE
 
     remote_config.clear_cache()
     persistent_data.clear_all_data()
 
     assert remote_config.get_token() == ''
     assert remote_config.get_proxies() == {}
+    assert remote_config.get_url() == ''
 
     remote_config.set_token(TOKEN_FROM_FILE)
     remote_config.set_proxies(PROXY_FROM_FILE)
+    remote_config.set_url(URL_FROM_FILE)
     remote_config.save()
     assert remote_config.get_token() == TOKEN_FROM_FILE
     assert remote_config.get_proxies() == PROXY_FROM_FILE
+    assert remote_config.get_url() == URL_FROM_FILE
 
     remote_config.set_token(TOKEN_FROM_FILE)
     remote_config.set_proxies(PROXY_FROM_FILE)
+    remote_config.set_url(URL_FROM_FILE)
     remote_config.save()
     assert remote_config.get_token() == TOKEN_FROM_FILE
     assert remote_config.get_proxies() == PROXY_FROM_FILE
+    assert remote_config.get_url() == URL_FROM_FILE
 
     remote_config.clear_cache()
     persistent_data.clear_all_data()
 
     assert remote_config.get_token() == ''
     assert remote_config.get_proxies() == {}
+    assert remote_config.get_url() == ''
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="chmod doesn't works on windows")
-def test_token_file_access(tmp_path):
+def test_config_file_access(tmp_path):
     remote_config = RemoteConfigForTest(tmp_path)
     persistent_data = remote_config._persistent_data
     if persistent_data.load_config():
@@ -134,6 +145,7 @@ def test_token_file_access(tmp_path):
         # warning because config file cannot be saved
         remote_config.set_token(TOKEN_FROM_FILE)
         remote_config.set_proxies(PROXY_FROM_FILE)
+        remote_config.set_url(URL_FROM_FILE)
         remote_config.save()
 
     os.chmod(directory, 0o777)
@@ -141,11 +153,13 @@ def test_token_file_access(tmp_path):
     token_file = os.path.join(directory, _CONFIG_FILE_NAME)
     remote_config.set_token(TOKEN_FROM_FILE)
     remote_config.set_proxies(PROXY_FROM_FILE)
+    remote_config.set_url(URL_FROM_FILE)
     remote_config.save()
 
     remote_config.clear_cache()
     assert remote_config.get_token() == TOKEN_FROM_FILE
     assert remote_config.get_proxies() == PROXY_FROM_FILE
+    assert remote_config.get_url() == URL_FROM_FILE
 
     os.chmod(token_file, 0o000)
 
@@ -156,6 +170,7 @@ def test_token_file_access(tmp_path):
         temp_remote_config.clear_cache()
         assert temp_remote_config.get_token() == ''
         assert temp_remote_config.get_proxies() == {}
+        assert temp_remote_config.get_url() == ''
 
     os.chmod(token_file, 0o777)
 

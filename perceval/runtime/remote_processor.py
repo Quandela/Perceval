@@ -71,7 +71,7 @@ class RemoteProcessor(AProcessor):
     def __init__(self,
                  name: str = None,
                  token: str = None,
-                 url: str = QUANDELA_CLOUD_URL,
+                 url: str = None,
                  proxies: dict[str,str] = None,
                  rpc_handler: RPCHandler = None,
                  m: int = None,
@@ -104,6 +104,10 @@ class RemoteProcessor(AProcessor):
                 token = remote.get_token()
             if not token:
                 raise ConnectionError("No token found")
+            if url is None:
+                url = remote.get_url()
+            if not url:
+                url = QUANDELA_CLOUD_URL
             if proxies is None:
                 proxies = remote.get_proxies()
             self.name = name

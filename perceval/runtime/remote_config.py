@@ -35,6 +35,7 @@ from perceval.utils.persistent_data import PersistentData, _CONFIG_FILE_NAME
 
 REMOTE_KEY = "remote"
 PROXIES_KEY = "proxies"
+URL_KEY = "url"
 TOKEN_KEY = "token"
 
 TOKEN_ENV_VAR = "PCVL_CLOUD_TOKEN"
@@ -50,6 +51,7 @@ class RemoteConfig:
     _token_env_var = TOKEN_ENV_VAR
     _proxies = None
     _token = None
+    _url = None
     _cloud_maximal_job_count = None
 
     def __init__(self, persistent_data: PersistentData = PersistentData()):
@@ -100,6 +102,28 @@ class RemoteConfig:
         if not RemoteConfig._proxies:
             RemoteConfig._proxies = self._get_remote_config(PROXIES_KEY)
         return RemoteConfig._proxies or {}
+
+    @staticmethod
+    def set_url(url: str) -> None:
+        """Set a cloud URL in the configuration cache. It is not saved on disk before the `save` method
+        is called.
+
+        :param url: The cloud URL
+        """
+        RemoteConfig._url = url
+
+    def get_url(self) -> str:
+        """Search a valid cloud URL from the environment, put it in cache and return it.
+
+        The priority for the URL search is as follows:
+        * A URL already in cache (e.g. set by the user or already found in a previous call)
+        * The value in Perceval persistent configuration
+
+        :return: The cloud URL
+        """
+        if not RemoteConfig._url:
+            RemoteConfig._url = self._get_remote_config(URL_KEY)
+        return RemoteConfig._url or ""
 
     @staticmethod
     def set_token(token: str) -> None:
@@ -156,6 +180,7 @@ class RemoteConfig:
     def clear_cache():
         """Delete the RemoteConfig cache."""
         RemoteConfig._proxies = None
+        RemoteConfig._url = None
         RemoteConfig._token = None
 
     def save(self) -> None:
@@ -167,6 +192,7 @@ class RemoteConfig:
             config[REMOTE_KEY] = {}
 
         config[REMOTE_KEY][PROXIES_KEY] = RemoteConfig._proxies
+        config[REMOTE_KEY][URL_KEY] = RemoteConfig._url
         config[REMOTE_KEY][TOKEN_KEY] = RemoteConfig._token
 
         self._persistent_data.save_config(config)
