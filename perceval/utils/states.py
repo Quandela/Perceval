@@ -36,6 +36,8 @@ from typing import Generator, Union, final, TypeAlias
 
 import exqalibur as xq
 
+import numpy as np
+
 
 FockState: TypeAlias = xq.FockState
 NoisyFockState: TypeAlias = xq.NoisyFockState
@@ -78,7 +80,7 @@ class BasicState(metaclass=BasicStateMeta):
     def __new__(cls):
         return FockState()
 
-    @dispatch(type, (list, tuple))
+    @dispatch(type, (list, tuple, np.ndarray))
     def __new__(cls, photons: list[int]):
         return FockState(photons)
 
@@ -86,7 +88,7 @@ class BasicState(metaclass=BasicStateMeta):
     def __new__(cls, m: int):
         return FockState(m)
 
-    @dispatch(type, (list, tuple), (list, tuple))
+    @dispatch(type, (list, tuple, np.ndarray), (list, tuple, np.ndarray))
     def __new__(cls, photons: list[int], noise: list[int]):
         return NoisyFockState(FockState(photons), noise)
 
