@@ -40,7 +40,6 @@ from .remote_config import RemoteConfig
 from .payload_generator import PayloadGenerator
 
 
-QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
 PERFS_KEY = "perfs"
 TRANSMITTANCE_KEY = "Transmittance (%)"
 DEFAULT_TRANSMITTANCE = 0.06
@@ -52,7 +51,7 @@ class RemoteProcessor(AProcessor):
             processor: Processor,
             name: str = None,
             token: str = None,
-            url: str = QUANDELA_CLOUD_URL,
+            url: str = None,
             proxies: dict[str,str] = None,
             rpc_handler: RPCHandler = None):
         rp = RemoteProcessor(
@@ -106,8 +105,6 @@ class RemoteProcessor(AProcessor):
                 raise ConnectionError("No token found")
             if url is None:
                 url = remote.get_url()
-            if not url:
-                url = QUANDELA_CLOUD_URL
             if proxies is None:
                 proxies = remote.get_proxies()
             self.name = name

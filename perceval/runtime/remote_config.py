@@ -33,6 +33,8 @@ from perceval.utils import FileFormat
 from perceval.utils.logging import channel, get_logger
 from perceval.utils.persistent_data import PersistentData, _CONFIG_FILE_NAME
 
+QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
+
 REMOTE_KEY = "remote"
 PROXIES_KEY = "proxies"
 URL_KEY = "url"
@@ -123,7 +125,7 @@ class RemoteConfig:
         """
         if not RemoteConfig._url:
             RemoteConfig._url = self._get_remote_config(URL_KEY)
-        return RemoteConfig._url or ""
+        return RemoteConfig._url or QUANDELA_CLOUD_URL
 
     @staticmethod
     def set_token(token: str) -> None:

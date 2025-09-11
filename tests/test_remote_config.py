@@ -33,7 +33,7 @@ import platform
 
 from perceval.utils.persistent_data import _CONFIG_FILE_NAME
 
-from _mock_persistent_data import RemoteConfigForTest
+from _mock_persistent_data import RemoteConfigForTest, QUANDELA_CLOUD_URL
 
 
 MISSING_KEY = "MISSING_ENV_VAR"
@@ -75,7 +75,7 @@ def test_remote_config_env_var_vs_cache(tmp_path):
     assert remote_config._proxies is None
     assert remote_config.get_proxies() == {}
     assert remote_config._url is None
-    assert remote_config.get_url() == ""
+    assert remote_config.get_url() == QUANDELA_CLOUD_URL
 
     del os.environ[ENV_VAR_KEY]  # Remove the environment variable
     remote_config.clear_cache()
@@ -91,7 +91,7 @@ def test_remote_config_from_file(tmp_path):
 
     assert remote_config.get_token() == ''
     assert remote_config.get_proxies() == {}
-    assert remote_config.get_url() == ''
+    assert remote_config.get_url() == QUANDELA_CLOUD_URL
     remote_config.set_token(TOKEN_FROM_FILE)
     remote_config.set_proxies(PROXY_FROM_FILE)
     remote_config.set_url(URL_FROM_FILE)
@@ -105,7 +105,7 @@ def test_remote_config_from_file(tmp_path):
 
     assert remote_config.get_token() == ''
     assert remote_config.get_proxies() == {}
-    assert remote_config.get_url() == ''
+    assert remote_config.get_url() == QUANDELA_CLOUD_URL
 
     remote_config.set_token(TOKEN_FROM_FILE)
     remote_config.set_proxies(PROXY_FROM_FILE)
@@ -128,7 +128,7 @@ def test_remote_config_from_file(tmp_path):
 
     assert remote_config.get_token() == ''
     assert remote_config.get_proxies() == {}
-    assert remote_config.get_url() == ''
+    assert remote_config.get_url() == QUANDELA_CLOUD_URL
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="chmod doesn't works on windows")
@@ -170,7 +170,7 @@ def test_config_file_access(tmp_path):
         temp_remote_config.clear_cache()
         assert temp_remote_config.get_token() == ''
         assert temp_remote_config.get_proxies() == {}
-        assert temp_remote_config.get_url() == ''
+        assert temp_remote_config.get_url() == QUANDELA_CLOUD_URL
 
     os.chmod(token_file, 0o777)
 
