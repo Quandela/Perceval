@@ -376,6 +376,10 @@ def test_compress():
     assert d_only_basicstate["input_state"].startswith(zip_prefix)
     assert not d_only_basicstate["circuit"].startswith(zip_prefix)
 
+    d_default_serialize = serialize(d) # Compress only Circuit (default behaviour for Circuit and BasicState)
+    assert not d_default_serialize["input_state"].startswith(zip_prefix)
+    assert d_default_serialize["circuit"].startswith(zip_prefix)
+
 
 def test_circuit_with_expression_serialization():
     p_a = P("A")
