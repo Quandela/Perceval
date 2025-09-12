@@ -31,7 +31,7 @@ import json
 import warnings
 from platformdirs import PlatformDirs
 
-from .metadata import PMetadata
+from .versions import PMetadata
 from ._enums import FileFormat
 
 _CONFIG_FILE_NAME = "config.json"

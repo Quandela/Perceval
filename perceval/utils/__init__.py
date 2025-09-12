@@ -44,7 +44,7 @@ from .conversion import samples_to_sample_count, samples_to_probs, sample_count_
 from .stategenerator import StateGenerator
 from ._enums import Encoding, InterferometerShape, FileFormat, ModeType
 from .persistent_data import PersistentData
-from .metadata import PMetadata
+from .versions import PMetadata
 from .density_matrix import DensityMatrix
 from .noise_model import NoiseModel
 from .logging import get_logger, use_perceval_logger, use_python_logger, LoggerConfig, deprecated
