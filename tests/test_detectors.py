@@ -56,7 +56,7 @@ def test_interleaved_ppnr():
     s = [BasicState([i]) for i in range(7)]
     detector_2wires = Detector.ppnr(n_wires=2)  # The detector contains 2 independent detecting-able systems
     res = detector_2wires.detect(2)  # 2 photons simultaneously hit the PPNR detector
-    assert s[0] not in res  # At least one photon gets detected => |0> does not apper
+    assert s[0] not in res  # At least one photon gets detected => |0> does not appear
     assert s[1] in res and res[s[1]] == pytest.approx(0.5)
     assert s[2] in res and res[s[2]] == pytest.approx(0.5)
     assert len(res) == 2  # Can't detect 3 simultaneous photons with only 2 wires
@@ -67,31 +67,39 @@ def test_interleaved_ppnr():
     assert s[2] in res and res[s[2]] == pytest.approx(0.75)
     assert len(res) == 2
 
-    detector_3wires = Detector.ppnr(n_wires=3)
+    detector_3wires = Detector.ppnr(n_wires=3, wire_efficiency=0.7) # With 3 wires and a limited wire efficiency of 0.7
     res = detector_3wires.detect(3)
-    assert s[0] not in res
-    assert s[1] in res and res[s[1]] == pytest.approx(3/27)
-    assert s[2] in res and res[s[2]] == pytest.approx(18/27)
-    assert s[3] in res and res[s[3]] == pytest.approx(6/27)
-    assert len(res) == 3  # Can't detect more than 3 simultaneous photons with 3 wires
+    assert s[0] in res and res[s[0]] == pytest.approx(0.027) # Probability to detect 0 photons is no longer 0
+    assert s[1] in res and res[s[1]] == pytest.approx(3367/9000)
+    assert s[2] in res and res[s[2]] == pytest.approx(196/375)
+    assert s[3] in res and res[s[3]] == pytest.approx(343/4500)
+    assert len(res) == 4  # Can't detect more than 3 simultaneous photons with 3 wires
     assert 3 in detector_3wires._cache  # Check that the result is cached
     assert detector_3wires._cache[3] == res
 
-    detector_5wires = Detector.ppnr(n_wires=5)  # Adding wires increases the probability of catching all photons
+    detector_5wires = Detector.ppnr(n_wires=5, wire_efficiency=0.7)  # Adding wires increases the probability of catching all photons
     res = detector_5wires.detect(3)
-    assert s[0] not in res
-    assert s[1] in res and res[s[1]] == pytest.approx(0.04)
-    assert s[2] in res and res[s[2]] == pytest.approx(0.48)
-    assert s[3] in res and res[s[3]] == pytest.approx(0.48)
-    assert len(res) == 3
+    assert s[0] in res and res[s[0]] == pytest.approx(0.027)
+    assert s[1] in res and res[s[1]] == pytest.approx(36365/125000)
+    assert s[2] in res and res[s[2]] == pytest.approx(1617/3125)
+    assert s[3] in res and res[s[3]] == pytest.approx(1029/6250)
+    assert len(res) == 4
 
-    detector_5wires_2max = Detector.ppnr(n_wires=5, max_detections=2)  # Now limit the detected photon count at 2
-    res = detector_5wires_2max.detect(3)
+    detector_5wires_higher_efficiency = Detector.ppnr(n_wires=5, wire_efficiency=0.9) # Higher efficiency increases the probability of catching all photons
+    res = detector_5wires_higher_efficiency.detect(3)
+    assert s[0] in res and res[s[0]] == pytest.approx(0.001)
+    assert s[1] in res and res[s[1]] == pytest.approx(2619/25000)
+    assert s[2] in res and res[s[2]] == pytest.approx(1701/3125)
+    assert s[3] in res and res[s[3]] == pytest.approx(2187/6250)
+    assert len(res) == 4
+
+    detector_5wires_higher_efficiency_2max = Detector.ppnr(n_wires=5, max_detections=2, wire_efficiency=0.9)  # Now limit the detected photon count at 2
+    res = detector_5wires_higher_efficiency_2max.detect(3)
     # Here we get the same results as above, but the probability for 2 and 3 detections are summed
-    assert s[0] not in res
-    assert s[1] in res and res[s[1]] == pytest.approx(0.04)
-    assert s[2] in res and res[s[2]] == pytest.approx(0.96)  # = p2_5wires + p3_5wires
-    assert len(res) == 2
+    assert s[0] in res and res[s[0]] == pytest.approx(0.001)
+    assert s[1] in res and res[s[1]] == pytest.approx(2619/25000)
+    assert s[2] in res and res[s[2]] == pytest.approx(5589/6250)  # = p2_5wires + p3_5wires
+    assert len(res) == 3
 
 
 def test_bs_layered_ppnr():
