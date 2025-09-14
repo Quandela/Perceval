@@ -171,9 +171,9 @@ class Detector(IDetector):
 
     :param n_wires: Number of detecting wires in the interleaved detector. (defaults to infinity)
     :param max_detections: Max number of photons the user is willing to read. The `|max_detection>` state would then mean "max_detection or more photons were detected". (defaults to None)
-    :param sde: Single pixel system detection efficiency (defaults to 1)
+    :param wire_efficiency: Individual wire efficiency (defaults to 1)
 
-    See :code:`pnr()`, :code:`threshold()` and :code:`ppnr(n_wires, max_detections, sde)` static methods for easy detector initialization.
+    See :code:`pnr()`, :code:`threshold()` and :code:`ppnr(n_wires, max_detections, wire_efficiency)` static methods for easy detector initialization.
 
     Example:
 
@@ -186,15 +186,15 @@ class Detector(IDetector):
     }
     """
 
-    def __init__(self, n_wires: int = None, max_detections: int = None, sde: float = 1):
+    def __init__(self, n_wires: int = None, max_detections: int = None, wire_efficiency: float = 1):
         super().__init__()
         assert n_wires is None or n_wires > 0, f"A detector requires at least 1 wire (got {n_wires})"
         assert max_detections is None or n_wires is None or max_detections <= n_wires, \
             f"Max detections has to be lower or equal than the number of wires (got {max_detections} > {n_wires} wires)"
-        assert sde > 0 and sde <= 1, f"Single pixel system detection efficiency has to be between 0 and 1"
+        assert wire_efficiency > 0 and wire_efficiency <= 1, f"Wire efficiency efficiency has to be between 0 and 1"
         self._wires = n_wires
         self._max = None
-        self._sde = sde
+        self._wire_efficiency = wire_efficiency
         if self._wires is not None:
             self._max = self._wires if max_detections is None else min(max_detections, self._wires)
         self._cache = {}
@@ -219,9 +219,9 @@ class Detector(IDetector):
         return d
 
     @staticmethod
-    def ppnr(n_wires: int, max_detections: int = None, sde: float = 1) -> Detector:
+    def ppnr(n_wires: int, max_detections: int = None, wire_efficiency: float = 1) -> Detector:
         """Builds an interleaved pseudo-PNR detector."""
-        d = Detector(n_wires, max_detections, sde)
+        d = Detector(n_wires, max_detections, wire_efficiency)
         d.name = f"PPNR"
         return d
 
@@ -235,7 +235,7 @@ class Detector(IDetector):
 
     def detect(self, theoretical_photons: int) -> BSDistribution | FockState:
         detector_type = self.type
-        if (theoretical_photons < 2 and self._sde == 1) or detector_type == DetectionType.PNR:
+        if (theoretical_photons < 2 and self._wire_efficiency == 1) or detector_type == DetectionType.PNR:
             return FockState([theoretical_photons])
 
         if detector_type == DetectionType.Threshold:
@@ -268,11 +268,11 @@ class Detector(IDetector):
             - hitting `i` wires with `n - 1` photons AND hitting one of the wire that were already hit with the nth photon, or an unsuccessful absorption
         """
         if det == 0:
-            return 1 if nph == 0 else (1 - self._sde) ** nph
+            return 1 if nph == 0 else (1 - self._wire_efficiency) ** nph
         if nph < det:
             return 0
-        return self._cond_probability(det - 1, nph - 1) * (self._wires - det + 1) * self._sde / self._wires \
-            + self._cond_probability(det, nph - 1) * (self._sde * det / self._wires + 1 - self._sde)
+        return self._cond_probability(det - 1, nph - 1) * (self._wires - det + 1) * self._wire_efficiency / self._wires \
+            + self._cond_probability(det, nph - 1) * (self._wire_efficiency * det / self._wires + 1 - self._wire_efficiency)
 
 
 def get_detection_type(detectors: list[IDetector]) -> DetectionType:
