@@ -8,6 +8,7 @@ build-backend = "setuptools.build_meta"
 [tool.pytest.ini_options]
 markers = [
     "long_test: marks tests as slow (deselect with '--long_test')"
+    "rendering: marks rendering tests"
 ]
 minversion = "6.0"
 addopts = "-ra"

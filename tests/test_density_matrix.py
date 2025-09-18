@@ -126,6 +126,7 @@ def test_density_matrix_array_constructor():
     assert np.allclose(dm1.mat.toarray(), dm2.mat.toarray())
 
 
+@pytest.mark.filterwarnings("ignore::numpy.exceptions.ComplexWarning")
 def test_sample():
     dm = DensityMatrix.from_svd(BasicState([1]))
     for x in dm.sample(10):
