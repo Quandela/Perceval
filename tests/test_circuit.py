@@ -329,6 +329,7 @@ def test_visualization_barrier(capfd):
 TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
 
 
+@pytest.mark.long_test
 def test_depths_ncomponents():
     assert comp.PS(0).depths() == [1]
     assert comp.PS(0).ncomponents() == 1

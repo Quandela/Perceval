@@ -37,6 +37,7 @@ import pytest
 from _test_utils import strip_line_12
 
 
+@pytest.mark.long_test
 def test_analyzer_on_qrng():
     chip_QRNG = pcvl.Circuit(4, name='QRNG')
     # Parameters
