@@ -117,6 +117,8 @@ def test_circuit_serialization_backward_compat():
         "0.11": ":PCVL:zip:eJxVjs0KgkAURh/IlYhgAy5uV9GZrGYqB2cZEs1PYaWhvn2ukvl2Bw6Hj3CUFQE0n/ZrBpLDaI4ToLLtGYVTVX2qg7mM+dQxFPAfvTu2ErwXd6WM+q52AmQnUe/Zq4QNDjc7ZonBIoybaNup5vCgthfwpFG+dAsMc8l7HVySq9dFv7vzP8yeC2n6A8+rQV4=",
         #0.12 : Did not change circuit serialization
         #0.13 : Did not change circuit serialization
+        #1.1 : Added new parameter to Detector
+        "1.1": ":PCVL:Detector:CgRQUE5SEAQYAg=="
     }
     for perceval_version, serial_c in serial_circuits.items():
         try:
@@ -248,7 +250,8 @@ def test_postselect_serialization(ps):
 @pytest.mark.parametrize("detector", (BSLayeredPPNR(2, .6),
                                       Detector.pnr(),
                                       Detector.threshold(),
-                                      Detector.ppnr(4, 2)))
+                                      Detector.ppnr(4, 2),
+                                      Detector.ppnr(4, 2, 0.6)))
 def test_detector_serialization(detector):
     serialized = serialize(detector)
     deserialized = deserialize(serialized)

@@ -51,12 +51,15 @@ def serialize_detector(detector: Detector):
         pb_d.n_wires = detector._wires
     if detector.max_detections is not None:
         pb_d.max_detections = detector.max_detections
+    if detector._wire_efficiency is not None:
+        pb_d.wire_efficiency = detector._wire_efficiency
     return pb_d
 
 
 def deserialize_detector(pb_d: pb.Detector) -> Detector:
     n_wires = pb_d.n_wires or None
     max_detections = pb_d.max_detections or None
-    detector = Detector(n_wires, max_detections)
+    wire_efficiency = pb_d.wire_efficiency or 1  # default value 0 is not allowed for Detectors
+    detector = Detector(n_wires, max_detections, wire_efficiency)
     detector.name = pb_d.name
     return detector
