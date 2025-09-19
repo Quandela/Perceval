@@ -36,9 +36,10 @@ from functools import wraps
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from perceval import BasicState
+from perceval import BasicState, Parameter, Expression
 from perceval.components import ACircuit, PS, IDetector, AFFConfigurator, FFConfigurator, FFCircuitProvider, \
     BSLayeredPPNR, Detector, Experiment, Circuit, AProcessor, AComponent
+from perceval.components.abstract_component import AParametrizedComponent
 from perceval.utils import StateVector, SVDistribution
 from perceval.utils.logging import channel
 from perceval.rendering import Format, pdisplay_to_file
@@ -132,6 +133,14 @@ def assert_component_list_eq(comp_a, comp_b):
         assert isinstance(input_comp, type(output_comp))
         assert list(input_idx) == list(output_idx)
 
+        if isinstance(input_comp, AParametrizedComponent):
+            for param_name, param in input_comp.vars.items():
+                assert param_name in output_comp.vars
+                if isinstance(param, Expression):
+                    assert sorted([str(p) for p in param._params]) == sorted([str(p) for p in output_comp.vars[param_name]._params])
+                elif isinstance(param, Parameter):
+                    assert str(param) == str(output_comp.vars[param_name])
+
         if isinstance(input_comp, AFFConfigurator):
             assert input_comp.name == output_comp.name
             assert input_comp._blocked_circuit_size == output_comp._blocked_circuit_size
@@ -153,8 +162,11 @@ def assert_component_list_eq(comp_a, comp_b):
         elif isinstance(input_comp, PS) or not isinstance(input_comp, ACircuit):
             assert input_comp.describe() == output_comp.describe()
 
-        else:
+        elif input_comp.defined and output_comp.defined:
             assert (input_comp.compute_unitary() == output_comp.compute_unitary()).all()
+
+        else:
+            assert input_comp.U == output_comp.U
 
 
 def assert_detector_list_eq(detect_a: list[IDetector], detect_b: list[IDetector]):
