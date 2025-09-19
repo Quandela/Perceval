@@ -58,6 +58,7 @@ def _check_optimize(size: int, mzi_func: Callable[[int], None], max_eval_per_tri
     assert norm.fidelity(result_circuit.compute_unitary(), random_unitary) == pytest.approx(fidelity)
 
 
+@pytest.mark.long_test
 def test_circuit_optimizer():
     def mzi(i):
         return Circuit(2) // PS(P(f"phi_1_{i}")) // BS.Rx(perfect_theta) \
@@ -67,6 +68,7 @@ def test_circuit_optimizer():
         _check_optimize(size, mzi)
 
 
+@pytest.mark.long_test
 def test_circuit_optimizer_bs_convention():
     for bs_ctor in [BS.Ry, BS.H]:
         def mzi_conv(i):

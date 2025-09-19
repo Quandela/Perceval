@@ -78,7 +78,7 @@ def frobenius(u: Matrix, v: Matrix, skip_colums: list[int] = []) -> float:
     :return: real distance between matrices
     """
     difference = u - v
-    return np.sqrt(frobenius_inner_product(difference, difference, skip_colums))
+    return np.sqrt(frobenius_inner_product(difference, difference, skip_colums).real)
 
 def frobenius_inner_product(A: np.ndarray, B: np.ndarray, skip_colums: list[int] = []) -> float:
     # calculates the inner product associated to Frobenius norm

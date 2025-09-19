@@ -393,7 +393,7 @@ class DensityMatrix:
         Sample a basic state on the density matrix
         """
         self.normalize()
-        samples = random.choices(self.inverse_index, list(self.mat.diagonal()), k=count)
+        samples = random.choices(self.inverse_index, list(self.mat.diagonal().real), k=count)
         output = BSSamples()
         for state in samples:
             output.append(state)

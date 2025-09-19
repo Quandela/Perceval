@@ -136,6 +136,7 @@ def _compute_random_circ_probs(source_emission, num_photons):
     return sampler.probs()['results']
 
 
+@pytest.mark.long_test
 @retry(AssertionError, 3)
 def test_mitigation_over_postselect_tvd():
 

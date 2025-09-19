@@ -73,6 +73,7 @@ def fidelity_op_process_tomography(op, op_proc):
     return op_fidelity
 
 
+@pytest.mark.long_test
 def test_fidelity_klm_cnot():
     # set operator circuit, num qubits
     cnot_p = catalog["klm cnot"].build_processor()
@@ -80,6 +81,7 @@ def test_fidelity_klm_cnot():
     assert cnot_fidelity == pytest.approx(1)
 
 
+@pytest.mark.long_test
 def test_fidelity_postprocessed_cnot():
     # set operator circuit, num qubits
     cnot_p = catalog["postprocessed cnot"].build_processor()
@@ -87,6 +89,7 @@ def test_fidelity_postprocessed_cnot():
     assert cnot_fidelity == pytest.approx(1)
 
 
+@pytest.mark.long_test
 def test_fidelity_random_op():
     # process tomography to compute fidelity of a random 2 qubit gate operation
     nqubit = 2
@@ -115,6 +118,7 @@ def test_processor_odd_modes():
         ProcessTomography(operator_processor=Processor(SLOSBackend(), m_circuit=5))
 
 
+@pytest.mark.long_test
 def test_chi_cnot_is_physical():
     cnot_p = catalog["klm cnot"].build_processor()
 
