@@ -148,7 +148,7 @@ class RPCHandlerResponsesBuilder():
         ]:
             responses.add(responses.Response(
                 method=method,
-                url=re.compile((self._rpc_handler.url + endpoint).replace('/', "\/") + UUID_REGEXP),
+                url=re.compile((self._rpc_handler.url + endpoint).replace('/', r"\/") + UUID_REGEXP),
                 status=404))
 
         responses.add_callback(responses.POST,
@@ -165,11 +165,11 @@ class RPCHandlerResponsesBuilder():
         ]:
             responses.remove(responses.Response(
                 method=method,
-                url=re.compile((self._rpc_handler.url + endpoint).replace('/', "\/") + UUID_REGEXP),
+                url=re.compile((self._rpc_handler.url + endpoint).replace('/', r"\/") + UUID_REGEXP),
                 status=404))
             responses.add(responses.Response(
                 method=method,
-                url=re.compile((self._rpc_handler.url + endpoint).replace('/', "\/") + UUID_REGEXP),
+                url=re.compile((self._rpc_handler.url + endpoint).replace('/', r"\/") + UUID_REGEXP),
                 status=404))
 
     def _get_job_status(self):

@@ -137,7 +137,6 @@ def test_subnodes_0():
 #     assert pytest.approx(math.cos(random_theta)**2) == matched.v_map.get("R", None)
 
 
-@pytest.mark.filterwarnings("ignore::numpy.exceptions.ComplexWarning")
 def test_match_rewrite_phase():
     a = PS(0.4) // PS(1.4)
     pattern2 = pcvl.Circuit(1, name="pattern") // PS(pcvl.P("phi1")) // PS(pcvl.P("phi2"))
@@ -147,7 +146,7 @@ def test_match_rewrite_phase():
         pattern2.param(k).set_value(v)
     v = pattern2.compute_unitary(False)
     res = optimize(rewrite2, v, norm.frobenius, sign=-1)
-    assert pytest.approx(0+1) == res.fun+1
+    assert pytest.approx(1) == res.fun+1
     assert pytest.approx(v[0, 0]) == rewrite2.compute_unitary(False)[0, 0]
 
 

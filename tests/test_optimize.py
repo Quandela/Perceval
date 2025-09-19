@@ -56,7 +56,6 @@ def test_optimize_fidelity():
     assert pytest.approx(1) == res.fun
 
 
-@pytest.mark.filterwarnings("ignore::numpy.exceptions.ComplexWarning")
 def test_optimize_frobenius():
     c = _create_circuit()
     v = pcvl.Matrix.random_unitary(3)
