@@ -36,7 +36,7 @@ given task.
 Here, the computation was set-up to run on `sim:sampling` platform when :code:`remote_sample_job` is executed.
 
 For more information about the shots and shots/samples ratio estimate, please read
-:ref:`Remote computing tutorial<V. Remote computing>`.
+:ref:`Remote computing tutorial<Remote Computing>`.
 
 .. toctree::
    sampler

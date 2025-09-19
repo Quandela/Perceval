@@ -58,6 +58,8 @@ def version_highter_then(v1, v2):
                 return False
             elif v2[i] == charac:
                 continue
+            else:
+                return True
     return True
 
 
@@ -68,7 +70,7 @@ def keep_latest_versions(versions, mini=None):
     for one_version in versions:
         # major_version = re.match(r"v\d+", one_version).group()
         try:
-            major_version = re.match(r"v\d+\.(\d+)", one_version).groups()
+            major_version = re.match(r"v(\d+)\.(\d+)", one_version).groups()
         except AttributeError:
             major_version = "0.0.0"
         if "-" not in one_version:

@@ -17,7 +17,7 @@ Technichally, the :code:`BasicState` initializer is implemented as a factory abl
 * :code:`NoisyFockState`: A collection of indistinguishable photon groups, that are totally distinguishable. The
   distinguishability index is an integer and is referred to as the `noise tag` (e.g. :code:`|{0},{1},{0}{2}>` contains three
   groups of indistinguishable photons tagged 0, 1 and 2). It is an alias of exqalibur :ref:`NoisyFockState`.
-* :code:`AnnotatedBasicState`: Replace the previous :code:`FockState` by allowing rich annotations, having one or more
+* :code:`AnnotatedFockState`: Replace the previous :code:`FockState` by allowing rich annotations, having one or more
   string types, each having a complex number for value. This enables to accurately encode physical parameters and
   play with partial distinguishability (e.g. :code:`|{P:H,lambda:0.625},{P:V,lambda:0.618}>`). Please note that apart from
   polarisation, `Perceval` does not provide a generic algorithm to separate rich annotated states, and the user would
