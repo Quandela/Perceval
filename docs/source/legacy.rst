@@ -52,7 +52,7 @@ and optionally noise tags or annotations.
 Even though, `Perceval` code makes it so :code:`isinstance(any_fockstate, BasicState)` returns :code:`True`, the type
 hinting of user code in an IDE could alert that the types do not match after the update.
 
-.. note:: :code:`StateVector` (and therefore :code:`SVDistribution`) accept any of the three Fock state types as
+.. note:: :code:`StateVector` (and therefore :code:`SVDistribution`) accepts any of the three Fock state types as
   components.
 
 Processor add with Component or Circuit
@@ -120,6 +120,7 @@ Now, your IDE should be able to tell that the attributes exist in the class,
 and the attributes can be changed using a syntax like :code:`noise_model.g2 = 0.1`.
 
 This change is accompanied by the removal of some methods:
+
 - The :code:`__getitem__` has been removed since it was giving a class that is not accessible anymore
 - The :code:`set_value` method has been removed, and can be replaced either by spelling directly the attribute (:code:`noise_model.g2 = 0.1`)
   or by using the python method :code:`setattr(noise_model, "g2", 0.1)`.
