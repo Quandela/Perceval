@@ -139,7 +139,15 @@ def assert_component_list_eq(comp_a, comp_b):
                 if isinstance(param, Expression):
                     assert sorted([str(p) for p in param._params]) == sorted([str(p) for p in output_comp.vars[param_name]._params])
                 elif isinstance(param, Parameter):
-                    assert str(param) == str(output_comp.vars[param_name])
+                    other_param = output_comp.vars[param_name]
+                    assert param.name == other_param.name
+                    assert param.fixed == other_param.fixed
+                    assert param.defined == other_param.defined
+                    assert param.max == other_param.max
+                    assert param.min == other_param.min
+                    assert param.is_periodic == other_param.is_periodic
+                    if param.defined:
+                        assert float(param) == float(other_param)
 
         if isinstance(input_comp, AFFConfigurator):
             assert input_comp.name == output_comp.name
