@@ -84,6 +84,11 @@ class IDetector(AComponent, ABC):
     def max_detections(self):
         pass
 
+    @property
+    @abstractmethod
+    def efficiency(self):
+        pass
+
 
 class BSLayeredPPNR(IDetector):
     r"""
@@ -113,6 +118,10 @@ class BSLayeredPPNR(IDetector):
     @property
     def type(self) -> DetectionType:
         return DetectionType.PPNR
+
+    @property
+    def efficiency(self) -> float:
+        return 1
 
     def clear_cache(self):
         """
@@ -204,6 +213,11 @@ class Detector(IDetector):
         """Maximum number of detected photons (None for infinity)"""
         return self._max
 
+    @property
+    def efficiency(self):
+        """Wire efficiency"""
+        return self._wire_efficiency
+
     @staticmethod
     def threshold() -> Detector:
         """Builds a threshold detector."""
@@ -227,9 +241,9 @@ class Detector(IDetector):
 
     @property
     def type(self) -> DetectionType:
-        if self._wires == 1:
+        if self._max == 1 and self._wire_efficiency == 1:
             return DetectionType.Threshold
-        elif self._wires is None and self._max is None:
+        elif self._wires is None and self._max is None and self._wire_efficiency == 1:
             return DetectionType.PNR
         return DetectionType.PPNR
 
