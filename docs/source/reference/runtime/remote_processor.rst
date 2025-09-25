@@ -4,7 +4,7 @@ RemoteProcessor
 :code:`RemoteProcessor` class is the entry point for sending a computation on a remote platform (a simulator or a QPU).
 `Quandela Cloud <https://cloud.quandela.com>`_ is a public cloud service with available QPUs and simulators.
 An access token on the selected service is required to connect to a remote platform (e.g. an access token to Quandela
-Cloud with rights is required to follow this tutorial: :ref:`Remote computing<V. Remote Computing>`).
+Cloud with rights is required to follow this tutorial: :ref:`Remote computing<Remote Computing>`).
 
 Once you have created a token suiting your needs (it needs to be given the rights to run jobs on target platforms), you
 may save it once and for all on your computer by using the :ref:`RemoteConfig`.

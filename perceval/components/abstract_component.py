@@ -115,6 +115,8 @@ class AParametrizedComponent(AComponent):
         :param param_name: The name of the parameter
         :return: A `Parameter` object
         """
+        if param_name not in self._params:
+            raise KeyError(f"Parameter {param_name} is not defined in this circuit")
         return self._params[param_name]
 
     def get_parameters(self, all_params: bool = False, expressions = False) -> list[Parameter]:
@@ -208,34 +210,15 @@ class AParametrizedComponent(AComponent):
     def get_variables(self):
         return {}
 
-    def copy(self, subs: dict | list = None):
+    def copy(self, subs: dict[str, Parameter] | list[Parameter] = None):
         nc = copy.deepcopy(self)
 
         if subs is None:
-            for k, p in nc._params.items():
-                if p.defined:
-                    v = float(p)
-                else:
-                    v = None
-                nc._params[k] = Parameter(p.name, v, p.min, p.max, p.is_periodic)
-                nc.__setattr__("_"+k, nc._params[k])
-        else:
-            if isinstance(subs, list):
-                subs = {p.name: p.spv for p in subs}
-            for k, p in nc._params.items():
-                name = p.name
-                min_v = p.min
-                max_v = p.max
-                is_periodic = p.is_periodic
-                if p._value is None:
-                    p = p._symbol.evalf(subs=subs)
-                else:
-                    p = p.evalf(subs=subs)
-                if not isinstance(p, sp.Expr) or isinstance(p, sp.Number):
-                    nc._params[k] = Parameter(name, float(p), min_v, max_v, is_periodic)
-                else:
-                    nc._params[k] = Parameter(name, None, min_v, max_v, is_periodic)
+            subs = {}
+        if isinstance(subs, list):
+            subs = {p.name: p for p in subs}
         for k, p in nc._params.items():
+            nc._params[k] = p.copy(subs)
             nc.__setattr__("_" + k, nc._params[k])
 
         return nc

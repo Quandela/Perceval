@@ -549,6 +549,8 @@ class Circuit(ACircuit):
     def copy(self, subs: dict | list = None):
         """Return a deep copy of the current circuit"""
         nc = copy.deepcopy(self)
+        if subs is None:
+            subs = {}
         nc._params = {}
         nc._components = []
         for r, c in self._components:

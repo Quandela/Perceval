@@ -218,6 +218,7 @@ class Experiment:
             self._postselect = None
 
     def __deepcopy__(self, memo):
+        # Do not call this directly; call self.copy()
         cls = self.__class__
         obj = cls.__new__(cls)
         memo[id(self)] = obj
@@ -234,7 +235,11 @@ class Experiment:
         Performs a deep copy of the current experiment.
         """
         get_logger().debug(f"Copy experiment {self.name}", channel.general)
+        if subs is None:
+            subs = {}
+        Experiment._no_copiable_attributes.add("_components")
         new_proc = copy.deepcopy(self)
+        Experiment._no_copiable_attributes.remove("_components")
         new_proc._components = []
         for r, c in self._components:
             new_proc._components.append((r, c.copy(subs=subs)))
