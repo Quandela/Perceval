@@ -23,7 +23,7 @@ It offers tools to:
 
 * Display circuits and data (:ref:`pdisplay`), serialise them (:ref:`serialization`)
 * Define real-world noise parameters applied in the input, the linear-optics circuit and the photon detectors (:ref:`Noise Model`)
-* Simulate these experiments through :ref:`different layers of simulations<I. Different layers of simulations>`
+* Simulate these experiments through :ref:`different layers of simulations<I. Different layers of simulation>`
 
   * Perfect simulations with :ref:`Simulation Back-ends`
   * Noisy and non-unitary simulations with the :ref:`Simulator` layer

@@ -183,6 +183,7 @@ def test_decompose_non_unitary():
         pcvl.Circuit.decomposition(m, pcvl.catalog["mzi phase last"].build_circuit(), shape=pcvl.InterferometerShape.TRIANGLE, max_try=5)
 
 
+@pytest.mark.long_test
 def test_decomposition_large():
     with open(TEST_DATA_DIR / 'u_random_8', "r") as f:
         m = pcvl.Matrix(f)

@@ -148,6 +148,7 @@ def test_add_errors(mock_write_file):
     assert mock_write_file.call_count == 1
 
 
+@pytest.mark.long_test
 @patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
 def test_classic_run(mock_write_file):
     RPCHandlerResponsesBuilder(RPC_HANDLER)
@@ -234,6 +235,7 @@ def test_classic_run(mock_write_file):
     assert mock_write_file.call_count == expected_write_call_count
 
 
+@pytest.mark.long_test
 @patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
 def test_save_on_error(mock_write_file):
     rpc_handler_responses_builder = RPCHandlerResponsesBuilder(RPC_HANDLER)
@@ -261,6 +263,7 @@ def test_save_on_error(mock_write_file):
         assert sum(1 for job in remote_jobs if job.is_success) == 1
 
 
+@pytest.mark.long_test
 @patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
 def test_run_advance(mock_write_file):
     rpc_handler_responses_builder = RPCHandlerResponsesBuilder(RPC_HANDLER)
@@ -290,6 +293,7 @@ def test_run_advance(mock_write_file):
                              'Unfinished': [0, {'sent': 0, 'not sent': 0}]}
 
 
+@pytest.mark.long_test
 @patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
 def test_rerun(mock_write_file):
     rpc_handler_responses_builder = RPCHandlerResponsesBuilder(RPC_HANDLER)

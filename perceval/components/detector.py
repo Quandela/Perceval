@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
+from __future__ import annotations  # Python 3.11 : Replace using Self typing
 
 import copy
 from abc import ABC, abstractmethod
@@ -84,6 +84,11 @@ class IDetector(AComponent, ABC):
     def max_detections(self):
         pass
 
+    @property
+    @abstractmethod
+    def efficiency(self):
+        pass
+
 
 class BSLayeredPPNR(IDetector):
     r"""
@@ -113,6 +118,10 @@ class BSLayeredPPNR(IDetector):
     @property
     def type(self) -> DetectionType:
         return DetectionType.PPNR
+
+    @property
+    def efficiency(self) -> float:
+        return 1
 
     def clear_cache(self):
         """
@@ -171,13 +180,14 @@ class Detector(IDetector):
 
     :param n_wires: Number of detecting wires in the interleaved detector. (defaults to infinity)
     :param max_detections: Max number of photons the user is willing to read. The `|max_detection>` state would then mean "max_detection or more photons were detected". (defaults to None)
+    :param wire_efficiency: Individual wire efficiency (defaults to 1)
 
-    See :code:`pnr()`, :code:`threshold()` and :code:`ppnr(n_wires, max_detections)` static methods for easy detector initialization.
+    See :code:`pnr()`, :code:`threshold()` and :code:`ppnr(n_wires, max_detections, wire_efficiency)` static methods for easy detector initialization.
 
     Example:
 
     >>> from perceval.components import Detector
-    >>> ppnr_detector = Detector.ppnr(5, 2)  # Create a 5-wires interleaved detector, able to detect 1 or 2+ photons
+    >>> ppnr_detector = Detector.ppnr(5, 2)  # Create a 5-wires interleaved detector, able to detect 1 or 2+ photons with unity efficiency
     >>> print(ppnr_detector.detect(3))       # and simulate the outcome of 3 photons hitting it at once
     {
       |1>: 0.04
@@ -185,13 +195,15 @@ class Detector(IDetector):
     }
     """
 
-    def __init__(self, n_wires: int = None, max_detections: int = None):
+    def __init__(self, n_wires: int = None, max_detections: int = None, wire_efficiency: float = 1):
         super().__init__()
         assert n_wires is None or n_wires > 0, f"A detector requires at least 1 wire (got {n_wires})"
         assert max_detections is None or n_wires is None or max_detections <= n_wires, \
             f"Max detections has to be lower or equal than the number of wires (got {max_detections} > {n_wires} wires)"
+        assert wire_efficiency > 0 and wire_efficiency <= 1, f"Wire efficiency efficiency has to be between 0 and 1"
         self._wires = n_wires
         self._max = None
+        self._wire_efficiency = wire_efficiency
         if self._wires is not None:
             self._max = self._wires if max_detections is None else min(max_detections, self._wires)
         self._cache = {}
@@ -200,6 +212,11 @@ class Detector(IDetector):
     def max_detections(self) -> int:
         """Maximum number of detected photons (None for infinity)"""
         return self._max
+
+    @property
+    def efficiency(self):
+        """Wire efficiency"""
+        return self._wire_efficiency
 
     @staticmethod
     def threshold() -> Detector:
@@ -216,23 +233,23 @@ class Detector(IDetector):
         return d
 
     @staticmethod
-    def ppnr(n_wires: int, max_detections: int = None) -> Detector:
+    def ppnr(n_wires: int, max_detections: int = None, wire_efficiency: float = 1) -> Detector:
         """Builds an interleaved pseudo-PNR detector."""
-        d = Detector(n_wires, max_detections)
+        d = Detector(n_wires, max_detections, wire_efficiency)
         d.name = f"PPNR"
         return d
 
     @property
     def type(self) -> DetectionType:
-        if self._wires == 1:
+        if self._max == 1 and self._wire_efficiency == 1:
             return DetectionType.Threshold
-        elif self._wires is None and self._max is None:
+        elif self._wires is None and self._max is None and self._wire_efficiency == 1:
             return DetectionType.PNR
         return DetectionType.PPNR
 
     def detect(self, theoretical_photons: int) -> BSDistribution | FockState:
         detector_type = self.type
-        if theoretical_photons < 2 or detector_type == DetectionType.PNR:
+        if (theoretical_photons < 2 and self._wire_efficiency == 1) or detector_type == DetectionType.PNR:
             return FockState([theoretical_photons])
 
         if detector_type == DetectionType.Threshold:
@@ -244,7 +261,7 @@ class Detector(IDetector):
         remaining_p = 1
         result = BSDistribution()
         max_detectable = min(self._max, theoretical_photons)
-        for i in range(1, max_detectable):
+        for i in range(0, max_detectable):
             p_i = self._cond_probability(i, theoretical_photons)
             result.add(FockState([i]), p_i)
             remaining_p -= p_i
@@ -260,16 +277,16 @@ class Detector(IDetector):
         This uses a recurrence formula set to compute each conditional probability from the ones with one less photon.
 
         Hitting `i` wires with `n` photons is:
-            - hitting `i - 1` wires with `n - 1` photons AND hitting a new wire with the nth photon
+            - hitting `i - 1` wires with `n - 1` photons AND hitting a new wire with the nth photon, with a successful absorption
             OR
-            - hitting `i` wires with `n - 1` photons AND hitting one of the wire that were already hit with the nth photon
+            - hitting `i` wires with `n - 1` photons AND hitting one of the wire that were already hit with the nth photon, or an unsuccessful absorption
         """
         if det == 0:
-            return 1 if nph == 0 else 0
+            return 1 if nph == 0 else (1 - self._wire_efficiency) ** nph
         if nph < det:
             return 0
-        return self._cond_probability(det - 1, nph - 1) * (self._wires - det + 1) / self._wires \
-            + self._cond_probability(det, nph - 1) * det / self._wires
+        return self._cond_probability(det - 1, nph - 1) * (self._wires - det + 1) * self._wire_efficiency / self._wires \
+            + self._cond_probability(det, nph - 1) * (self._wire_efficiency * det / self._wires + 1 - self._wire_efficiency)
 
 
 def get_detection_type(detectors: list[IDetector]) -> DetectionType:

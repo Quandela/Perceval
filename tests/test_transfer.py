@@ -113,6 +113,7 @@ def test_transfer_complex_4():
         b.transfer_from(a)
 
 
+@pytest.mark.long_test
 def test_transfer_complex_5():
     with open(TEST_DATA_DIR / 'u_random_8', "r") as f:
         m = Matrix(f)

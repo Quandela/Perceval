@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
+from __future__ import annotations  # Python 3.11 : Replace using Self typing
 
 import uuid
 import json
@@ -148,7 +148,7 @@ class RPCHandlerResponsesBuilder():
         ]:
             responses.add(responses.Response(
                 method=method,
-                url=re.compile((self._rpc_handler.url + endpoint).replace('/', "\/") + UUID_REGEXP),
+                url=re.compile((self._rpc_handler.url + endpoint).replace('/', r"\/") + UUID_REGEXP),
                 status=404))
 
         responses.add_callback(responses.POST,
@@ -165,11 +165,11 @@ class RPCHandlerResponsesBuilder():
         ]:
             responses.remove(responses.Response(
                 method=method,
-                url=re.compile((self._rpc_handler.url + endpoint).replace('/', "\/") + UUID_REGEXP),
+                url=re.compile((self._rpc_handler.url + endpoint).replace('/', r"\/") + UUID_REGEXP),
                 status=404))
             responses.add(responses.Response(
                 method=method,
-                url=re.compile((self._rpc_handler.url + endpoint).replace('/', "\/") + UUID_REGEXP),
+                url=re.compile((self._rpc_handler.url + endpoint).replace('/', r"\/") + UUID_REGEXP),
                 status=404))
 
     def _get_job_status(self):

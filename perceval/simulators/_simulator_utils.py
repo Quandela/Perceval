@@ -96,8 +96,25 @@ def _annot_state_mapping(bs_with_annots: NoisyFockState):
 
 
 @dispatch(AnnotatedFockState)
-def _annot_state_mapping(bs_with_annots: AnnotatedFockState): # TODO if needed + separate_state() does not exist for AnnotatedFockState anymore
-    return {bs_with_annots.get_photon_annotation(0): bs_with_annots.clear_annotations()}
+def _annot_state_mapping(bs_with_annots: AnnotatedFockState):
+    raise ValueError("AnnotatedFockState can't be used to separate states. "
+                     "If needed, you can convert it to a NoisyFockState using a string representation like |{0}, {1}>.")
+
+
+@dispatch(FockState)
+def _separate_state(bs_with_annots: FockState):
+    return [bs_with_annots]
+
+
+@dispatch(NoisyFockState)
+def _separate_state(bs_with_annots: NoisyFockState):
+    return bs_with_annots.separate_state()
+
+
+@dispatch(AnnotatedFockState)
+def _separate_state(bs_with_annots: AnnotatedFockState):
+    raise ValueError("AnnotatedFockState can't be used to separate states. "
+                     "If needed, you can convert it to a NoisyFockState using a string representation like |{0}, {1}>.")
 
 
 def _retrieve_mode_count(component_list: list) -> int:

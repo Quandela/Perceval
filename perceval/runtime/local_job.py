@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
+from __future__ import annotations  # Python 3.11 : Replace using Self typing
 
 import threading
 
@@ -134,6 +134,8 @@ class LocalJob(Job):
         self._cancel_requested = True
 
     def _get_results(self):
+        if self._results is None:
+            return self._results
         if self._result_mapping_function:
             get_logger().info(
                 f"Converting local job results with {self._result_mapping_function.__name__}", channel.general)

@@ -117,6 +117,8 @@ def test_circuit_serialization_backward_compat():
         "0.11": ":PCVL:zip:eJxVjs0KgkAURh/IlYhgAy5uV9GZrGYqB2cZEs1PYaWhvn2ukvl2Bw6Hj3CUFQE0n/ZrBpLDaI4ToLLtGYVTVX2qg7mM+dQxFPAfvTu2ErwXd6WM+q52AmQnUe/Zq4QNDjc7ZonBIoybaNup5vCgthfwpFG+dAsMc8l7HVySq9dFv7vzP8yeC2n6A8+rQV4=",
         #0.12 : Did not change circuit serialization
         #0.13 : Did not change circuit serialization
+        #1.0 : Added new parameter to Detector
+        "1.0": ":PCVL:Detector:CgRQUE5SEAQYAg=="
     }
     for perceval_version, serial_c in serial_circuits.items():
         try:
@@ -248,7 +250,8 @@ def test_postselect_serialization(ps):
 @pytest.mark.parametrize("detector", (BSLayeredPPNR(2, .6),
                                       Detector.pnr(),
                                       Detector.threshold(),
-                                      Detector.ppnr(4, 2)))
+                                      Detector.ppnr(4, 2),
+                                      Detector.ppnr(4, 2, 0.6)))
 def test_detector_serialization(detector):
     serialized = serialize(detector)
     deserialized = deserialize(serialized)
@@ -375,6 +378,10 @@ def test_compress():
     d_only_basicstate = serialize(d, compress=["BasicState"])  # Compress only BasicState objects
     assert d_only_basicstate["input_state"].startswith(zip_prefix)
     assert not d_only_basicstate["circuit"].startswith(zip_prefix)
+
+    d_default_serialize = serialize(d) # Compress only Circuit (default behaviour for Circuit and BasicState)
+    assert not d_default_serialize["input_state"].startswith(zip_prefix)
+    assert d_default_serialize["circuit"].startswith(zip_prefix)
 
 
 def test_circuit_with_expression_serialization():

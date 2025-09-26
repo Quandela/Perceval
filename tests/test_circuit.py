@@ -37,7 +37,7 @@ from perceval.rendering.format import Format
 from perceval.utils import InterferometerShape
 import perceval.algorithm as algo
 import perceval.components.unitary_components as comp
-from _test_utils import strip_line_12
+from _test_utils import strip_line_12, assert_circuits_eq
 import sympy as sp
 import numpy as np
 
@@ -329,6 +329,7 @@ def test_visualization_barrier(capfd):
 TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
 
 
+@pytest.mark.long_test
 def test_depths_ncomponents():
     assert comp.PS(0).depths() == [1]
     assert comp.PS(0).ncomponents() == 1
@@ -386,3 +387,62 @@ def test_describe():
     assert comp.BS.H(theta=param).describe() == "BS.H(theta=1.097)"
     assert comp.PS(0).describe() == "PS(phi=0)"
     assert comp.PERM([1, 2, 3, 0]).describe() == "PERM([1, 2, 3, 0])"
+
+
+def test_copy():
+    # Test with numerical values
+    c = Circuit(2) // comp.BS.H() // comp.PS(0.3) // comp.BS.H() // comp.PS(0.8)
+    c_copy = c.copy()
+    assert_circuits_eq(c, c_copy)
+    assert c is not c_copy
+
+    # Test with Parameters without values
+    c = Circuit(2) // comp.BS.H() // comp.PS(P("phi1")) // comp.BS.H() // comp.PS(P("phi2"))
+    c_copy = c.copy()
+    assert_circuits_eq(c, c_copy)
+
+    # Test with parameters with values
+    c.param('phi1').set_value(0.4)
+    c.param('phi2').set_value(0.6)
+    c_copy = c.copy()
+    assert_circuits_eq(c, c_copy)
+
+    # Test with Expressions without values
+    c = Circuit(2) // comp.BS.H() // comp.PS(P("phi1") + P("phi11")) // comp.BS.H() // comp.PS(P("phi2") * P("phi21"))
+    c_copy = c.copy()
+    assert_circuits_eq(c, c_copy)
+
+    # Test with Expressions with values
+    c = Circuit(2) // comp.BS.H() // comp.PS(P("phi1") + P("phi11")) // comp.BS.H() // comp.PS(P("phi2") * P("phi21"))
+    c.param('phi1').set_value(0.4)
+    c.param('phi11').set_value(0.5)
+    c.param('phi2').set_value(0.6)
+    c.param('phi21').set_value(0.7)
+    c_copy = c.copy()
+    assert_circuits_eq(c, c_copy)
+
+    # Test with repeated Parameter
+    phi = P("phi")
+    c = Circuit(2) // comp.BS.H() // comp.PS(phi) // comp.BS.H() // comp.PS(phi)
+    c_copy = c.copy()
+    assert_circuits_eq(c, c_copy)
+
+    assert len(c_copy.vars) == 1
+    assert next(iter(c_copy.vars)) is not phi  # Check that the parameter has effectively been copied
+
+    phi.set_value(0.5)
+    assert not c_copy.defined, "Parameters have not been copied"
+    c_copy = c.copy()
+    assert_circuits_eq(c, c_copy)
+
+    # All combined
+    phi = P("phi")
+    phi.set_value(0.5)
+    phi2 = P("phi2")
+    phi3 = P("phi3")
+    phi3.set_value(1.2)
+    c = (Circuit(2) // comp.BS.H(P("theta1")) // comp.PS(phi + phi3) // comp.BS.H(0.67) // comp.PS(phi2 * P("phi21"))
+        // comp.BS.H(phi)) // comp.PS(phi2)
+
+    c_copy = c.copy()
+    assert_circuits_eq(c, c_copy)

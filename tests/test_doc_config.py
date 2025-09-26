@@ -27,48 +27,75 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# Configuration file for the Sphinx documentation builder.
-#
-# This file only contains a selection of the most common options. For a full
-# list see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
-
-# -- Path setup --------------------------------------------------------------
-
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-#
-import os
-import sys
-import re
-from pathlib import Path
-from git import Repo
-
 from perceval.utils.versions.version_utils import keep_latest_versions
 
-sys.path.insert(0, os.path.relpath("../"))
+def test_version_filtering():
 
-REPO_PATH = Path(__file__).parent.parent.parent.resolve()
+    # All different minor: all should be kept
+    versions = [
+        "v0.1.0",
+        "v0.2.0",
+        "v0.3.1",
+    ]
 
-repo = Repo(REPO_PATH)
-tags = [tag.name for tag in repo.tags]
-versions = keep_latest_versions(tags, "v0.6")
-versions_string = "|".join([f"({one_version})" for one_version in versions])
-versions_regex = re.compile(f"^{versions_string}$")
+    filtered = keep_latest_versions(versions)
+    assert filtered == versions
 
-print(f"Building {versions_regex}")
+    # Same minor: Only the highest patch should be kept
+    versions = [
+        "v0.1.0",
+        "v0.2.0",
+        "v0.2.1",
+    ]
 
-# Whitelist pattern for tags (set to None to ignore all tags)
-smv_tag_whitelist = versions_regex
+    filtered = keep_latest_versions(versions)
+    assert filtered == ["v0.1.0", "v0.2.1"]
 
-# Whitelist pattern for branches (set to None to ignore all branches)
-smv_branch_whitelist = None
+    # Test that we drop alphas and betas
+    versions = [
+        "v0.1.0",
+        "v0.2.0",
+        "v0.2.1-beta1",
+        "v0.3.0",
+        "v0.3.1-alpha2",
+    ]
 
-# Whitelist pattern for remotes (set to None to use local branches only)
-smv_remote_whitelist = None
+    filtered = keep_latest_versions(versions)
+    assert filtered == ["v0.1.0", "v0.2.0", "v0.3.0"]
 
-# Pattern for released versions
-smv_released_pattern = r".*"
+    # Test the optional minimum version
+    versions = [
+        "v0.1.0",
+        "v0.2.0",
+        "v0.2.1",
+        "v0.3.0",
+    ]
 
-smv_regex_name = r"(.*)\..*"
+    filtered = keep_latest_versions(versions, mini="v0.2.1")
+    assert filtered == ["v0.2.1", "v0.3.0"]
+
+    # Test mixing major and minor
+    versions = [
+        "v0.1.0",
+        "v0.2.0",
+        "v0.2.1",
+        "v1.0.0",
+        "v1.0.1",
+        "v1.1.0",
+    ]
+
+    filtered = keep_latest_versions(versions)
+    assert filtered == ["v0.1.0", "v0.2.1", "v1.0.1", "v1.1.0"]
+
+    # Test with "randomly" ordered versions (same list than previous test)
+    versions = [
+        "v1.1.0",
+        "v0.1.0",
+        "v0.2.1",
+        "v1.0.0",
+        "v0.2.0",
+        "v1.0.1",
+    ]
+
+    filtered = keep_latest_versions(versions)
+    assert filtered == ["v0.1.0", "v0.2.1", "v1.0.1", "v1.1.0"]

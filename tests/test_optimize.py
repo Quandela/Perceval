@@ -48,6 +48,7 @@ def _create_circuit():
             // (2, comp.PS(pcvl.P("beta6"))))
 
 
+@pytest.mark.long_test
 def test_optimize_fidelity():
     c = _create_circuit()
     v = pcvl.Matrix.random_unitary(3)

@@ -26,21 +26,17 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-from __future__ import annotations
+from __future__ import annotations  # Needed to annotate Generator
 
 from collections import defaultdict
 
 from exqalibur import Annotation
 from multipledispatch import dispatch
-from typing import Generator, Union, final
-
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias  # Only used with python 3.9
+from typing import Generator, Union, final, TypeAlias
 
 import exqalibur as xq
+
+import numpy as np
 
 
 FockState: TypeAlias = xq.FockState
@@ -84,7 +80,7 @@ class BasicState(metaclass=BasicStateMeta):
     def __new__(cls):
         return FockState()
 
-    @dispatch(type, (list, tuple))
+    @dispatch(type, (list, tuple, np.ndarray))
     def __new__(cls, photons: list[int]):
         return FockState(photons)
 
@@ -92,7 +88,7 @@ class BasicState(metaclass=BasicStateMeta):
     def __new__(cls, m: int):
         return FockState(m)
 
-    @dispatch(type, (list, tuple), (list, tuple))
+    @dispatch(type, (list, tuple, np.ndarray), (list, tuple, np.ndarray))
     def __new__(cls, photons: list[int], noise: list[int]):
         return NoisyFockState(FockState(photons), noise)
 
@@ -144,7 +140,7 @@ class BasicState(metaclass=BasicStateMeta):
     def __iter__(self) -> Generator[int, None, None]:
         yield 0
 
-    def merge(self, other: BasicState) -> State:
+    def merge(self, other: State) -> State:
         """
         :param other: a BasicState with the same number of modes than self.
         :return: A new state for which the photons in one mode are the photons in this mode in ``self`` and in ``other``.

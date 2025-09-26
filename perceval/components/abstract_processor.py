@@ -26,14 +26,13 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
+from __future__ import annotations  # Python 3.11 : Replace using Self typing
 
 import copy
 from abc import ABC, abstractmethod
 from enum import Enum
 
-from perceval.utils import (BasicState, FockState, AnnotatedFockState, Parameter, PostSelect, LogicalState, NoiseModel,
-                            SVDistribution, StateVector, NoisyFockState)
+from perceval.utils import BasicState, FockState, Parameter, PostSelect, LogicalState, NoiseModel, SVDistribution, StateVector
 from perceval.utils.logging import get_logger, channel
 from .abstract_component import AComponent
 from .detector import DetectionType
