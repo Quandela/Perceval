@@ -81,6 +81,9 @@ class NoiseModel:
     def __str__(self) -> str:
         return str(self.__dict__())
 
+    def __repr__(self) -> str:
+        return str(self.__dict__())
+
     def __dict__(self) -> dict:
         cls = type(self)
         res = {}
