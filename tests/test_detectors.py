@@ -51,6 +51,13 @@ def test_detector():
     for i in range(10):
         assert th_detector.detect(i) == BasicState([i if i < 2 else 1])
 
+    max_detection = 4
+    limited_pnr_detector = Detector(max_detections=max_detection)
+    assert limited_pnr_detector.type == DetectionType.PPNR
+
+    for i in range(10):
+        assert limited_pnr_detector.detect(i) == BasicState([i if i <= max_detection else max_detection])
+
 
 def test_interleaved_ppnr():
     s = [BasicState([i]) for i in range(7)]

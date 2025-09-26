@@ -202,8 +202,8 @@ class Detector(IDetector):
             f"Max detections has to be lower or equal than the number of wires (got {max_detections} > {n_wires} wires)"
         assert wire_efficiency > 0 and wire_efficiency <= 1, f"Wire efficiency efficiency has to be between 0 and 1"
         self._wires = n_wires
-        self._max = None
         self._wire_efficiency = wire_efficiency
+        self._max = max_detections
         if self._wires is not None:
             self._max = self._wires if max_detections is None else min(max_detections, self._wires)
         self._cache = {}
@@ -254,6 +254,9 @@ class Detector(IDetector):
 
         if detector_type == DetectionType.Threshold:
             return FockState([1])
+
+        if self._wires is None and self._wire_efficiency == 1:
+            return FockState([min(theoretical_photons, self._max)])
 
         if theoretical_photons in self._cache:
             return self._cache[theoretical_photons]
