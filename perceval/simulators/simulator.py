@@ -67,6 +67,7 @@ class Simulator(ISimulator):
         self._rel_precision: float = 1e-6  # Precision relative to the highest probability of interest in probs_svd
         self._keep_heralds = True
         self._n_heralds = 0
+        self._no_mask_heralded_modes = []
 
     @property
     def precision(self):
@@ -600,7 +601,10 @@ class Simulator(ISimulator):
 
         is_pnr = get_detection_type(detectors) == DetectionType.PNR
 
-        self.init_use_mask(is_pnr or not self._compute_physical_logical_perf)
+        self._no_mask_heralded_modes = [m for m, d in enumerate(detectors) if
+                                        self._heralds.get(m, None) == 0 and d.efficiency < 1]
+
+        self.init_use_mask(is_pnr)
 
         if is_pnr:
             prog_cb = progress_callback
@@ -609,10 +613,12 @@ class Simulator(ISimulator):
 
         self._logical_perf = 0
 
-        # Note: we should test for each detector if it can detect 0 photons from at least 1 or not.
-        # If it does, we need to include this mode in the list (or, to be faster, not put this herald in the mask)
-        non_pnr_detector_modes = [m for m, d in enumerate(detectors) if d is not None and d.type != DetectionType.PNR
-                                  and self._heralds.get(m, 0) > 0] if self._can_use_mask and detectors else None
+        # All the modes where the mask must apply a "at least" rule
+        non_pnr_detector_modes = [m for m, d in enumerate(detectors)
+                                  if d is not None
+                                  and d.type != DetectionType.PNR
+                                  and self._heralds.get(m, 0) > 0] \
+            if self._can_use_mask and detectors else None
 
         if has_superposed_states:
             res = self._probs_svd_generic(svd, p_threshold, non_pnr_detector_modes, prog_cb)
@@ -635,6 +641,8 @@ class Simulator(ISimulator):
         res, logical_perf_contrib = post_select_distribution(res, self._postselect, self._heralds, self._keep_heralds)
         self._logical_perf *= logical_perf_contrib
 
+        self._no_mask_heralded_modes = []
+
         self.log_resources(sys._getframe().f_code.co_name, {'n': n})
         return self.format_results(res, physical_perf, self._logical_perf)
 
@@ -642,7 +650,7 @@ class Simulator(ISimulator):
         # Set up a mask corresponding to heralds:
         mask_str = ""
         for i in range(self._backend._circuit.m):
-            if i in self._heralds:
+            if i in self._heralds and i not in self._no_mask_heralded_modes:
                 herald_expectation = self._heralds[i]
                 if herald_expectation > 32:  # FsMask limitation
                     raise ValueError("Cannot simulate an herald expecting more than 32 detected photons")
@@ -653,7 +661,8 @@ class Simulator(ISimulator):
         self._backend.set_mask(mask_str, n, non_pnr_detector_modes)
 
     def init_use_mask(self, is_pnr) -> None:
-        self._can_use_mask = self._heralds and is_pnr
+        self._can_use_mask = (any(m not in self._no_mask_heralded_modes for m in self._heralds)
+                              and (is_pnr or not self._compute_physical_logical_perf))
 
     def use_mask(self, n=None, non_pnr_detector_modes=None):
         if self._can_use_mask:
