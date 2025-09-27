@@ -88,3 +88,7 @@ Probabilities: {
 }
 
 Now that you can run some code, let's continue with a tutorial to learn Perceval syntax.
+
+You can also check out the Quandela Training Centre_ for more Lessons and Tutorials.
+
+.. _Quandela Training Centre: https://training.quandela.com/
