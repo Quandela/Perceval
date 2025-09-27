@@ -233,17 +233,23 @@ class Experiment:
     def copy(self, subs: dict | list = None) -> Experiment:
         """
         Performs a deep copy of the current experiment.
+
+        :param subs: Substitution dictionary or list of named parameters. If a list is passed, then parameters will be
+                     substituted in the order they were introduced in the ``Experiment``.
+                     If a dictionary is passed, it maps variable names (keys) to either a numerical value or a
+                     ``Parameter``.
+        :return: A copy of this experiment.
         """
         get_logger().debug(f"Copy experiment {self.name}", channel.general)
         if subs is None:
             subs = {}
         Experiment._no_copiable_attributes.add("_components")
-        new_proc = copy.deepcopy(self)
+        new_exp = copy.deepcopy(self)
         Experiment._no_copiable_attributes.remove("_components")
-        new_proc._components = []
+        new_exp._components = []
         for r, c in self._components:
-            new_proc._components.append((r, c.copy(subs=subs)))
-        return new_proc
+            new_exp._components.append((r, c.copy(subs=subs)))
+        return new_exp
 
     def set_circuit(self, circuit: ACircuit):
         r"""
@@ -367,6 +373,9 @@ class Experiment:
 
     @property
     def detectors(self):
+        """
+        :return: The list of detectors which were defined in the experiment.
+        """
         return self._detectors
 
     def _validate_postselect_composition(self, mode_mapping: dict):

@@ -93,7 +93,7 @@ class Parameter:
         """
         return float(self._value)
 
-    def copy(self, subs: dict[str, Parameter] = None) -> Parameter:
+    def copy(self, subs: dict[str, Parameter | float] = None) -> Parameter:
         if self.fixed:
             return Parameter(name=self.name, value=float(self), min_v=self._min, max_v=self._max, periodic=self._periodic)
 
@@ -105,6 +105,9 @@ class Parameter:
                 p.set_value(float(self))
 
             subs[self.name] = p
+
+        elif not isinstance(subs[self.name], Parameter):
+            return Parameter(name=self.name, value=float(subs[self.name]), min_v=self._min, max_v=self._max, periodic=self._periodic)
 
         return subs[self.name]
 
