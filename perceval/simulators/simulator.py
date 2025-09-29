@@ -601,8 +601,9 @@ class Simulator(ISimulator):
 
         is_pnr = get_detection_type(detectors) == DetectionType.PNR
 
-        self._no_mask_heralded_modes = [m for m, d in enumerate(detectors) if
-                                        self._heralds.get(m, None) == 0 and d.efficiency < 1]
+        if detectors is not None:
+            self._no_mask_heralded_modes = [m for m, d in enumerate(detectors) if
+                                            self._heralds.get(m, None) == 0 and d is not None and d.efficiency < 1]
 
         self.init_use_mask(is_pnr)
 
