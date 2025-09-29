@@ -31,7 +31,7 @@ import pytest
 from unittest.mock import patch
 
 import perceval as pcvl
-from perceval import BSDistribution, FockState, NoisyFockState
+from perceval import BSDistribution, FockState, NoisyFockState, Experiment, FFCircuitProvider
 from perceval.components import Circuit, Processor, BS, PS, catalog, UnavailableModeException, Port, PortLocation, \
     PERM, Detector
 from perceval.utils import BasicState, StateVector, SVDistribution, Encoding, NoiseModel, P
@@ -411,3 +411,20 @@ def test_asymmetric_processor():
     res = p.probs()
     assert res["results"][BasicState([0])] == pytest.approx(1)
     assert res["global_perf"] == pytest.approx(.5)
+
+
+def test_get_parameters():
+    e = Experiment(4)
+
+    ffc = FFCircuitProvider(2, 0, BS(theta=P("theta0")))
+    ffc.add_configuration((1, 0), BS(theta=P("theta1")))
+    ffc.add_configuration((1, 0), Experiment(BS(theta=P("theta2"))))
+
+    e.add(0, Detector.pnr())
+    e.add(1, Detector.pnr())
+
+    e.add(0, ffc)
+
+    params = e.get_circuit_parameters()
+
+    assert set(params.keys()) == {"theta0", "theta1", "theta2"}

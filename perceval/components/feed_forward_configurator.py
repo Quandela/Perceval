@@ -174,7 +174,12 @@ class FFCircuitProvider(AFFConfigurator):
         if isinstance(circuit, AProcessor):
             circuit = circuit.experiment
 
-        self._params.update(self._get_parameters(circuit))
+        params = self._get_parameters(circuit)
+        for param_name, param in params.items():
+            if param_name in self._params and self._params[param_name].pid != param.pid and not param.fixed:
+                raise RuntimeError(f"two parameters with the name {param_name} in the configurator")
+
+        self._params.update(params)
 
         self._map[state] = circuit
         return self
