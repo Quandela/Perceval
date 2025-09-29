@@ -129,25 +129,25 @@ class FFCircuitProvider(AFFConfigurator):
         assert not isinstance(default_circuit, AFFConfigurator), \
             "Can't add directly a Feed-forward configurator to a configurator (use a Processor)"
         super().__init__(m, offset, default_circuit, name)
-        self._params.update(self._get_parameters(default_circuit))
+        self._params = self._get_parameters(default_circuit, True, True)
         self._map: dict[BasicState, ACircuit] = {}
 
     @staticmethod
-    def _get_parameters(circ) -> dict:
+    def _get_parameters(circ, all_params: bool, expressions: bool) -> dict:
         if isinstance(circ, ACircuit):
-            res = {p.name: p for p in circ.get_parameters(True, True)}
+            res = {p.name: p for p in circ.get_parameters(all_params, expressions)}
         else:  # This is a Processor or an Experiment
             res = {}
             for _, c in circ.components:
                 if isinstance(c, AParametrizedComponent):
-                    res.update({p.name: p for p in c.get_parameters(True, True)})
+                    res.update({p.name: p for p in c.get_parameters(all_params, expressions)})
 
         return res
 
     def reset_map(self):
         self._max_circuit_size = self.default_circuit.m
         self._map = {}
-        self._params = self._get_parameters(self.default_circuit)
+        self._params = self._get_parameters(self.default_circuit, True, True)
 
     @property
     def circuit_map(self):
@@ -174,7 +174,7 @@ class FFCircuitProvider(AFFConfigurator):
         if isinstance(circuit, AProcessor):
             circuit = circuit.experiment
 
-        params = self._get_parameters(circuit)
+        params = self._get_parameters(circuit, False, True)
         for param_name, param in params.items():
             if param_name in self._params and self._params[param_name].pid != param.pid and not param.fixed:
                 raise RuntimeError(f"two parameters with the name {param_name} in the configurator")

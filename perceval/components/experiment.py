@@ -335,6 +335,7 @@ class Experiment:
             raise ValueError(f"Mode numbers must be in [0; {self.m - 1}] (got {photonic_modes})")
         if any([self._out_mode_type[i] != ModeType.PHOTONIC for i in photonic_modes]):
             raise UnavailableModeException(photonic_modes, "Cannot add a configured circuit on non-photonic modes")
+        self._validate_new_parameters({p.name: p for p in component.get_parameters(False, True)})
 
         modes_add_detectors = [m for m in modes if m not in self.detectors_injected]
         self._components.append((tuple(range(self.m)), Barrier(self.m, visible=len(modes_add_detectors) == 0)))
@@ -376,7 +377,14 @@ class Experiment:
             assert self._postselect.can_compose_with(impacted_modes), \
                 f"Post-selection conditions cannot compose with modes {impacted_modes}"
 
+    def _validate_new_parameters(self, new_params: dict[str, Parameter]):
+        self_params = self.get_circuit_parameters()
+        for param_name, param in new_params.items():
+            if param_name in self_params and self_params[param_name].pid != param.pid and not param.fixed:
+                raise RuntimeError(f"The experiment already owns a parameter named {param_name}")
+
     def _compose_experiment(self, connector: ModeConnector, experiment: Experiment, keep_port: bool):
+        self._validate_new_parameters(experiment.get_circuit_parameters())
         get_logger().debug(f"Compose experiment {self.name} with {experiment.name}", channel.general)
         self._is_unitary = self._is_unitary and experiment._is_unitary
         self._has_td = self._has_td or experiment._has_td
@@ -519,6 +527,8 @@ class Experiment:
 
     def _add_component(self, mode_mapping, component, keep_port: bool):
         self._validate_postselect_composition(mode_mapping)
+        if isinstance(component, AParametrizedComponent):
+            self._validate_new_parameters({p.name: p for p in component.get_parameters(False, True)})
         if not keep_port:
             # Remove output ports used to connect the new experiment
             for i in mode_mapping:
