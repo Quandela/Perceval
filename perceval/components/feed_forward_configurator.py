@@ -103,9 +103,6 @@ class AFFConfigurator(AParametrizedComponent, ABC):
         assert isinstance(offset, int), f"A feed-forward configurator offset must be an integer (received {offset})"
         self._offset = offset
 
-    def copy(self, subs=None) -> AFFConfigurator:
-        return super().copy(subs)  # TODO: test this
-
 
 class FFCircuitProvider(AFFConfigurator):
     DEFAULT_NAME = "FFC"
