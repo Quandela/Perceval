@@ -61,6 +61,9 @@ class Processor(AProcessor):
                  noise: NoiseModel = None, name: str = "Local processor"):
         if not isinstance(m_circuit, Experiment):
             m_circuit = Experiment(m_circuit, noise=noise, name=name)
+        elif noise:
+            m_circuit = m_circuit.copy()  # Create a copy so that we don't change the input experiment
+            m_circuit.noise = noise
         super().__init__(m_circuit)
 
         self._init_backend(backend)

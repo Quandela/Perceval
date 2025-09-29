@@ -28,8 +28,7 @@
 # SOFTWARE.
 
 from perceval.runtime.remote_processor import RemoteProcessor, TRANSMITTANCE_KEY
-from perceval.components.abstract_processor import AProcessor
-from perceval.components import Unitary, BS, PS
+from perceval.components import AProcessor, Unitary, BS, PS, Experiment, Detector, FFCircuitProvider, Circuit
 from perceval.utils import Matrix, BasicState, P
 import random
 
@@ -84,3 +83,18 @@ def test_shots_estimate_circuit_with_variables():
     rp.with_input(BasicState([1, 1]))
     assert 28 < rp.estimate_expected_samples(1000, {"my_phase": 0.2}) < 32
     assert 32000 < rp.estimate_required_shots(1000, {"my_phase": 0.2}) < 33000
+
+
+def test_shots_estimate_feed_forward():
+    exp_ff = Experiment(4)
+    exp_ff.add(0, BS.H())
+    for i in range(2):
+        exp_ff.add(i, Detector.pnr())
+    ffc = FFCircuitProvider(2, 0, BS.H())
+    ffc.add_configuration((0, 1), Circuit(2))
+    exp_ff.add(0, ffc)
+    rp = _MockRemoteProcessor()
+    rp.add(0, exp_ff)
+    rp.with_input(BasicState([1, 0, 1, 0]))
+    assert 28 < rp.estimate_expected_samples(1000) < 32
+    assert 32000 < rp.estimate_required_shots(1000) < 33000
