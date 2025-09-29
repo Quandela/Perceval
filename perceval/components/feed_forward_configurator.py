@@ -28,16 +28,15 @@
 # SOFTWARE.
 from __future__ import annotations  # Python 3.11 : Replace using Self typing
 
-import copy
 from abc import ABC, abstractmethod
 
 from .unitary_components import Unitary
-from .abstract_component import AComponent
+from .abstract_component import AParametrizedComponent
 from .linear_circuit import ACircuit
 from perceval.utils import BasicState, Matrix
 
 
-class AFFConfigurator(AComponent, ABC):
+class AFFConfigurator(AParametrizedComponent, ABC):
     DEFAULT_NAME = "FFC"
 
     """
@@ -105,7 +104,7 @@ class AFFConfigurator(AComponent, ABC):
         self._offset = offset
 
     def copy(self, subs=None) -> AFFConfigurator:
-        return copy.copy(self)
+        return super().copy(subs)  # TODO: test this
 
 
 class FFCircuitProvider(AFFConfigurator):
@@ -130,11 +129,25 @@ class FFCircuitProvider(AFFConfigurator):
         assert not isinstance(default_circuit, AFFConfigurator), \
             "Can't add directly a Feed-forward configurator to a configurator (use a Processor)"
         super().__init__(m, offset, default_circuit, name)
+        self._params.update(self._get_parameters(default_circuit))
         self._map: dict[BasicState, ACircuit] = {}
+
+    @staticmethod
+    def _get_parameters(circ) -> dict:
+        if isinstance(circ, ACircuit):
+            res = {p.name: p for p in circ.get_parameters(True, True)}
+        else:  # This is a Processor or an Experiment
+            res = {}
+            for _, c in circ.components:
+                if isinstance(c, AParametrizedComponent):
+                    res.update({p.name: p for p in c.get_parameters(True, True)})
+
+        return res
 
     def reset_map(self):
         self._max_circuit_size = self.default_circuit.m
         self._map = {}
+        self._params = self._get_parameters(self.default_circuit)
 
     @property
     def circuit_map(self):
@@ -160,6 +173,8 @@ class FFCircuitProvider(AFFConfigurator):
         from .abstract_processor import AProcessor
         if isinstance(circuit, AProcessor):
             circuit = circuit.experiment
+
+        self._params.update(self._get_parameters(circuit))
 
         self._map[state] = circuit
         return self
