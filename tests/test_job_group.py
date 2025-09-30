@@ -245,7 +245,7 @@ def test_save_on_error(mock_write_file):
         for _ in range(2):
             jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'my_remote_job'))
 
-        with pytest.raises(requests.exceptions.HTTPError):
+        with pytest.raises(SystemExit):
             if method_idx == 0:
                 jg.run_parallel()
             else:
