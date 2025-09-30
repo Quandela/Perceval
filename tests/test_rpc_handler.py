@@ -29,7 +29,6 @@
 import uuid
 import json
 import pytest
-import requests
 
 import responses
 
@@ -66,7 +65,7 @@ def test_create_job():
     assert create_job_request.headers['Authorization'] == f'Bearer {TOKEN}'
 
     RPCHandlerResponsesBuilder(rpc_handler, default_job_status=None)
-    with pytest.raises(requests.exceptions.HTTPError):
+    with pytest.raises(SystemExit):
         rpc_handler.create_job(JOB_PAYLOAD)
 
 
@@ -107,10 +106,10 @@ def test_get_job_infos():
     assert job_results_request.body == None
     assert job_results_request.headers['Authorization'] == f'Bearer {TOKEN}'
 
-    with pytest.raises(requests.exceptions.HTTPError):
+    with pytest.raises(SystemExit):
         rpc_handler.get_job_status(str(uuid.uuid4()))
 
-    with pytest.raises(requests.exceptions.HTTPError):
+    with pytest.raises(SystemExit):
         rpc_handler.get_job_results(str(uuid.uuid4()))
 
 
@@ -118,9 +117,9 @@ def test_cancel_rerun_job():
     rpc_handler = RPCHandler(PLATFORM_NAME, URL, TOKEN)
 
     RPCHandlerResponsesBuilder(rpc_handler)
-    with pytest.raises(requests.exceptions.HTTPError):
+    with pytest.raises(SystemExit):
         rpc_handler.cancel_job(str(uuid.uuid4()))
-    with pytest.raises(requests.exceptions.HTTPError):
+    with pytest.raises(SystemExit):
         rpc_handler.rerun_job(str(uuid.uuid4()))
 
     # cancel
@@ -142,7 +141,7 @@ def test_cancel_rerun_job():
     for status in [RunningStatus.SUCCESS, RunningStatus.ERROR, RunningStatus.CANCELED]:
         RPCHandlerResponsesBuilder(rpc_handler, default_job_status=status)
         job_id = rpc_handler.create_job(JOB_PAYLOAD)
-        with pytest.raises(requests.exceptions.HTTPError):
+        with pytest.raises(SystemExit):
             rpc_handler.cancel_job(job_id)
 
     # rerun
@@ -166,7 +165,7 @@ def test_cancel_rerun_job():
     for status in [RunningStatus.SUCCESS, RunningStatus.WAITING, RunningStatus.RUNNING]:
         RPCHandlerResponsesBuilder(rpc_handler, default_job_status=status)
         job_id = rpc_handler.create_job(JOB_PAYLOAD)
-        with pytest.raises(requests.exceptions.HTTPError):
+        with pytest.raises(SystemExit):
             rpc_handler.rerun_job(job_id)
 
 
