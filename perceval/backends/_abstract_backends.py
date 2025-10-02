@@ -157,6 +157,12 @@ class AStrongSimulationBackend(ABackend):
             self.clear_iterator_cache()
         super().set_circuit(circuit)
 
+    def set_feed_forward(self, ff_descriptor):
+        raise NotImplementedError(f"Direct Feed-forward is not implemented in the {self.name} backend")
+
+    def reset_feed_forward(self):
+        raise NotImplementedError(f"Direct Feed-forward is not implemented in the {self.name} backend")
+
     @abstractmethod
     def prob_amplitude(self, output_state: FockState) -> complex:
         """Computes the probability amplitude for a given output state. The input state and the circuit must already be set"""

@@ -29,12 +29,14 @@
 import copy
 from typing import Any
 
-from perceval.components import Processor, AComponent, Barrier, PERM, IDetector, Herald, PortLocation, Source
-from perceval.utils import NoiseModel, BasicState, BSDistribution, SVDistribution, StateVector, partial_progress_callable, get_logger
-from perceval.components.feed_forward_configurator import AFFConfigurator
-from perceval.backends import AStrongSimulationBackend
+from perceval.components import Processor, AComponent, Barrier, PERM, IDetector, Herald, PortLocation, Source, Experiment, DetectionType
+from perceval.utils import NoiseModel, BasicState, FockState, BSDistribution, SVDistribution, StateVector, partial_progress_callable, get_logger, deprecated
+from perceval.components.feed_forward_configurator import AFFConfigurator, FFCircuitProvider
+from perceval.backends import AStrongSimulationBackend, SLAPBackend
+from ._simulator_utils import _parse_feed_forward_info
 
 from .simulator_interface import ISimulator
+
 
 class FFSimulator(ISimulator):
 
@@ -46,7 +48,6 @@ class FFSimulator(ISimulator):
         self._backend = backend
 
         self._noise_model = None
-        self._source: Source = None
 
     def compute_physical_logical_perf(self, value: bool):
         if value:
@@ -65,8 +66,9 @@ class FFSimulator(ISimulator):
     def set_noise(self, nm: NoiseModel):
         self._noise_model = nm
 
+    @deprecated("Version 1.1 - Source is no longer used")
     def set_source(self, source: Source):
-        self._source = source
+        pass
 
     def _probs_svd(self,
                    input_state: SVDistribution | tuple[Source, BasicState],
@@ -95,10 +97,9 @@ class FFSimulator(ISimulator):
 
         # Estimation of possible measures: n for each measured mode
         if isinstance(input_state, tuple):
-            self.set_source(input_state[0])
             n = input_state[1].n
             m = input_state[1].m
-            if self._source.multiphoton_component > 0:
+            if self._noise_model.g2 > 0:
                 n *= 2
         else:
             n = input_state.n_max
@@ -208,32 +209,29 @@ class FFSimulator(ISimulator):
 
         return res, list(measured_modes), feed_forwarded_modes
 
-    def _simulate(self, input_state: SVDistribution | tuple[Source, BasicState],
-                  components: list[tuple[tuple, AComponent | Processor]],
-                  m: int,
-                  detectors: list[IDetector],
-                  prog_cb=None,
-                  filter_states: bool = False,
-                  new_heralds: dict[int, int] = None) \
-            -> dict[str, Any]:
+    def _get_sim_params(self,
+                       input_state: SVDistribution | tuple[Source, BasicState],
+                       components: list[tuple[tuple, AComponent | Processor]],
+                       m: int,
+                       detectors: list[IDetector] = None,
+                       filter_states: bool = False,
+                       new_heralds: dict[int, int] = None):
         """Initialize a new simulator with the given components and heralds.
-         Heralds that are already in this simulator are still considered.
+        Heralds that are already in this simulator are still considered.
 
-         :param input_state: The input state used for the simulation
-         :param components: A list of components that will be added in the simulation. Can themselves be processors.
-         :param filter_states: Whether the states should be filtered in the sub-simulation.
-         :param new_heralds: The list of heralds that should be added, containing the position and the value
+        :param input_state: The input state used for the simulation
+        :param components: A list of components that will be added in the simulation. Can themselves be processors.
+        :param filter_states: Whether the states should be filtered in the sub-simulation.
+        :param new_heralds: The list of heralds that should be added, containing the position and the value
 
-         :return: the results of a sub-simulation prob_svd
-         """
+        :return: A configured simulator to run, the input state to give it, and the detectors to use
+        """
 
         if detectors is None:
             detectors = m * [None]
         proc = Processor(self._backend, m)
         if self._noise_model is not None:
             proc.noise = self._noise_model
-        if self._source is not None:
-            proc._source = self._source  # Need to use the original source to avoid old/new modes annotation overlap
 
         for r, c in components:
             proc.add(r, c)
@@ -281,7 +279,18 @@ class FFSimulator(ISimulator):
         if self._precision is not None:
             sim.set_precision(self._precision)
         sim.set_silent(True)
-        return sim.probs_svd(input_state, detectors + proc.detectors[m:], prog_cb)
+        return sim, input_state, detectors + proc.detectors[m:]
+
+    def _simulate(self, input_state: SVDistribution | tuple[Source, BasicState],
+                  components: list[tuple[tuple, AComponent | Processor]],
+                  m: int,
+                  detectors: list[IDetector],
+                  prog_cb=None,
+                  filter_states: bool = False,
+                  new_heralds: dict[int, int] = None) \
+            -> dict[str, Any]:
+        sim, input_state, detectors = self._get_sim_params(input_state, components, m, detectors, filter_states, new_heralds)
+        return sim.probs_svd(input_state, detectors, prog_cb)
 
     def _post_process_state(self, bs: BasicState) -> bool:
         """Returns True if the state checks all requirements of the simulator"""
@@ -297,6 +306,44 @@ class FFSimulator(ISimulator):
         if not self._keep_heralds:
             return state.remove_modes(list(self._heralds.keys()))
         return state
+
+    def _can_simulate_directly(self, detectors: list[IDetector] = None) -> bool:
+        # TODO: test if this also depends on the input state
+        # Conditions: Use SLAP, detectors before measured modes are PNR,
+        # Configurators don't configure on modes above them, nor do they point to heralded or non-unitary experiments
+
+        if not isinstance(self._backend, SLAPBackend):
+            return False
+
+        def accept(p):
+            if isinstance(p, Processor):
+                p = p.experiment
+            if isinstance(p, Experiment) and (p.heralds or p.in_heralds or not p.is_unitary):
+                return False
+            return True
+
+        measured_modes = set()
+
+        for i, (r, c) in enumerate(self._components):
+            if isinstance(c, AFFConfigurator):
+                if c.circuit_offset < 0:
+                    return False
+
+                if isinstance(c, FFCircuitProvider):
+                    if not accept(c.default_circuit):
+                        return False
+
+                    if any(not accept(p) for p in c.circuit_map.values()):
+                        return False
+
+            measured_modes.update(r)
+
+        if detectors is not None:
+            for m in measured_modes:
+                if detectors[m] is not None and detectors[m].type != DetectionType.PNR:
+                    return False
+
+        return True
 
     def probs(self, input_state: BasicState) -> BSDistribution:
         """
@@ -328,8 +375,20 @@ class FFSimulator(ISimulator):
         return {'results': res[0],
                 'global_perf': res[1]}
 
-    def evolve(self, input_state) -> StateVector:
-        raise RuntimeError("Cannot perform state evolution with feed-forward")
+    def evolve(self, input_state: FockState | StateVector) -> StateVector:
+        if not self._can_simulate_directly():
+            raise RuntimeError("Cannot perform state evolution with feed-forward")
+
+        input_state = SVDistribution(input_state)
+        sim, input_state, _ = self._get_sim_params(input_state, [], input_state.m, filter_states = True)
+        c0, ff_info = _parse_feed_forward_info(self._components, input_state.m)
+        self._backend.set_circuit(c0)
+        self._backend.set_feed_forward(ff_info)
+        res = sim.evolve(input_state)
+        self._backend.reset_feed_forward()
+
+        return res
+
 
     def set_precision(self, precision: float):
         self._precision = precision

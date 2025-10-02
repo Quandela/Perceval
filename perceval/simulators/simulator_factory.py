@@ -122,7 +122,6 @@ class SimulatorFactory:
             assert not sim_polarization, "Cannot simulate polarization in a feed-forward simulation"
             simulator = FFSimulator(backend)
             simulator.set_noise(noise)
-            simulator.set_source(source)
 
         else:
             simulator = Simulator(backend)

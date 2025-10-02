@@ -45,6 +45,16 @@ class SLAPBackend(AStrongSimulationBackend):
         super().set_circuit(circuit)  # Computes circuit unitary as _umat
         self._slap.set_unitary(self._umat)
 
+    def set_feed_forward(self, ff_descriptor: dict[int, list[xq.ConfiguratorMap]]):
+        """
+        :param ff_descriptor: A dict [int, list[ConfiguratorMap]]
+            where the key integer is the last measured mode of each associated ConfiguratorMap.
+        """
+        self._slap.set_feed_forward(ff_descriptor)
+
+    def reset_feed_forward(self):
+        self._slap.reset_feed_forward()
+
     def _init_mask(self):
         super()._init_mask()
         if self._mask:
