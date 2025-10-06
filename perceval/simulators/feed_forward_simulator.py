@@ -53,10 +53,10 @@ class FFSimulator(ISimulator):
         if value:
             get_logger().warn("Only the global performance can be computed for a feed-forward simulator.")
 
-    def set_circuit(self, circuit: Processor | list[tuple[tuple, AComponent]], m=None):
-        if isinstance(circuit, Processor):
+    def set_circuit(self, circuit: Processor | Experiment | list[tuple[tuple, AComponent]], m=None):
+        if isinstance(circuit, (Processor, Experiment)):
             self._components = circuit.components
-            min_detected_photons = circuit.parameters.get('min_detected_photons')
+            min_detected_photons = circuit._min_detected_photons_filter
             post_select = circuit.post_select_fn
             heralds = circuit.heralds
             self.set_selection(min_detected_photons, post_select, heralds)
@@ -99,7 +99,7 @@ class FFSimulator(ISimulator):
         if isinstance(input_state, tuple):
             n = input_state[1].n
             m = input_state[1].m
-            if self._noise_model.g2 > 0:
+            if self._noise_model is not None and self._noise_model.g2 > 0:
                 n *= 2
         else:
             n = input_state.n_max
@@ -333,7 +333,7 @@ class FFSimulator(ISimulator):
                     if not accept(c.default_circuit):
                         return False
 
-                    if any(not accept(p) for p in c.circuit_map.values()):
+                    if not all(accept(p) for p in c.circuit_map.values()):
                         return False
 
             measured_modes.update(r)
@@ -353,6 +353,15 @@ class FFSimulator(ISimulator):
 
         :return: A BSDistribution
         """
+        if self._can_simulate_directly():
+            sim = self._get_sim_params(SVDistribution(input_state), [], input_state.m, filter_states = True)[0]
+            c0, ff_info = _parse_feed_forward_info(self._components, input_state.m)
+            self._backend.set_circuit(c0)
+            self._backend.set_feed_forward(ff_info)
+            res = sim.probs(input_state)
+            self._backend.reset_feed_forward()
+            return res
+
         return self._probs_svd(SVDistribution(input_state))[0]
 
     def probs_svd(self,
@@ -371,6 +380,20 @@ class FFSimulator(ISimulator):
             * results is the post-selected output state distribution
             * global_perf is the probability that a state is post-selected
         """
+        if self._can_simulate_directly():
+            if isinstance(input_dist, tuple):
+                m = input_dist[1].m
+            else:
+                m = input_dist.m
+            sim, input_dist, detectors  = self._get_sim_params(input_dist, [], m, detectors, filter_states=True)
+            sim.compute_physical_logical_perf(self._compute_physical_logical_perf)
+            c0, ff_info = _parse_feed_forward_info(self._components, m)
+            self._backend.set_circuit(c0)
+            self._backend.set_feed_forward(ff_info)
+            res = sim.probs_svd(input_dist, detectors, progress_callback)
+            self._backend.reset_feed_forward()
+            return res
+
         res = self._probs_svd(input_dist, detectors, progress_callback)
         return {'results': res[0],
                 'global_perf': res[1]}
@@ -379,8 +402,7 @@ class FFSimulator(ISimulator):
         if not self._can_simulate_directly():
             raise RuntimeError("Cannot perform state evolution with feed-forward")
 
-        input_state = SVDistribution(input_state)
-        sim, input_state, _ = self._get_sim_params(input_state, [], input_state.m, filter_states = True)
+        sim = self._get_sim_params(SVDistribution(input_state), [], input_state.m, filter_states = True)[0]
         c0, ff_info = _parse_feed_forward_info(self._components, input_state.m)
         self._backend.set_circuit(c0)
         self._backend.set_feed_forward(ff_info)
@@ -388,7 +410,6 @@ class FFSimulator(ISimulator):
         self._backend.reset_feed_forward()
 
         return res
-
 
     def set_precision(self, precision: float):
         self._precision = precision

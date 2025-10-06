@@ -66,7 +66,6 @@ class SimulatorFactory:
         min_detected_photons = None
         post_select = None
         heralds = None
-        source = None
         noise = None
         m = None
 
@@ -74,7 +73,6 @@ class SimulatorFactory:
             if backend is None:
                 # If no backend was chosen, the backend type set in the Processor is used
                 backend = circuit.backend
-            source = circuit.source
             circuit = circuit.experiment
 
         if not isinstance(circuit, ACircuit):

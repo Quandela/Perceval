@@ -34,10 +34,9 @@ from exqalibur import ConfiguratorMap
 from multipledispatch import dispatch
 from typing import Iterable
 
-from perceval import AComponent, ACircuit, Experiment, IDetector, AFFConfigurator, FFCircuitProvider, Unitary, \
-    FFConfigurator
-from perceval.utils import FockState, NoisyFockState, AnnotatedFockState, BSDistribution, StateVector, Annotation, SVDistribution
-from perceval.components import Circuit
+from perceval.utils import FockState, NoisyFockState, AnnotatedFockState, BSDistribution, StateVector, Annotation, SVDistribution, Matrix
+from perceval.components import Circuit, AComponent, ACircuit, Experiment, IDetector, AFFConfigurator, FFCircuitProvider, \
+    FFConfigurator, Barrier, Processor
 
 
 def _to_bsd(sv: StateVector) -> BSDistribution:
@@ -175,12 +174,11 @@ def _list_merge(distributions: list[Iterable[tuple[FockState, float]]], prob_thr
 
     return res
 
-def _parse_feed_forward_info(components: list[tuple[tuple[int, ...], AComponent]], circuit_size: int) -> tuple[Circuit, dict[int, list[ConfiguratorMap]]]:
+def _parse_feed_forward_info(components: list[tuple[tuple[int, ...], AComponent]], circuit_size: int) -> tuple[Circuit, list[ConfiguratorMap | tuple[Matrix, int]]]:
     """
     :param components: A list of placed components containing feed-forward such that:
         - None of the configurators configures modes above it
         - None of the configurators points to a heralded or non-unitary experiment
-        - No component is placed after a configurator above it  TODO: make this not a problem (see TODO in code)
     :param circuit_size: The size of the circuit
     :return:
     """
@@ -188,54 +186,44 @@ def _parse_feed_forward_info(components: list[tuple[tuple[int, ...], AComponent]
 
     main_unitary = Circuit(circuit_size)
 
-    all_maps = defaultdict(list)
+    config_map: dict[FockState, Matrix] = None
 
-    config_map: dict[FockState, ACircuit] = None
-    config_modes: tuple[int, ...] = None
-    default_circuit : ACircuit = None
-    measured_modes = None
+    res = []
 
     for r, c in components:
         if isinstance(c, Experiment):
             assert c.is_unitary
             c = c.unitary_circuit()
 
-        if isinstance(c, IDetector):
+        if isinstance(c, IDetector) or isinstance(c, Barrier):
             continue
 
         if isinstance(c, ACircuit):
             if not config_map:
                 main_unitary.add(r, c)
             else:
-                # TODO: here, the newly added component could be above the configurator, which would create a bug
-                modes = tuple(range(min(config_modes[0], r[0]), max(config_modes[-1], r[-1]) + 1))
-                default_circuit = Circuit(modes[-1] - modes[0] + 1).add(config_modes[0] - modes[0], default_circuit).add(r[0] - modes[0], c)
-                for measure, u in config_map.items():
-                    config_map[measure] = Circuit(modes[-1] - modes[0] + 1).add(config_modes[0] - modes[0], u).add(r[0] - modes[0], c)
-                config_modes = modes
+                res.append((c.compute_unitary(), r[0]))
             continue
 
         elif not isinstance(c, AFFConfigurator):
             raise ValueError("Received non-unitary components")
 
-        if config_map is not None:
-            config = {tuple(measure): u.compute_unitary() for measure, u in config_map.items()}
-            all_maps[measured_modes[-1]].append(ConfiguratorMap(measured_modes[0], measured_modes[-1], config_modes[0], config, default_circuit.compute_unitary()))
-
-        measured_modes = r
         config_modes = c.config_modes(r)
         default_circuit = c.default_circuit
 
         if isinstance(c, FFCircuitProvider):
-            # We need to duplicate the circuits to avoid changing them on the flight
-            config_map = {measure: Unitary(u.compute_unitary()) for measure, u in c.circuit_map.items()}
+            config_map = {}
+            for measure, sub_c in c.circuit_map.items():
+                if isinstance(sub_c, Experiment):
+                    sub_c = sub_c.unitary_circuit()
+                elif isinstance(sub_c, Processor):
+                    sub_c = sub_c.linear_circuit()
+
+                config_map[measure] = sub_c.compute_unitary()
 
         elif isinstance(c, FFConfigurator):
-            # c.configure make a copy here
-            config_map = {measure: c.configure(measure) for measure in c._configs.keys()}
+            config_map = {measure: c.configure(measure).compute_unitary() for measure in c._configs.keys()}
 
-    if config_map is not None:
-        config = {tuple(measure): u.compute_unitary() for measure, u in config_map.items()}
-        all_maps[measured_modes[-1]].append(ConfiguratorMap(measured_modes[0], measured_modes[-1], config_modes[0], config, default_circuit.compute_unitary()))
+        res.append(ConfiguratorMap(r[0], r[-1], config_modes[0], config_map, default_circuit.compute_unitary()))
 
-    return main_unitary, all_maps
+    return main_unitary, res

@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import exqalibur as xq
-from perceval.utils import FockState, BSDistribution, StateVector
+from perceval.utils import FockState, BSDistribution, StateVector, Matrix
 from perceval.components import ACircuit
 
 from ._abstract_backends import AStrongSimulationBackend
@@ -45,12 +45,13 @@ class SLAPBackend(AStrongSimulationBackend):
         super().set_circuit(circuit)  # Computes circuit unitary as _umat
         self._slap.set_unitary(self._umat)
 
-    def set_feed_forward(self, ff_descriptor: dict[int, list[xq.ConfiguratorMap]]):
+    def set_feed_forward(self, ff_descriptor: list[xq.ConfiguratorMap | tuple[Matrix, int]]):
         """
-        :param ff_descriptor: A dict [int, list[ConfiguratorMap]]
-            where the key integer is the last measured mode of each associated ConfiguratorMap.
+        :param ff_descriptor: A list of ConfiguratorMaps, or of tuples of (Matrix, int)
+        where each matrix is a fixed unitary placed at the given mode.
         """
-        self._slap.set_feed_forward(ff_descriptor)
+        for o in ff_descriptor:
+            self._slap.add_feed_forward_config(o)
 
     def reset_feed_forward(self):
         self._slap.reset_feed_forward()
