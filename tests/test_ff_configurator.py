@@ -71,6 +71,17 @@ def test_ff_circuit_provider():
     config.circuit_map = {BasicState([1, 1, 0]): tested_circuit}
     assert config.configure(BasicState([1, 1, 0])) == tested_circuit, "Incorrect output circuit"
 
+def test_ff_circuit_provider_failures():
+    default_circuit = BS(P("theta0"))
+    m = 3
+    offset = 1
+
+    ffc = FFCircuitProvider(m, offset, default_circuit)
+
+    with pytest.raises(AssertionError):
+        ffc.add_configuration((0, 1), BS())  # Wrong number of modes
+    with pytest.raises(RuntimeError):
+        ffc.add_configuration((1, 0, 1), BS(P("theta0")))  # Repeated parameter
 
 def test_ffconfigurator():
     controlled_circuit = BS.H() // PS(phi=P("phi_a")) // BS.H()
