@@ -388,9 +388,11 @@ class Experiment:
 
     def _validate_new_parameters(self, new_params: dict[str, Parameter]):
         self_params = self.get_circuit_parameters()
-        for param_name, param in new_params.items():
-            if param_name in self_params and not self_params[param_name].is_identical_to(param) and not param.fixed:
-                raise RuntimeError(f"The experiment already owns a parameter named {param_name}")
+        for _, param in new_params.items():
+            if not param.fixed:
+                for internal_p in param._params:
+                    if internal_p.name in self_params and internal_p is not self_params[internal_p.name]:
+                        raise RuntimeError(f"The experiment already owns a parameter named {internal_p.name}")
 
     def _compose_experiment(self, connector: ModeConnector, experiment: Experiment, keep_port: bool):
         self._validate_new_parameters(experiment.get_circuit_parameters())

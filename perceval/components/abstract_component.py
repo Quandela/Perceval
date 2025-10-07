@@ -173,7 +173,7 @@ class AParametrizedComponent(AComponent):
                 if p.max is None or max_v < p.max:
                     p.max = float(max_v)
             if p.name in self._vars:
-                if not p.is_identical_to(self._vars[p.name]):
+                if p is not self._vars[p.name]:
                     raise RuntimeError("two parameters with the same name in the circuit")
             if periodic is not None:
                 p.set_periodic(periodic)

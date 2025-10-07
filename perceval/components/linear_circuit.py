@@ -466,8 +466,8 @@ class Circuit(ACircuit):
         for _, p in component._params.items():
             if not p.fixed:
                 for internal_p in p._params:
-                    if internal_p.name in self._params and not internal_p.is_identical_to(self._params[internal_p.name]):
-                        raise RuntimeError("two parameters with the same name in the circuit (%s)" % p.name)
+                    if internal_p.name in self._params and internal_p is not self._params[internal_p.name]:
+                        raise RuntimeError(f"two parameters with the same name in the circuit {internal_p.name}")
                     self._params[internal_p.name] = internal_p
 
         # register the component

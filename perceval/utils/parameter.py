@@ -231,9 +231,6 @@ class Parameter:
         r"""Unique identifier for the parameter"""
         return id(self)
 
-    def is_identical_to(self, other: Parameter) -> bool:
-        return self is other
-
     def __mul__(self, other):
         if isinstance(other, Parameter):
             return Expression(f"({self.name}*{other.name})", self._merge_param_sets(other))
@@ -375,16 +372,6 @@ class Expression(Parameter):
             subs[self.name] = Expression(self.name, new_params)
 
         return subs[self.name]
-
-    def is_identical_to(self, other: Expression) -> bool:
-        if not isinstance(other, Expression) or self.name != other.name:
-            return False
-        for p in self._params:
-            if any((p_other := p2).name == p.name for p2 in other._params):
-                if not p.is_identical_to(p_other):
-                    return False
-
-        return True
 
 
 
