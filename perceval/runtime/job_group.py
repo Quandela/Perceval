@@ -461,6 +461,18 @@ class JobGroup:
                           rerun=True,
                           replace_failed_jobs=replace_failed_jobs)
 
+    def cancel_all(self):
+        """
+        Cancels all started (already sent) jobs in the group.
+        """
+        for job in self._jobs:
+            if job.was_sent and not job._job_status.completed:
+                try:
+                    job.cancel()
+                except:
+                    pass
+                self._write_to_file()
+
     def get_results(self) -> list[dict]:
         """
         Retrieve results for all jobs in the group. It aggregates results by calling the `get_results()`
