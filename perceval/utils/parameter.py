@@ -32,6 +32,8 @@ from __future__ import annotations
 import random
 import sympy as sp
 
+from .logging import deprecated
+
 
 class Parameter:
     r"""A Parameter is a used as a variable in a circuit definition
@@ -45,7 +47,6 @@ class Parameter:
     :param max_v: maximal value that the parameter can take, is used in circuit optimization
     :param periodic: True if the parameter is periodic, False otherwise (default True)
     """
-    _id = 0
 
     def __init__(self, name: str, value: float = None,
                  min_v: float = None, max_v: float = None, periodic: bool = True):
@@ -63,10 +64,8 @@ class Parameter:
 
         self.name = name
         self._periodic = periodic
-        self._pid = Parameter._id
         self._original = None
         self._params = {self}  # set of sub parameters
-        Parameter._id += 1
 
     @property
     def _is_expression(self):
@@ -226,10 +225,14 @@ class Parameter:
         """
         self._max = m
 
+    @deprecated(version = "v1.1", reason = "Use id(self) or self.is_identical_to(other) instead")
     @property
     def pid(self):
         r"""Unique identifier for the parameter"""
-        return self._pid
+        return id(self)
+
+    def is_identical_to(self, other: Parameter) -> bool:
+        return self is other
 
     def __mul__(self, other):
         if isinstance(other, Parameter):
@@ -372,6 +375,16 @@ class Expression(Parameter):
             subs[self.name] = Expression(self.name, new_params)
 
         return subs[self.name]
+
+    def is_identical_to(self, other: Expression) -> bool:
+        if not isinstance(other, Expression) or self.name != other.name:
+            return False
+        for p in self._params:
+            if any((p_other := p2).name == p.name for p2 in other._params):
+                if not p.is_identical_to(p_other):
+                    return False
+
+        return True
 
 
 
