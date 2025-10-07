@@ -111,7 +111,7 @@ class AStrongSimulationBackend(ABackend):
             empty modes.
         :param n: The number of photons to instantiate the mask with.
             This corresponds to the total number of photons in your non-separated state.
-        :param at_least_modes: A list containing the modes on which the accepted number of photons cn be anything higher
+        :param at_least_modes: A list containing the modes on which the accepted number of photons can be anything higher
             than or equal to the given value in the condition.
         """
         self.clear_mask()
