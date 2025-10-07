@@ -546,16 +546,9 @@ class Circuit(ACircuit):
             u = Matrix.eye(self._m, use_symbolic=use_symbolic)
         return u
 
-    def copy(self, subs: dict | list = None):
+    def copy(self, subs = None):
         """Return a deep copy of the current circuit"""
-        nc = copy.deepcopy(self)
-        if subs is None:
-            subs = {}
-        nc._params = {}
-        nc._components = []
-        for r, c in self._components:
-            nc.add(r, c.copy(subs=subs))
-        return nc
+        return copy.deepcopy(self, subs)
 
     @staticmethod
     def decomposition(U: MatrixN,

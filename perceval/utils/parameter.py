@@ -30,6 +30,8 @@
 from __future__ import annotations
 
 import random
+from copy import deepcopy
+
 import sympy as sp
 
 from .logging import deprecated
@@ -92,23 +94,8 @@ class Parameter:
         """
         return float(self._value)
 
-    def copy(self, subs: dict[str, Parameter | float] = None) -> Parameter:
-        if self.fixed:
-            return Parameter(name=self.name, value=float(self), min_v=self._min, max_v=self._max, periodic=self._periodic)
-
-        if subs is None:
-            subs = {}
-        if self.name not in subs:
-            p = Parameter(name=self.name, value=None, min_v=self._min, max_v=self._max, periodic=self._periodic)
-            if self.defined:
-                p.set_value(float(self))
-
-            subs[self.name] = p
-
-        elif not isinstance(subs[self.name], Parameter):
-            return Parameter(name=self.name, value=float(subs[self.name]), min_v=self._min, max_v=self._max, periodic=self._periodic)
-
-        return subs[self.name]
+    def copy(self, subs = None) -> Parameter:
+        return deepcopy(self, subs)
 
     def evalf(self, subs: dict = None) -> float:
         r"""Convert the parameter to float, will fail if the parameter has no defined value
@@ -360,18 +347,8 @@ class Expression(Parameter):
         """
         return all(p.fixed for p in self._params)
 
-    def copy(self, subs: dict[str, Parameter] = None) -> Expression:
-        if self.fixed:
-            new_params = {p.copy(subs) for p in self._params}
-            return Expression(self.name, new_params)
-
-        if subs is None:
-            subs = {}
-        if self.name not in subs:
-            new_params = {p.copy(subs) for p in self._params}
-            subs[self.name] = Expression(self.name, new_params)
-
-        return subs[self.name]
+    def copy(self, subs = None) -> Expression:
+        return deepcopy(self, subs)
 
 
 

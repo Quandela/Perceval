@@ -210,15 +210,5 @@ class AParametrizedComponent(AComponent):
     def get_variables(self):
         return {}
 
-    def copy(self, subs: dict[str, Parameter] | list[Parameter] = None):
-        nc = copy.deepcopy(self)
-
-        if subs is None:
-            subs = {}
-        if isinstance(subs, list):
-            subs = {p.name: p for p in subs}
-        for k, p in nc._params.items():
-            nc._params[k] = p.copy(subs)
-            nc.__setattr__("_" + k, nc._params[k])
-
-        return nc
+    def copy(self, subs = None):
+        return copy.deepcopy(self, subs)
