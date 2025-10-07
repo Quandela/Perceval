@@ -210,5 +210,5 @@ class AParametrizedComponent(AComponent):
     def get_variables(self):
         return {}
 
-    def copy(self, subs = None):
-        return copy.deepcopy(self, subs)
+    def copy(self):
+        return copy.deepcopy(self)

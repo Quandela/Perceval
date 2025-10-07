@@ -94,8 +94,8 @@ class Parameter:
         """
         return float(self._value)
 
-    def copy(self, subs = None) -> Parameter:
-        return deepcopy(self, subs)
+    def copy(self) -> Parameter:
+        return deepcopy(self)
 
     def evalf(self, subs: dict = None) -> float:
         r"""Convert the parameter to float, will fail if the parameter has no defined value
@@ -347,8 +347,8 @@ class Expression(Parameter):
         """
         return all(p.fixed for p in self._params)
 
-    def copy(self, subs = None) -> Expression:
-        return deepcopy(self, subs)
+    def copy(self) -> Expression:
+        return deepcopy(self)
 
 
 

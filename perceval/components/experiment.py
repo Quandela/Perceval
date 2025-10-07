@@ -229,13 +229,13 @@ class Experiment:
             pass
         return obj
 
-    def copy(self, subs = None) -> Experiment:
+    def copy(self) -> Experiment:
         """
         Performs a deep copy of the current experiment.
         :return: A copy of this experiment.
         """
         get_logger().debug(f"Copy experiment {self.name}", channel.general)
-        return copy.deepcopy(self, subs)
+        return copy.deepcopy(self)
 
     def set_circuit(self, circuit: ACircuit):
         r"""
