@@ -32,6 +32,7 @@ from typing import Any
 from perceval.components import Processor, AComponent, Barrier, PERM, IDetector, Herald, PortLocation, Source, Experiment, DetectionType
 from perceval.utils import (NoiseModel, BasicState, FockState, NoisyFockState, BSDistribution, SVDistribution, StateVector,
                             partial_progress_callable, get_logger, deprecated)
+from perceval.utils.logging import channel
 from perceval.components.feed_forward_configurator import AFFConfigurator, FFCircuitProvider
 from perceval.backends import AStrongSimulationBackend, SLAPBackend
 from ._simulator_utils import _parse_feed_forward_info
@@ -360,6 +361,8 @@ class FFSimulator(ISimulator):
             for m in measured_modes:
                 if detectors[m] is not None and detectors[m].type != DetectionType.PNR:
                     return False
+
+        get_logger().info("Perform a direct feed-forward simulation", channel.general)
 
         return True
 
