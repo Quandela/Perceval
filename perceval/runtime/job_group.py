@@ -350,7 +350,7 @@ class JobGroup:
         """
         return [job for job in self._jobs if not job.was_sent]
 
-    def _launch_jobs(self, concurrent_job_count: int | None, delay: float, rerun: bool, replace_failed_jobs: bool = False) -> None:
+    def _launch_wait_jobs(self, concurrent_job_count: int | None, delay: float, rerun: bool, replace_failed_jobs: bool = False) -> None:
         """
         Launches or reruns jobs in the group on Cloud in a parallel/sequential manner.
 
@@ -412,7 +412,7 @@ class JobGroup:
 
         :param delay: number of seconds to wait between launching jobs on cloud
         """
-        self._launch_jobs(rerun=False,
+        self._launch_wait_jobs(rerun=False,
                           concurrent_job_count = 1,
                           delay=delay)
 
@@ -425,7 +425,7 @@ class JobGroup:
         :param replace_failed_jobs: Indicates whether a new job created from a rerun should replace the previously
                                     failed job (defaults to True).
         """
-        self._launch_jobs(rerun=True,
+        self._launch_wait_jobs(rerun=True,
                           concurrent_job_count = 1,
                           delay=delay,
                           replace_failed_jobs=replace_failed_jobs)
@@ -440,7 +440,7 @@ class JobGroup:
         RemoteConfig.set_cloud_maximal_job_count() should be set in accordance with the user pricing plan.
         Any remaining jobs in the group will not be sent.
         """
-        self._launch_jobs(concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count(),
+        self._launch_wait_jobs(concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count(),
                           delay=0,
                           rerun=False)
 
@@ -456,10 +456,45 @@ class JobGroup:
         :param replace_failed_jobs: Indicates whether a new job created from a rerun should replace the previously
                                     failed job (defaults to True).
         """
-        self._launch_jobs(concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count(),
+        self._launch_wait_jobs(concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count(),
                           delay=0,
                           rerun=True,
                           replace_failed_jobs=replace_failed_jobs)
+
+    def launch_async_jobs(self, concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count()):
+        """
+        Launches up to concurrent_job_count jobs and returns without waiting for job completion.
+
+        :concurrent_job_count: maximum number of concurrent jobs
+        """
+        jobs_to_run = self.list_unsent_jobs()
+        if concurrent_job_count:
+            jobs_to_run = jobs_to_run[:concurrent_job_count]
+
+        for job in jobs_to_run:
+            job.execute_async()
+            self._write_to_file()   # save data after each job (rerun/execution) at launch
+
+    def relaunch_async_failed_jobs(self, replace_failed_jobs=True, concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count()):
+        """
+        Relaunches up to concurrent_job_count failed jobs and returns without waiting for job completion.
+
+        :concurrent_job_count: maximum number of concurrent jobs
+        :replace_failed_jobs: replace the rerun jobs in the jobgroup, else keep the failed in addition of the rerun ones
+        """
+        jobs_to_run = self.list_unsuccessful_jobs()
+        if concurrent_job_count:
+            jobs_to_run = jobs_to_run[:concurrent_job_count]
+
+        for job in jobs_to_run:
+            index = self._jobs.index(job)
+            job = job.rerun()
+            if replace_failed_jobs:
+                self._jobs[index] = job
+            else:
+                self._jobs.append(job)
+
+            self._write_to_file()   # save data after each job (rerun/execution) at launch
 
     def get_results(self) -> list[dict]:
         """
