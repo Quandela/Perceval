@@ -66,9 +66,9 @@ def test_load(mock_write_file: MagicMock):
         'id': None,
         'name': "my_job",
         'status': None,
-        'body': {
-            'payload': {'job_context': None},
-            'job_name': "my_job"},
+        'job_context': None,
+        'request_data':  {'payload': {}},
+        'delta_parameters': {'command': {}, 'mapping': {}},
         'metadata': {
             'headers': RPC_HANDLER.headers,
             'platform': RPC_HANDLER.name,
@@ -90,6 +90,8 @@ def test_load(mock_write_file: MagicMock):
     for key, value in last_saved_jg_dict.items():
         if key == 'modified_date':
             assert jg_dict[key] < value
+        elif key == 'request_data':
+            assert jg_dict['body'] == value, f"Failed for key {key}: {jg_dict['body']} != {value}"
         else:
             assert jg_dict[key] == value, f"Failed for key {key}: {jg_dict[key]} != {value}"
 
@@ -114,9 +116,9 @@ def test_add(mock_write_file):
         'id': None,
         'name': job_name,
         'status': None,
-        'body': {
-            'payload': {'job_context': None},
-            'job_name': job_name},
+        'job_context': None,
+        'request_data':  {'payload': {}},
+        'delta_parameters': {'command': {}, 'mapping': {}},
         'metadata': {
             'headers': RPC_HANDLER.headers,
             'platform': RPC_HANDLER.name,
@@ -125,7 +127,6 @@ def test_add(mock_write_file):
     }
 
     for i, job_info in enumerate(jg._to_json()['job_group_data']):
-        remote_job_dict['body']['job_name'] = job_name + str(i)
         remote_job_dict['name'] = job_name + str(i)
         assert job_info == remote_job_dict
 

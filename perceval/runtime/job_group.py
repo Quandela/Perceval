@@ -168,7 +168,7 @@ class JobGroup:
         if job_to_add.id and job_to_add.id in [job.id for job in self._jobs]:
             raise ValueError(f"Duplicate job detected : job id {job_to_add.id} exists in the group.")
         if kwargs:
-            job_to_add._create_payload_data(**kwargs)
+            job_to_add._handle_params(**kwargs)
         self._jobs.append(job_to_add)
         self._write_to_file()
 

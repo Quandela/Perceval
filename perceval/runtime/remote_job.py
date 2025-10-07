@@ -129,12 +129,17 @@ class RemoteJob(Job):
 
     @staticmethod
     def _from_dict(my_dict: dict, rpc_handler):
-        if my_dict['status'] == 'SUCCESS':
-            body = None
-        else:
-            body = my_dict['body']
+        # Perceval <= 1.0.1 stores 'body' containing the computed payload
+        body = my_dict.get('body')
+        # Perceval > 1.0.1 stores 'request_data' & 'delta_parameters' & 'job_context' allowing to re-computed the payload
+        request_data = my_dict.get('request_data')
+        job_context = my_dict.get('job_context')
+        delta_parameters = my_dict.get('delta_parameters')
+
+        if my_dict['status'] != 'SUCCESS' and not body and not request_data:
+            raise RuntimeError(f"Missing job description")
         name = my_dict.get('name')
-        rj = RemoteJob(body, rpc_handler, name)
+        rj = RemoteJob(request_data or body, rpc_handler, name, delta_parameters, job_context)
         rj._id = my_dict['id']
         if my_dict['status'] is not None:
             rj._job_status.status = RunningStatus[my_dict['status']]
@@ -153,8 +158,9 @@ class RemoteJob(Job):
                                 'proxies': self._rpc_handler.proxies}
 
         if not self._job_status.success:
-            # Save the job payload for later use in the cloud unless the status is 'success'.
-            job_info['body'] = self._create_payload_data()
+            job_info['delta_parameters'] = self._delta_parameters
+            job_info['job_context'] = self._job_context
+            job_info['request_data'] = self._request_data
 
         return job_info
 
@@ -242,7 +248,7 @@ class RemoteJob(Job):
 
     def _create_payload_data(self, *args, **kwargs) -> dict:
         # creates the payload for the job and returns the prepared job data
-        self._handle_params(args, kwargs)
+        self._handle_params(*args, **kwargs)
         if self._delta_parameters['mapping']:
             if self._job_context is None:
                 self._job_context = {}
@@ -250,10 +256,11 @@ class RemoteJob(Job):
 
         kwargs = self._delta_parameters['command']
         kwargs['job_context'] = self._job_context
-        self._request_data['job_name'] = self._name
-        self._request_data['payload'].update(kwargs)
+        request_data = self._request_data
+        request_data['job_name'] = self._name
+        request_data['payload'].update(kwargs)
         self._check_max_shots_samples_validity()
-        return self._request_data
+        return request_data
 
     def execute_async(self, *args, **kwargs) -> RemoteJob:
         assert self._job_status.waiting, "job has already been executed"
