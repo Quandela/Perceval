@@ -39,6 +39,7 @@ _ENDPOINT_JOB_STATUS = '/api/job/status/'
 _ENDPOINT_JOB_CANCEL = '/api/job/cancel/'
 _ENDPOINT_JOB_RERUN = '/api/job/rerun/'
 _ENDPOINT_JOB_RESULT = '/api/job/result/'
+_ENDPOINT_JOB_AVAILABILITY = '/api/jobs/availability/'
 
 _JOB_ID_KEY = 'job_id'
 
@@ -146,3 +147,17 @@ class RPCHandler:
         res = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)
         res.raise_for_status()
         return res.json()
+
+    def get_job_availability(self) -> dict:
+        """get job availability
+        :return: The availability of the token
+        """
+        endpoint = self.build_endpoint(_ENDPOINT_JOB_AVAILABILITY)
+
+        # requests may throw an IO Exception, but we don't want this call to be blocking in that case
+        try:
+            res = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)
+            res.raise_for_status()
+            return res.json()
+        except HTTPError:
+            return {}
