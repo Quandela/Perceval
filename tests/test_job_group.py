@@ -327,3 +327,31 @@ def test_rerun(mock_write_file):
     assert jg.progress() == {'Total': 6,
                              'Finished': [5, {'successful': 5, 'unsuccessful': 0}],
                              'Unfinished': [1, {'sent': 0, 'not sent': 1}]}
+
+
+@pytest.mark.long_test
+@patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
+def test_cancel_all(mock_write_file):
+    rpc_handler_responses_builder = RPCHandlerResponsesBuilder(RPC_HANDLER)
+    rpc_handler_responses_builder.set_default_job_status(RunningStatus.WAITING)
+
+    jg = JobGroup(TEST_JG_NAME)
+
+    for _ in range(13):
+        jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'my_remote_job'))
+
+    jg.launch_async_jobs(8)
+
+    assert jg.progress() == {'Total': 13,
+                             'Finished': [0, {'successful': 0, 'unsuccessful': 0}],
+                             'Unfinished': [13, {'sent': 8, 'not sent': 5}]}
+
+    jg.cancel_all()
+    ## We cannot check that the jobs were cancelled
+    ## as the MockRPCHandler cannot modify the response for a given job
+
+    # rpc_handler_responses_builder.set_default_job_status(RunningStatus.CANCELED)
+
+    # assert jg.progress() == {'Total': 13,
+    #                          'Finished': [8, {'successful': 0, 'unsuccessful': 8}],
+    #                          'Unfinished': [5, {'sent': 0, 'not sent': 5}]}
