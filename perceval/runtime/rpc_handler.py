@@ -154,10 +154,7 @@ class RPCHandler:
         """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_AVAILABILITY)
 
-        # requests may throw an IO Exception, but we don't want this call to be blocking in that case
-        try:
-            res = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)
-            res.raise_for_status()
-            return res.json()
-        except HTTPError:
-            return {}
+        # requests may throw an IO Exception, let the user deal with it
+        res = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)
+        res.raise_for_status()
+        return res.json()
