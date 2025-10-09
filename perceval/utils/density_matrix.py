@@ -26,8 +26,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
-
 import random
 from copy import copy
 from math import comb, sqrt
@@ -395,7 +393,7 @@ class DensityMatrix:
         Sample a basic state on the density matrix
         """
         self.normalize()
-        samples = random.choices(self.inverse_index, list(self.mat.diagonal()), k=count)
+        samples = random.choices(self.inverse_index, list(self.mat.diagonal().real), k=count)
         output = BSSamples()
         for state in samples:
             output.append(state)

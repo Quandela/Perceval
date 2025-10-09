@@ -26,8 +26,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
-
 import sys
 from collections import defaultdict
 
@@ -45,7 +43,7 @@ from perceval.utils.logging import get_logger
 from perceval.runtime import cancel_requested
 
 from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping, _split_by_photon_count, \
-    _list_merge
+    _list_merge, _separate_state
 from ._simulate_detectors import simulate_detectors
 from .simulator_interface import ISimulator
 
@@ -426,7 +424,7 @@ class Simulator(ISimulator):
            where [bs_x,] is the list of the un-annotated separated basic state (result of bs_x.separate_state())
         """
         if isinstance(input_dist, SVDistribution):
-            decomposed_input = [(prob, sv[0].separate_state() if isinstance(sv[0], NoisyFockState) else [sv[0]], sv[0].n) for sv, prob in input_dist.items()]
+            decomposed_input = [(prob, _separate_state(sv[0]), sv[0].n) for sv, prob in input_dist.items()]
         else:
             decomposed_input = [(prob, states, sum(state.n for state in states)) for states, prob in input_dist]
 

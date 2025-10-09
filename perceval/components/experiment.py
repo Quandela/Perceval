@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
+from __future__ import annotations  # Python 3.11 : Replace using Self typing
 
 import copy
 import weakref
@@ -218,6 +218,7 @@ class Experiment:
             self._postselect = None
 
     def __deepcopy__(self, memo):
+        # Do not call this directly; call self.copy()
         cls = self.__class__
         obj = cls.__new__(cls)
         memo[id(self)] = obj
@@ -232,13 +233,23 @@ class Experiment:
     def copy(self, subs: dict | list = None) -> Experiment:
         """
         Performs a deep copy of the current experiment.
+
+        :param subs: Substitution dictionary or list of named parameters. If a list is passed, then parameters will be
+                     substituted in the order they were introduced in the ``Experiment``.
+                     If a dictionary is passed, it maps variable names (keys) to either a numerical value or a
+                     ``Parameter``.
+        :return: A copy of this experiment.
         """
         get_logger().debug(f"Copy experiment {self.name}", channel.general)
-        new_proc = copy.deepcopy(self)
-        new_proc._components = []
+        if subs is None:
+            subs = {}
+        Experiment._no_copiable_attributes.add("_components")
+        new_exp = copy.deepcopy(self)
+        Experiment._no_copiable_attributes.remove("_components")
+        new_exp._components = []
         for r, c in self._components:
-            new_proc._components.append((r, c.copy(subs=subs)))
-        return new_proc
+            new_exp._components.append((r, c.copy(subs=subs)))
+        return new_exp
 
     def set_circuit(self, circuit: ACircuit):
         r"""
@@ -330,6 +341,7 @@ class Experiment:
             raise ValueError(f"Mode numbers must be in [0; {self.m - 1}] (got {photonic_modes})")
         if any([self._out_mode_type[i] != ModeType.PHOTONIC for i in photonic_modes]):
             raise UnavailableModeException(photonic_modes, "Cannot add a configured circuit on non-photonic modes")
+        self._validate_new_parameters({p.name: p for p in component.get_parameters(False, True)})
 
         modes_add_detectors = [m for m in modes if m not in self.detectors_injected]
         self._components.append((tuple(range(self.m)), Barrier(self.m, visible=len(modes_add_detectors) == 0)))
@@ -362,6 +374,9 @@ class Experiment:
 
     @property
     def detectors(self):
+        """
+        :return: The list of detectors which were defined in the experiment.
+        """
         return self._detectors
 
     def _validate_postselect_composition(self, mode_mapping: dict):
@@ -371,7 +386,14 @@ class Experiment:
             assert self._postselect.can_compose_with(impacted_modes), \
                 f"Post-selection conditions cannot compose with modes {impacted_modes}"
 
+    def _validate_new_parameters(self, new_params: dict[str, Parameter]):
+        self_params = self.get_circuit_parameters()
+        for param_name, param in new_params.items():
+            if param_name in self_params and self_params[param_name].pid != param.pid and not param.fixed:
+                raise RuntimeError(f"The experiment already owns a parameter named {param_name}")
+
     def _compose_experiment(self, connector: ModeConnector, experiment: Experiment, keep_port: bool):
+        self._validate_new_parameters(experiment.get_circuit_parameters())
         get_logger().debug(f"Compose experiment {self.name} with {experiment.name}", channel.general)
         self._is_unitary = self._is_unitary and experiment._is_unitary
         self._has_td = self._has_td or experiment._has_td
@@ -514,6 +536,8 @@ class Experiment:
 
     def _add_component(self, mode_mapping, component, keep_port: bool):
         self._validate_postselect_composition(mode_mapping)
+        if isinstance(component, AParametrizedComponent):
+            self._validate_new_parameters({p.name: p for p in component.get_parameters(False, True)})
         if not keep_port:
             # Remove output ports used to connect the new experiment
             for i in mode_mapping:

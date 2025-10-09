@@ -27,48 +27,30 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# Configuration file for the Sphinx documentation builder.
-#
-# This file only contains a selection of the most common options. For a full
-# list see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
+from packaging.version import Version
 
-# -- Path setup --------------------------------------------------------------
+def keep_latest_versions(versions: list[str], mini: str = None) -> list[str]:
+    """
+    Keep the highest patch for all major-minor versions. Drops all pre-release patches.
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-#
-import os
-import sys
-import re
-from pathlib import Path
-from git import Repo
+    :param versions: A list of version strings 'vM.m.p'
+    :param mini: (optional) The minimum version to keep. All versions below this are dropped.
+    :return: The ordered list of version strings with the highest patch number.
+    """
+    if mini is not None:
+        mini = Version(mini)
 
-from perceval.utils.versions.version_utils import keep_latest_versions
+    version_dict: dict[tuple[int, ...], Version] = {}
 
-sys.path.insert(0, os.path.relpath("../"))
+    for one_version in versions:
+        try:
+            version = Version(one_version)
+        except AttributeError:
+            continue
+        if not version.is_prerelease and (mini is None or version >= mini):  # filter alpha,beta...
+            major_minor = version.release[:2]
+            if major_minor not in version_dict or version > version_dict[major_minor]:
+                version_dict[major_minor] = version
 
-REPO_PATH = Path(__file__).parent.parent.parent.resolve()
-
-repo = Repo(REPO_PATH)
-tags = [tag.name for tag in repo.tags]
-versions = keep_latest_versions(tags, "v0.6")
-versions_string = "|".join([f"({one_version})" for one_version in versions])
-versions_regex = re.compile(f"^{versions_string}$")
-
-print(f"Building {versions_regex}")
-
-# Whitelist pattern for tags (set to None to ignore all tags)
-smv_tag_whitelist = versions_regex
-
-# Whitelist pattern for branches (set to None to ignore all branches)
-smv_branch_whitelist = None
-
-# Whitelist pattern for remotes (set to None to use local branches only)
-smv_remote_whitelist = None
-
-# Pattern for released versions
-smv_released_pattern = r".*"
-
-smv_regex_name = r"(.*)\..*"
+    latest_versions = sorted(version_dict.values())
+    return list(map(lambda v: f"v{v}", latest_versions))

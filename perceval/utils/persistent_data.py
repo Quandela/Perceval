@@ -26,14 +26,12 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
-
 import os
 import json
 import warnings
 from platformdirs import PlatformDirs
 
-from .metadata import PMetadata
+from .versions import PMetadata
 from ._enums import FileFormat
 
 _CONFIG_FILE_NAME = "config.json"

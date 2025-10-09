@@ -27,48 +27,32 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# Configuration file for the Sphinx documentation builder.
-#
-# This file only contains a selection of the most common options. For a full
-# list see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
-
-# -- Path setup --------------------------------------------------------------
-
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-#
-import os
-import sys
 import re
-from pathlib import Path
-from git import Repo
+from importlib.metadata import metadata
 
-from perceval.utils.versions.version_utils import keep_latest_versions
 
-sys.path.insert(0, os.path.relpath("../"))
+class PMetadata:
+    _NAME = "perceval"
+    _PACKAGE_NAME = "perceval-quandela"
+    _METADATA = metadata(_PACKAGE_NAME)
+    _REGEX = re.compile(r"(\d+\.\d+(?:\.\d+)*)")
 
-REPO_PATH = Path(__file__).parent.parent.parent.resolve()
+    @staticmethod
+    def short_version() -> str:
+        return PMetadata._REGEX.findall(PMetadata._METADATA["version"])[0]
 
-repo = Repo(REPO_PATH)
-tags = [tag.name for tag in repo.tags]
-versions = keep_latest_versions(tags, "v0.6")
-versions_string = "|".join([f"({one_version})" for one_version in versions])
-versions_regex = re.compile(f"^{versions_string}$")
+    @staticmethod
+    def version() -> str:
+        return PMetadata._METADATA["version"]
 
-print(f"Building {versions_regex}")
+    @staticmethod
+    def package_name() -> str:
+        return PMetadata._PACKAGE_NAME
 
-# Whitelist pattern for tags (set to None to ignore all tags)
-smv_tag_whitelist = versions_regex
+    @staticmethod
+    def author() -> str:
+        return PMetadata._METADATA["author"]
 
-# Whitelist pattern for branches (set to None to ignore all branches)
-smv_branch_whitelist = None
-
-# Whitelist pattern for remotes (set to None to use local branches only)
-smv_remote_whitelist = None
-
-# Pattern for released versions
-smv_released_pattern = r".*"
-
-smv_regex_name = r"(.*)\..*"
+    @staticmethod
+    def name() -> str:
+        return PMetadata._NAME

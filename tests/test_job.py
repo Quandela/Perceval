@@ -51,10 +51,12 @@ def quadratic_count_down(n, period=PERIOD, progress_callback=None):
     return l
 
 
+@pytest.mark.long_test
 def test_run_sync_0():
     assert (pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'period'])(5) == [0, 1, 4, 9, 16])
 
 
+@pytest.mark.long_test
 @patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 def test_run_sync_1(mock_warn):
     job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'period'])
@@ -72,6 +74,7 @@ def test_run_sync_1(mock_warn):
         assert job.get_results() == [0, 1, 4, 9, 16]
 
 
+@pytest.mark.long_test
 def test_run_async():
     job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'period'])
     n = 5
@@ -92,6 +95,7 @@ def test_run_async():
     assert job.status.status == RunningStatus.SUCCESS
 
 
+@pytest.mark.long_test
 @patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 def test_run_async_fail(mock_warn):
     job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'period'])
@@ -111,6 +115,7 @@ def test_run_async_fail(mock_warn):
         assert job.get_results() == None
 
 
+@pytest.mark.long_test
 def test_run_async_cancel():
     job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'period'])
     assert job.execute_async(5, 0.3) is job

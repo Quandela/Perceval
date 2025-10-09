@@ -30,7 +30,7 @@
 
 from perceval.utils import PersistentData, LoggerConfig
 from perceval.utils.logging import ExqaliburLogger
-from perceval.runtime.remote_config import RemoteConfig
+from perceval.runtime.remote_config import RemoteConfig, QUANDELA_CLOUD_URL
 
 
 class RemoteConfigForTest(RemoteConfig):

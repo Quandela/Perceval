@@ -26,8 +26,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
-
 import sys
 
 from perceval.backends import ABackend, ASamplingBackend, BACKEND_LIST
@@ -38,7 +36,6 @@ from .abstract_processor import AProcessor, ProcessorType
 from .experiment import Experiment
 from .linear_circuit import ACircuit, Circuit
 from .source import Source
-from .unitary_components import PS
 
 
 class Processor(AProcessor):
@@ -64,6 +61,9 @@ class Processor(AProcessor):
                  noise: NoiseModel = None, name: str = "Local processor"):
         if not isinstance(m_circuit, Experiment):
             m_circuit = Experiment(m_circuit, noise=noise, name=name)
+        elif noise:
+            m_circuit = m_circuit.copy()  # Create a copy so that we don't change the input experiment
+            m_circuit.noise = noise
         super().__init__(m_circuit)
 
         self._init_backend(backend)
