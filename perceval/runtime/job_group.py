@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import inspect
 import os
 import json
 import time
@@ -461,30 +462,36 @@ class JobGroup:
                           rerun=True,
                           replace_failed_jobs=replace_failed_jobs)
 
-    def launch_async_jobs(self, concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count()):
+    def launch_async_jobs(self, concurrent_job_count = None):
         """
         Launches up to concurrent_job_count jobs and returns without waiting for job completion.
 
         :concurrent_job_count: maximum number of concurrent jobs
         """
-        jobs_to_run = self.list_unsent_jobs()
-        if concurrent_job_count:
-            jobs_to_run = jobs_to_run[:concurrent_job_count]
+        if not concurrent_job_count:
+            concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count()
+        if not concurrent_job_count:
+            get_logger().warn(f"{inspect.currentframe().f_code.co_name}: no job will be run as there is no slot available")
+        jobs_to_run = self.list_unsent_jobs()[:concurrent_job_count]
 
         for job in jobs_to_run:
             job.execute_async()
             self._write_to_file()   # save data after each job (rerun/execution) at launch
+        get_logger().info("{}(): {} jobs launched / {} unsent jobs remaining".format(
+                           inspect.currentframe().f_code.co_name, len(jobs_to_run), len(self.list_unsent_jobs())))
 
-    def relaunch_async_failed_jobs(self, replace_failed_jobs=True, concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count()):
+    def relaunch_async_failed_jobs(self, replace_failed_jobs=True, concurrent_job_count = None):
         """
         Relaunches up to concurrent_job_count failed jobs and returns without waiting for job completion.
 
         :concurrent_job_count: maximum number of concurrent jobs
         :replace_failed_jobs: replace the rerun jobs in the jobgroup, else keep the failed in addition of the rerun ones
         """
-        jobs_to_run = self.list_unsuccessful_jobs()
-        if concurrent_job_count:
-            jobs_to_run = jobs_to_run[:concurrent_job_count]
+        if not concurrent_job_count:
+            concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count()
+        if concurrent_job_count == 0:
+            get_logger().warn(f"{inspect.currentframe().f_code.co_name}: no job will be run as there is no slot available")
+        jobs_to_run = self.list_unsuccessful_jobs()[:concurrent_job_count]
 
         for job in jobs_to_run:
             index = self._jobs.index(job)
@@ -495,6 +502,8 @@ class JobGroup:
                 self._jobs.append(job)
 
             self._write_to_file()   # save data after each job (rerun/execution) at launch
+        get_logger().info("{}(): {} jobs launched / {} unsent jobs remaining".format(
+                           inspect.currentframe().f_code.co_name, len(jobs_to_run), len(self.list_unsent_jobs())))
 
     def get_results(self) -> list[dict]:
         """
