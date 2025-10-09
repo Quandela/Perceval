@@ -77,6 +77,7 @@ class RPCHandler:
         return f'{self.url}/{endpoint.strip("/")}{endpath}'
 
     def get_request(self, endpoint: str) -> None | dict:
+        # requests may throw an IO Exception, let the user deal with it
         try:
             resp = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)
             resp.raise_for_status()
@@ -93,6 +94,7 @@ class RPCHandler:
             raise requests.HTTPError(f"Could not read json response from url: {endpoint}. \n{e}")
 
     def post_request(self, endpoint: str, payload: dict | None, with_json_response: bool) -> None | dict:
+        # requests may throw an IO Exception, let the user deal with it
         try:
             request = requests.post(endpoint, headers=self.headers, json=payload, timeout=self.request_timeout, proxies=self.proxies)
         except Exception as e:
@@ -174,8 +176,4 @@ class RPCHandler:
         :return: The availability of the token
         """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_AVAILABILITY)
-
-        # requests may throw an IO Exception, let the user deal with it
-        res = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)
-        res.raise_for_status()
-        return res.json()
+        return self.get_request(endpoint)
