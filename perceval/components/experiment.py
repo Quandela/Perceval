@@ -218,6 +218,8 @@ class Experiment:
             self._postselect = None
 
     def __deepcopy__(self, memo):
+        if id(self) in memo:
+            return memo[id(self)]
         cls = self.__class__
         obj = cls.__new__(cls)
         memo[id(self)] = obj
