@@ -281,9 +281,9 @@ class RemoteJob(Job):
             get_logger().info(f"Programmatically request job {self._id} cancellation", channel.general)
             try:
                 self._rpc_handler.cancel_job(self._id)
-                self._job_status.stop_run(RunningStatus.CANCEL_REQUESTED, 'Cancellation requested by user')
-            except Exception as e:
-                raise type(e)(str(e)) from None
+            except HTTPError as e:
+                raise HTTPError(f"Error while trying to cancel job: {e}") from None
+            self._job_status.stop_run(RunningStatus.CANCEL_REQUESTED, 'Cancellation requested by user')
         else:
             raise RuntimeError('Job is not waiting or running, cannot cancel it')
 
@@ -301,8 +301,8 @@ class RemoteJob(Job):
         job_dict = self._to_dict()
         try:
             job_dict['id'] = self._rpc_handler.rerun_job(self._id)
-        except Exception as e:
-            raise type(e)(str(e)) from None
+        except HTTPError as e:
+            raise HTTPError(f"Error while trying to rerun job: {e}") from None
         job_dict['status'] = RunningStatus.WAITING.name
         return RemoteJob._from_dict(job_dict, self._rpc_handler)
 
@@ -311,8 +311,8 @@ class RemoteJob(Job):
             return self._results
         try:
             response = self._rpc_handler.get_job_results(self._id)
-        except Exception as e:
-            raise type(e)(str(e)) from None
+        except HTTPError as e:
+            raise HTTPError(f"Error while retrieving job results: {e}") from None
         self._results = deserialize(json.loads(response['results']))
         if not isinstance(self._results, dict):
             self._results = None

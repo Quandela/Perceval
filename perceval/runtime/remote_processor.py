@@ -28,6 +28,8 @@
 # SOFTWARE.
 from __future__ import annotations
 
+from requests import HTTPError
+
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import ACircuit, Processor, AComponent,  Experiment, IDetector, Detector
 from perceval.utils import FockState, NoiseModel
@@ -146,8 +148,8 @@ class RemoteProcessor(AProcessor):
     def fetch_data(self):
         try:
             platform_details = self._rpc_handler.fetch_platform_details()
-        except Exception as e:
-            raise type(e)(str(e)) from None
+        except HTTPError as e:
+            raise HTTPError(f"Error while fecthing platform details: {e}") from None
         self._status = platform_details.get("status")
         platform_specs = deserialize(platform_details['specs'])
         self._specs.update(platform_specs)
