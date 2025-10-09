@@ -144,7 +144,10 @@ class RemoteProcessor(AProcessor):
         return True
 
     def fetch_data(self):
-        platform_details = self._rpc_handler.fetch_platform_details()
+        try:
+            platform_details = self._rpc_handler.fetch_platform_details()
+        except Exception as e:
+            raise type(e)(str(e)) from None
         self._status = platform_details.get("status")
         platform_specs = deserialize(platform_details['specs'])
         self._specs.update(platform_specs)

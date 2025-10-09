@@ -80,38 +80,36 @@ class RPCHandler:
             resp = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)
             resp.raise_for_status()
         except Exception as e:
-            error_info = ''.join(traceback.format_stack())
+            error_info = ''.join(traceback.format_stack()[:-1])
             get_logger().debug(error_info, channel.general)
-            raise SystemExit(e)
+            raise e
 
         try:
             return resp.json()
         except Exception as e:
-            error_info = ''.join(traceback.format_stack())
+            error_info = ''.join(traceback.format_stack()[:-1])
             get_logger().debug(error_info, channel.general)
-            raise SystemExit(f"Could not read json response from url: {endpoint}. \n{e}")
+            raise requests.HTTPError(f"Could not read json response from url: {endpoint}. \n{e}")
 
     def post_request(self, endpoint: str, payload: dict | None, with_json_response: bool) -> None | dict:
         try:
             request = requests.post(endpoint, headers=self.headers, json=payload, timeout=self.request_timeout, proxies=self.proxies)
         except Exception as e:
-            error_info = ''.join(traceback.format_stack())
+            error_info = ''.join(traceback.format_stack()[:-1])
             get_logger().debug(error_info, channel.general)
-            raise SystemExit(e)
+            raise e
 
         json_res = None
         if with_json_response:
             try:
                 json_res = request.json()
             except Exception as e:
-                error_info = ''.join(traceback.format_stack())
-                get_logger().debug(error_info, channel.general)
-                raise SystemExit(e)
+                json_res = {'error': f'{e}'}
 
         if request.status_code != 200:
             error_info = ''.join(traceback.format_stack())
             get_logger().debug(error_info, channel.general)
-            raise SystemExit(f"Url: {endpoint} answered with status code {request.status_code}.")
+            raise requests.HTTPError(f"Url: {endpoint} answered with status code {request.status_code}.")
 
         return json_res
 
