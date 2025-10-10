@@ -26,7 +26,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import inspect
 import os
 import json
 import time
@@ -471,14 +470,15 @@ class JobGroup:
         if not concurrent_job_count:
             concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count()
         if not concurrent_job_count:
-            get_logger().warn(f"{inspect.currentframe().f_code.co_name}: no job will be run as there is no slot available")
+            get_logger().warn(f"{self.name}: no job will be run as there is no slot available")
         jobs_to_run = self.list_unsent_jobs()[:concurrent_job_count]
 
         for job in jobs_to_run:
             job.execute_async()
             self._write_to_file()   # save data after each job (rerun/execution) at launch
-        get_logger().info("{}(): {} jobs launched / {} unsent jobs remaining".format(
-                           inspect.currentframe().f_code.co_name, len(jobs_to_run), len(self.list_unsent_jobs())))
+        n1 = len(jobs_to_run)
+        n2 = len(self.list_unsent_jobs())
+        get_logger().info(f"{self.name}: {n1} jobs launched / {n2} unsent jobs remaining")
 
     def relaunch_async_failed_jobs(self, replace_failed_jobs=True, concurrent_job_count = None):
         """
@@ -490,7 +490,7 @@ class JobGroup:
         if not concurrent_job_count:
             concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count()
         if concurrent_job_count == 0:
-            get_logger().warn(f"{inspect.currentframe().f_code.co_name}: no job will be run as there is no slot available")
+            get_logger().warn(f"{self.name}: no job will be run as there is no slot available")
         jobs_to_run = self.list_unsuccessful_jobs()[:concurrent_job_count]
 
         for job in jobs_to_run:
@@ -502,8 +502,9 @@ class JobGroup:
                 self._jobs.append(job)
 
             self._write_to_file()   # save data after each job (rerun/execution) at launch
-        get_logger().info("{}(): {} jobs launched / {} unsent jobs remaining".format(
-                           inspect.currentframe().f_code.co_name, len(jobs_to_run), len(self.list_unsent_jobs())))
+        n1 = len(jobs_to_run)
+        n2 = len(self.list_unsent_jobs())
+        get_logger().info(f"{self.name}: {n1} jobs launched / {n2} unsent jobs remaining")
 
     def get_results(self) -> list[dict]:
         """
