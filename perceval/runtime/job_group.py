@@ -373,10 +373,11 @@ class JobGroup:
             while jobs_to_run and len(awaited_jobs) < maximal_concurent_jobs:
                 time.sleep(delay)
                 job = jobs_to_run.pop()
+                job.set_job_group_name(self.name)
                 if job.status.failed:
-                    index = self._jobs.index(job)
                     job = job.rerun()
                     if replace_failed_jobs:
+                        index = self._jobs.index(job)
                         self._jobs[index] = job
                     else:
                         self._jobs.append(job)
@@ -474,6 +475,7 @@ class JobGroup:
         jobs_to_run = self.list_unsent_jobs()[:concurrent_job_count]
 
         for job in jobs_to_run:
+            job.set_job_group_name(self.name)
             job.execute_async()
             self._write_to_file()   # save data after each job (rerun/execution) at launch
         get_logger().info(f"{self.name}: {len(jobs_to_run)} jobs launched"
@@ -493,9 +495,10 @@ class JobGroup:
         jobs_to_run = self.list_unsuccessful_jobs()[:concurrent_job_count]
 
         for job in jobs_to_run:
-            index = self._jobs.index(job)
+            job.set_job_group_name(self.name)
             job = job.rerun()
             if replace_failed_jobs:
+                index = self._jobs.index(job)
                 self._jobs[index] = job
             else:
                 self._jobs.append(job)
