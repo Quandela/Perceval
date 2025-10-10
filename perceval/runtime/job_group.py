@@ -476,9 +476,8 @@ class JobGroup:
         for job in jobs_to_run:
             job.execute_async()
             self._write_to_file()   # save data after each job (rerun/execution) at launch
-        n1 = len(jobs_to_run)
-        n2 = len(self.list_unsent_jobs())
-        get_logger().info(f"{self.name}: {n1} jobs launched / {n2} unsent jobs remaining")
+        get_logger().info(f"{self.name}: {len(jobs_to_run)} jobs launched"
+                          f" / {len(self.list_unsent_jobs())} unsent jobs remaining")
 
     def relaunch_async_failed_jobs(self, replace_failed_jobs=True, concurrent_job_count = None):
         """
@@ -502,9 +501,8 @@ class JobGroup:
                 self._jobs.append(job)
 
             self._write_to_file()   # save data after each job (rerun/execution) at launch
-        n1 = len(jobs_to_run)
-        n2 = len(self.list_unsent_jobs())
-        get_logger().info(f"{self.name}: {n1} jobs launched / {n2} unsent jobs remaining")
+        get_logger().info(f"{self.name}: {len(jobs_to_run)} jobs launched"
+                          f" / {len(self.list_unsent_jobs())} unsent jobs remaining")
 
     def get_results(self) -> list[dict]:
         """
