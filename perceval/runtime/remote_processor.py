@@ -26,6 +26,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from requests import HTTPError
+
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import ACircuit, Processor, AComponent,  Experiment, Detector
 from perceval.utils import FockState, NoiseModel
@@ -143,7 +145,10 @@ class RemoteProcessor(AProcessor):
         return True
 
     def fetch_data(self):
-        platform_details = self._rpc_handler.fetch_platform_details()
+        try:
+            platform_details = self._rpc_handler.fetch_platform_details()
+        except HTTPError as e:
+            raise HTTPError(f"Error while fecthing platform details: {e}") from None
         self._status = platform_details.get("status")
         platform_specs = deserialize(platform_details['specs'])
         self._specs.update(platform_specs)
