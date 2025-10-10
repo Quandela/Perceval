@@ -66,9 +66,9 @@ def test_load(mock_write_file: MagicMock):
         'id': None,
         'name': "my_job",
         'status': None,
-        'body': {
-            'payload': {'job_context': None},
-            'job_name': "my_job"},
+        'job_context': None,
+        'request_data':  {'payload': {}},
+        'delta_parameters': {'command': {}, 'mapping': {}},
         'metadata': {
             'headers': RPC_HANDLER.headers,
             'platform': RPC_HANDLER.name,
@@ -90,6 +90,8 @@ def test_load(mock_write_file: MagicMock):
     for key, value in last_saved_jg_dict.items():
         if key == 'modified_date':
             assert jg_dict[key] < value
+        elif key == 'request_data':
+            assert jg_dict['body'] == value, f"Failed for key {key}: {jg_dict['body']} != {value}"
         else:
             assert jg_dict[key] == value, f"Failed for key {key}: {jg_dict[key]} != {value}"
 
@@ -114,9 +116,9 @@ def test_add(mock_write_file):
         'id': None,
         'name': job_name,
         'status': None,
-        'body': {
-            'payload': {'job_context': None},
-            'job_name': job_name},
+        'job_context': None,
+        'request_data':  {'payload': {}},
+        'delta_parameters': {'command': {}, 'mapping': {}},
         'metadata': {
             'headers': RPC_HANDLER.headers,
             'platform': RPC_HANDLER.name,
@@ -125,7 +127,6 @@ def test_add(mock_write_file):
     }
 
     for i, job_info in enumerate(jg._to_json()['job_group_data']):
-        remote_job_dict['body']['job_name'] = job_name + str(i)
         remote_job_dict['name'] = job_name + str(i)
         assert job_info == remote_job_dict
 
@@ -327,3 +328,44 @@ def test_rerun(mock_write_file):
     assert jg.progress() == {'Total': 6,
                              'Finished': [5, {'successful': 5, 'unsuccessful': 0}],
                              'Unfinished': [1, {'sent': 0, 'not sent': 1}]}
+
+
+@pytest.mark.long_test
+@patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
+def test_launch_async(mock_write_file):
+    rpc_handler_responses_builder = RPCHandlerResponsesBuilder(RPC_HANDLER)
+    rpc_handler_responses_builder.set_job_status_sequence(
+        [RunningStatus.WAITING, RunningStatus.SUCCESS, RunningStatus.ERROR])
+
+    jg = JobGroup(TEST_JG_NAME)
+
+    for _ in range(13):
+        jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'my_remote_job'))
+
+    jg.launch_async_jobs(3)
+
+    assert jg.progress() == {'Total': 13,
+                             'Finished': [2, {'successful': 1, 'unsuccessful': 1}],
+                             'Unfinished': [11, {'sent': 1, 'not sent': 10}]}
+
+    rpc_handler_responses_builder.set_job_status_sequence([])
+    rpc_handler_responses_builder.set_default_job_status(RunningStatus.ERROR)
+
+    jg.launch_async_jobs()
+
+    assert jg.progress() == {'Total': 13,
+                             'Finished': [12, {'successful': 1, 'unsuccessful': 11}],
+                             'Unfinished': [1, {'sent': 1, 'not sent': 0}]}
+
+    rpc_handler_responses_builder.set_default_job_status(RunningStatus.SUCCESS)
+    jg.relaunch_async_failed_jobs(concurrent_job_count=3, replace_failed_jobs=False)
+
+    assert jg.progress() == {'Total': 16,
+                             'Finished': [15, {'successful': 4, 'unsuccessful': 11}],
+                             'Unfinished': [1, {'sent': 1, 'not sent': 0}]}
+
+    jg.relaunch_async_failed_jobs(replace_failed_jobs=True)
+
+    assert jg.progress() == {'Total': 16,
+                             'Finished': [15, {'successful': 15, 'unsuccessful': 0}],
+                             'Unfinished': [1, {'sent': 1, 'not sent': 0}]}
