@@ -342,12 +342,14 @@ def test_launch_async(mock_write_file):
     for _ in range(13):
         jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'my_remote_job'))
 
-    jg.launch_async_jobs(3)
+    rpc_handler_responses_builder.set_job_availability_count(3)
+    jg.launch_async_jobs()
 
     assert jg.progress() == {'Total': 13,
                              'Finished': [2, {'successful': 1, 'unsuccessful': 1}],
                              'Unfinished': [11, {'sent': 1, 'not sent': 10}]}
 
+    rpc_handler_responses_builder.set_job_availability_count(100)
     rpc_handler_responses_builder.set_job_status_sequence([])
     rpc_handler_responses_builder.set_default_job_status(RunningStatus.ERROR)
 
