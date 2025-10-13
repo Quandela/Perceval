@@ -34,6 +34,7 @@ import re
 import datetime
 from enum import Enum
 
+import requests
 import responses
 
 from perceval.runtime.rpc_handler import (
@@ -118,6 +119,7 @@ class RPCHandlerResponsesBuilder():
         self._job_status_sequence = []
         self._authorized_retry = authorized_retry
         self._custom_status_response = None
+        self.last_payload = {}
         responses.reset()
         self._set_default_responses()
 
@@ -181,7 +183,8 @@ class RPCHandlerResponsesBuilder():
             return status
         return self._job_status
 
-    def _create_job_callback(self, _) -> tuple[int, dict, str]:
+    def _create_job_callback(self, request: requests.PreparedRequest) -> tuple[int, dict, str]:
+        self.last_payload = json.loads(request.body) if request.body else {}
         status = self._get_job_status()
         if status is None:
             return (400, {"content-type": "application/json"}, "")
