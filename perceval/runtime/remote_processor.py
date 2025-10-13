@@ -250,7 +250,12 @@ class RemoteProcessor(AProcessor):
             return 1
 
         # Simulation with a noisy source (only losses)
-        exp = self.experiment.copy(param_values)
+        exp = self.experiment.copy()
+        if param_values is not None:
+            params = exp.get_circuit_parameters()
+            for param_name, value in param_values.items():
+                if param_name in params:
+                    params[param_name].set_value(value)
         lp = Processor("SLAP", exp, NoiseModel(transmittance=transmittance))
         lp.min_detected_photons_filter(1)
         if self._thresholded_output:

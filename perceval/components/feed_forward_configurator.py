@@ -172,9 +172,11 @@ class FFCircuitProvider(AFFConfigurator):
             circuit = circuit.experiment
 
         params = self._get_parameters(circuit, False, True)
-        for param_name, param in params.items():
-            if param_name in self._params and self._params[param_name].pid != param.pid and not param.fixed:
-                raise RuntimeError(f"two parameters with the name {param_name} in the configurator")
+        for _, param in params.items():
+            if not param.fixed:
+                for internal_p in param._params:
+                    if internal_p.name in self._params and internal_p is not self._params[internal_p.name]:
+                        raise RuntimeError(f"two parameters with the same name in the circuit {internal_p.name}")
 
         self._params.update(params)
 
