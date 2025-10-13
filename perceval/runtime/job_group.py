@@ -29,7 +29,10 @@
 import os
 import json
 import time
+from collections import defaultdict
 from datetime import datetime
+
+from requests import HTTPError
 from tqdm import tqdm
 
 from perceval.runtime import Job, RemoteJob, RunningStatus
@@ -367,12 +370,19 @@ class JobGroup:
         bar_format = '{percentage:3.0f}%|{bar}|{n_fmt}/{total_fmt}|{desc}'
         progress_bar = tqdm(total=len(jobs_to_run), bar_format=bar_format, desc="Successful: 0, Failed: 0")
 
-        maximal_concurent_jobs = concurrent_job_count or len(jobs_to_run)
+        availability = self._get_jobs_availability(jobs_to_run, concurrent_job_count)
 
         while jobs_to_run or awaited_jobs:
-            while jobs_to_run and len(awaited_jobs) < maximal_concurent_jobs:
+            # TODO: repair run_sequential
+            while jobs_to_run and any(availability[job._rpc_handler.token] for job in jobs_to_run):
                 time.sleep(delay)
-                job = jobs_to_run.pop()
+                job = jobs_to_run[-1]
+                token = job._rpc_handler.token
+                if availability[token] == 0:
+                    continue
+
+                availability[token] -= 1
+                jobs_to_run = jobs_to_run[:-1]
                 if job.status.failed:
                     index = self._jobs.index(job)
                     job = job.rerun()
@@ -387,6 +397,8 @@ class JobGroup:
                 self._write_to_file()   # save data after each job (rerun/execution) at launch
 
             time.sleep(STATUS_REFRESH_DELAY)
+
+            availability = self._get_jobs_availability(jobs_to_run, concurrent_job_count)
 
             just_finished_jobs = set()
             for job in awaited_jobs:
@@ -440,7 +452,7 @@ class JobGroup:
         RemoteConfig.set_cloud_maximal_job_count() should be set in accordance with the user pricing plan.
         Any remaining jobs in the group will not be sent.
         """
-        self._launch_wait_jobs(concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count(),
+        self._launch_wait_jobs(concurrent_job_count = None,
                           delay=0,
                           rerun=False)
 
@@ -456,7 +468,7 @@ class JobGroup:
         :param replace_failed_jobs: Indicates whether a new job created from a rerun should replace the previously
                                     failed job (defaults to True).
         """
-        self._launch_wait_jobs(concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count(),
+        self._launch_wait_jobs(concurrent_job_count = None,
                           delay=0,
                           rerun=True,
                           replace_failed_jobs=replace_failed_jobs)
@@ -465,44 +477,84 @@ class JobGroup:
         """
         Launches up to concurrent_job_count jobs and returns without waiting for job completion.
 
-        :concurrent_job_count: maximum number of concurrent jobs
+        :concurrent_job_count: maximum number of concurrent jobs for each token.
         """
-        if not concurrent_job_count:
-            concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count()
-        if not concurrent_job_count:
-            get_logger().warn(f"{self.name}: no job will be run as there is no slot available")
-        jobs_to_run = self.list_unsent_jobs()[:concurrent_job_count]
+        jobs_to_run = self.list_unsent_jobs()
 
+        launched = 0
+        availability = self._get_jobs_availability(jobs_to_run, concurrent_job_count)
         for job in jobs_to_run:
-            job.execute_async()
-            self._write_to_file()   # save data after each job (rerun/execution) at launch
-        get_logger().info(f"{self.name}: {len(jobs_to_run)} jobs launched"
+            token = job._rpc_handler.token
+            if availability[token] > 0:
+                availability[token] -= 1
+                launched += 1
+                job.execute_async()
+                self._write_to_file()  # save data after each job (rerun/execution) at launch
+
+        if not launched:
+            get_logger().warn(f"{self.name}: no job will be run as there is no slot available")
+
+        get_logger().info(f"{self.name}: {launched} jobs launched"
                           f" / {len(self.list_unsent_jobs())} unsent jobs remaining")
 
     def relaunch_async_failed_jobs(self, replace_failed_jobs=True, concurrent_job_count = None):
         """
         Relaunches up to concurrent_job_count failed jobs and returns without waiting for job completion.
 
-        :concurrent_job_count: maximum number of concurrent jobs
+        :concurrent_job_count: maximum number of concurrent jobs for each token.
         :replace_failed_jobs: replace the rerun jobs in the jobgroup, else keep the failed in addition of the rerun ones
         """
-        if not concurrent_job_count:
-            concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count()
-        if concurrent_job_count == 0:
-            get_logger().warn(f"{self.name}: no job will be run as there is no slot available")
-        jobs_to_run = self.list_unsuccessful_jobs()[:concurrent_job_count]
+        jobs_to_run = self.list_unsuccessful_jobs()
 
+        launched = 0
+        availability = self._get_jobs_availability(jobs_to_run, concurrent_job_count)
         for job in jobs_to_run:
-            index = self._jobs.index(job)
-            job = job.rerun()
-            if replace_failed_jobs:
-                self._jobs[index] = job
-            else:
-                self._jobs.append(job)
+            token = job._rpc_handler.token
+            if availability[token] > 0:
+                # This makes a bug: if two tokens point to the same account, their availabilities are the same
+                # The way to fix this is to call the availability at each job for which the registered availability is not 0
+                availability[token] -= 1
+                launched += 1
 
-            self._write_to_file()   # save data after each job (rerun/execution) at launch
+                index = self._jobs.index(job)
+                job = job.rerun()
+                if replace_failed_jobs:
+                    self._jobs[index] = job
+                else:
+                    self._jobs.append(job)
+
+                self._write_to_file()  # save data after each job (rerun/execution) at launch
+
+        if not launched:
+            get_logger().warn(f"{self.name}: no job will be run as there is no slot available")
+
         get_logger().info(f"{self.name}: {len(jobs_to_run)} jobs launched"
                           f" / {len(self.list_unsent_jobs())} unsent jobs remaining")
+
+    def _get_jobs_availability(self, jobs, concurrent_job_count = None):
+        # TODO: This makes a bug: if two tokens point to the same account, their availabilities are the same
+        #  One way to fix this is to call the availability at each job for which the registered availability is not 0
+        availability = {}
+        for job in jobs:
+
+            rpc_handler = job._rpc_handler
+            token = rpc_handler.token
+            if token not in availability:
+                try:
+                    response = rpc_handler.get_job_availability()
+                    nb_launchable = response["max_jobs_in_queue"] - response["num_jobs_in_queue"]
+                except HTTPError:
+                    if not concurrent_job_count:
+                        raise ValueError("Unable to determine number of concurrent jobs;"
+                                         " concurrent_job_count must be set manually")
+                    nb_launchable = concurrent_job_count
+
+                if concurrent_job_count:
+                    nb_launchable = min(concurrent_job_count, nb_launchable)
+
+                availability[token] = nb_launchable
+
+        return availability
 
     def get_results(self) -> list[dict]:
         """
