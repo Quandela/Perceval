@@ -152,7 +152,7 @@ def test_add_errors(mock_write_file):
 @pytest.mark.long_test
 @patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
 def test_classic_run(mock_write_file):
-    RPCHandlerResponsesBuilder(RPC_HANDLER)
+    rpc_handler_responses_builder = RPCHandlerResponsesBuilder(RPC_HANDLER)
     rj_nmb = 2
 
     jg = JobGroup(TEST_JG_NAME)
@@ -179,17 +179,19 @@ def test_classic_run(mock_write_file):
                               'Unfinished': [rj_nmb, {'sent': 0, 'not sent': rj_nmb}]}
 
     # Running jobs
+    rpc_handler_responses_builder.set_job_availability_count(2)
+
     jg.run_parallel()
     expected_write_call_count += 2 * rj_nmb
 
-    assert len(responses.calls) == 2 * rj_nmb
+    assert len(responses.calls) == 2 * rj_nmb + 1  # 1 for token availability call
     assert mock_write_file.call_count == expected_write_call_count
 
     group_progress = jg.progress()
 
-    assert len(responses.calls) == rj_nmb * 2
+    assert len(responses.calls) == 2 * rj_nmb + 1
     assert all([CloudEndpoint.from_response(call.response) ==
-               CloudEndpoint.JobStatus for call in responses.calls[rj_nmb:]])
+               CloudEndpoint.JobStatus for call in responses.calls[rj_nmb + 1:]])
     assert mock_write_file.call_count == expected_write_call_count
 
     assert group_progress == {'Total': rj_nmb,
@@ -204,7 +206,7 @@ def test_classic_run(mock_write_file):
 
     group_progress = jg.progress()
 
-    assert len(responses.calls) == rj_nmb * 2
+    assert len(responses.calls) == rj_nmb * 2 + 1
     assert mock_write_file.call_count == expected_write_call_count
 
     current_group_progress = {'Total': rj_nmb*2,
@@ -224,7 +226,7 @@ def test_classic_run(mock_write_file):
     new_jg._from_json(jg._to_json())
 
     # No call on load
-    assert len(responses.calls) == rj_nmb * 2
+    assert len(responses.calls) == rj_nmb * 2 + 1
     assert mock_write_file.call_count == expected_write_call_count
 
     group_progress = jg.progress()
@@ -232,7 +234,7 @@ def test_classic_run(mock_write_file):
     assert group_progress == current_group_progress
 
     # No call on load
-    assert len(responses.calls) == rj_nmb * 2
+    assert len(responses.calls) == rj_nmb * 2 + 1
     assert mock_write_file.call_count == expected_write_call_count
 
 
