@@ -375,9 +375,9 @@ class JobGroup:
                 job = jobs_to_run.pop()
                 job.set_job_group_name(self.name)
                 if job.status.failed:
+                    index = self._jobs.index(job)
                     job = job.rerun()
                     if replace_failed_jobs:
-                        index = self._jobs.index(job)
                         self._jobs[index] = job
                     else:
                         self._jobs.append(job)
@@ -496,9 +496,9 @@ class JobGroup:
 
         for job in jobs_to_run:
             job.set_job_group_name(self.name)
+            index = self._jobs.index(job)
             job = job.rerun()
             if replace_failed_jobs:
-                index = self._jobs.index(job)
                 self._jobs[index] = job
             else:
                 self._jobs.append(job)
