@@ -353,13 +353,15 @@ class JobGroup:
         """
         return [job for job in self._jobs if not job.was_sent]
 
-    def _launch_wait_jobs(self, concurrent_job_count: int | None, delay: float, rerun: bool, replace_failed_jobs: bool = False) -> None:
+    def _launch_wait_jobs(self, concurrent_job_count: int | None, delay: float, rerun: bool, replace_failed_jobs: bool = False,
+                          sequential = False) -> None:
         """
         Launches or reruns jobs in the group on Cloud in a parallel/sequential manner.
 
         :concurrent_job_count: maximum number of concurrent jobs
         :param delay: number of seconds to wait between the launch of two consecutive jobs on cloud
         :param rerun: if True rerun failed jobs or run unsent jobs
+        :param sequential: if True, only one job is run at a time, including if several tokens have job availability
         :replace_failed_jobs: replace the rerun jobs in the jobgroup, else keep the failed in addition of the rerun ones
         """
         jobs_to_run = self.list_unsuccessful_jobs() if rerun else self.list_unsent_jobs()
@@ -373,16 +375,13 @@ class JobGroup:
         availability = self._get_jobs_availability(jobs_to_run, concurrent_job_count)
 
         while jobs_to_run or awaited_jobs:
-            # TODO: repair run_sequential
-            while jobs_to_run and any(availability[job._rpc_handler.token] for job in jobs_to_run):
+            while any(availability[(job := j)._rpc_handler.token] for j in jobs_to_run):
                 time.sleep(delay)
-                job = jobs_to_run[-1]
-                token = job._rpc_handler.token
-                if availability[token] == 0:
-                    continue
 
+                token = job._rpc_handler.token
                 availability[token] -= 1
-                jobs_to_run = jobs_to_run[:-1]
+                jobs_to_run.remove(job)
+
                 if job.status.failed:
                     index = self._jobs.index(job)
                     job = job.rerun()
@@ -395,6 +394,9 @@ class JobGroup:
 
                 awaited_jobs.add(job)
                 self._write_to_file()   # save data after each job (rerun/execution) at launch
+
+                if sequential:
+                    break
 
             time.sleep(STATUS_REFRESH_DELAY)
 
@@ -425,8 +427,9 @@ class JobGroup:
         :param delay: number of seconds to wait between launching jobs on cloud
         """
         self._launch_wait_jobs(rerun=False,
-                          concurrent_job_count = 1,
-                          delay=delay)
+                               concurrent_job_count=1,
+                               delay=delay,
+                               sequential=True)
 
     def rerun_failed_sequential(self, delay: float, replace_failed_jobs=True) -> None:
         """
@@ -438,9 +441,10 @@ class JobGroup:
                                     failed job (defaults to True).
         """
         self._launch_wait_jobs(rerun=True,
-                          concurrent_job_count = 1,
-                          delay=delay,
-                          replace_failed_jobs=replace_failed_jobs)
+                               concurrent_job_count=1,
+                               delay=delay,
+                               replace_failed_jobs=replace_failed_jobs,
+                               sequential=True)
 
     def run_parallel(self) -> None:
         """
@@ -452,9 +456,9 @@ class JobGroup:
         RemoteConfig.set_cloud_maximal_job_count() should be set in accordance with the user pricing plan.
         Any remaining jobs in the group will not be sent.
         """
-        self._launch_wait_jobs(concurrent_job_count = None,
-                          delay=0,
-                          rerun=False)
+        self._launch_wait_jobs(concurrent_job_count=None,
+                               delay=0,
+                               rerun=False)
 
     def rerun_failed_parallel(self, replace_failed_jobs=True) -> None:
         """
@@ -469,9 +473,9 @@ class JobGroup:
                                     failed job (defaults to True).
         """
         self._launch_wait_jobs(concurrent_job_count = None,
-                          delay=0,
-                          rerun=True,
-                          replace_failed_jobs=replace_failed_jobs)
+                               delay=0,
+                               rerun=True,
+                               replace_failed_jobs=replace_failed_jobs)
 
     def launch_async_jobs(self, concurrent_job_count = None):
         """
