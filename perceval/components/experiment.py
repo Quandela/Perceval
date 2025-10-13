@@ -218,7 +218,8 @@ class Experiment:
             self._postselect = None
 
     def __deepcopy__(self, memo):
-        # Do not call this directly; call self.copy()
+        if id(self) in memo:
+            return memo[id(self)]
         cls = self.__class__
         obj = cls.__new__(cls)
         memo[id(self)] = obj
@@ -230,26 +231,13 @@ class Experiment:
             pass
         return obj
 
-    def copy(self, subs: dict | list = None) -> Experiment:
+    def copy(self) -> Experiment:
         """
         Performs a deep copy of the current experiment.
-
-        :param subs: Substitution dictionary or list of named parameters. If a list is passed, then parameters will be
-                     substituted in the order they were introduced in the ``Experiment``.
-                     If a dictionary is passed, it maps variable names (keys) to either a numerical value or a
-                     ``Parameter``.
         :return: A copy of this experiment.
         """
         get_logger().debug(f"Copy experiment {self.name}", channel.general)
-        if subs is None:
-            subs = {}
-        Experiment._no_copiable_attributes.add("_components")
-        new_exp = copy.deepcopy(self)
-        Experiment._no_copiable_attributes.remove("_components")
-        new_exp._components = []
-        for r, c in self._components:
-            new_exp._components.append((r, c.copy(subs=subs)))
-        return new_exp
+        return copy.deepcopy(self)
 
     def set_circuit(self, circuit: ACircuit):
         r"""
@@ -388,9 +376,11 @@ class Experiment:
 
     def _validate_new_parameters(self, new_params: dict[str, Parameter]):
         self_params = self.get_circuit_parameters()
-        for param_name, param in new_params.items():
-            if param_name in self_params and self_params[param_name].pid != param.pid and not param.fixed:
-                raise RuntimeError(f"The experiment already owns a parameter named {param_name}")
+        for _, param in new_params.items():
+            if not param.fixed:
+                for internal_p in param._params:
+                    if internal_p.name in self_params and internal_p is not self_params[internal_p.name]:
+                        raise RuntimeError(f"The experiment already owns a parameter named {internal_p.name}")
 
     def _compose_experiment(self, connector: ModeConnector, experiment: Experiment, keep_port: bool):
         self._validate_new_parameters(experiment.get_circuit_parameters())

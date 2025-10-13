@@ -98,7 +98,7 @@ class LocalJob(Job):
         if 'progress_callback' in kwargs:
             self._user_cb = kwargs['progress_callback']
         self._delta_parameters['command']['progress_callback'] = self._progress_cb
-        self._handle_params(args, kwargs)
+        self._handle_params(*args, **kwargs)
         self._call_fn_safe(**self._delta_parameters['command'])
         return self.get_results()
 
@@ -123,7 +123,7 @@ class LocalJob(Job):
         if 'progress_callback' in kwargs:
             self._user_cb = kwargs['progress_callback']
         self._delta_parameters['command']['progress_callback'] = self._progress_cb
-        self._handle_params(args, kwargs)
+        self._handle_params(*args, **kwargs)
         self._status.start_run()
         # we are launching the function in a separate thread
         self._worker = threading.Thread(target=self._call_fn_safe, kwargs=self._delta_parameters['command'])

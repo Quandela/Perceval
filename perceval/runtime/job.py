@@ -57,7 +57,7 @@ class Job(ABC):
             raise TypeError("A job name must be a string")
         self._name = new_name if len(new_name) > 0 else "unnamed"
 
-    def _handle_params(self, args, kwargs):
+    def _handle_params(self, *args, **kwargs):
         """Handle args and kwargs parameters from __call__, execute_sync or execute_async
         Split parameters between the command and the post-process function (mapping),
         See: self._delta_parameters and self._param_names

@@ -180,11 +180,9 @@ class AProcessor(ABC):
             return self.experiment.post_select_fn(state)
         return True
 
-    def copy(self, subs: dict | list = None):
+    def copy(self):
         get_logger().debug(f"Copy processor {self.name}", channel.general)
-        new_proc = copy.copy(self)
-        new_proc.experiment = self.experiment.copy()
-        return new_proc
+        return copy.deepcopy(self)
 
     def set_circuit(self, circuit: ACircuit) -> AProcessor:
         r"""
