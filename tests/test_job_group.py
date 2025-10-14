@@ -152,7 +152,7 @@ def test_add_errors(mock_write_file):
 @pytest.mark.long_test
 @patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
 def test_classic_run(mock_write_file):
-    RPCHandlerResponsesBuilder(RPC_HANDLER)
+    rpc_handler_responses_builder = RPCHandlerResponsesBuilder(RPC_HANDLER)
     rj_nmb = 2
 
     jg = JobGroup(TEST_JG_NAME)
@@ -184,6 +184,7 @@ def test_classic_run(mock_write_file):
 
     assert len(responses.calls) == 2 * rj_nmb
     assert mock_write_file.call_count == expected_write_call_count
+    assert rpc_handler_responses_builder.last_payload.get("job_group_name") == TEST_JG_NAME
 
     group_progress = jg.progress()
 
@@ -278,6 +279,8 @@ def test_run_advance(mock_write_file):
 
     jg.run_parallel()
 
+    assert rpc_handler_responses_builder.last_payload.get("job_group_name") == TEST_JG_NAME
+
     jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'my_remote_job'))
 
     rpc_handler_responses_builder.set_job_status_sequence([])
@@ -307,6 +310,8 @@ def test_rerun(mock_write_file):
         jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'my_remote_job'))
 
     jg.run_parallel()
+
+    assert rpc_handler_responses_builder.last_payload.get("job_group_name") == TEST_JG_NAME
 
     jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'my_remote_job'))
 
@@ -343,6 +348,8 @@ def test_launch_async(mock_write_file):
         jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'my_remote_job'))
 
     jg.launch_async_jobs(3)
+
+    assert rpc_handler_responses_builder.last_payload.get("job_group_name") == TEST_JG_NAME
 
     assert jg.progress() == {'Total': 13,
                              'Finished': [2, {'successful': 1, 'unsuccessful': 1}],
