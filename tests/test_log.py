@@ -31,9 +31,9 @@ import json
 from unittest.mock import patch
 
 import perceval as pcvl
+from perceval.utils import LoggerConfig
 from perceval.utils.logging import ExqaliburLogger, PythonLogger, level, channel
 
-from _mock_persistent_data import LoggerConfigForTest
 from _mock_rpc_handler import get_rpc_handler_for_tests
 
 DEFAULT_CONFIG = {'use_python_logger': False, 'enable_file': False,
@@ -41,8 +41,9 @@ DEFAULT_CONFIG = {'use_python_logger': False, 'enable_file': False,
 
 
 @patch.object(ExqaliburLogger, "apply_config")
-def test_logger_config(mock_apply_config, tmp_path):
-    logger_config = LoggerConfigForTest(tmp_path)
+def test_logger_config(mock_apply_config, tmp_path, monkeypatch):
+    monkeypatch.setenv('PCVL_PERSISTENT_PATH', str(tmp_path))
+    logger_config = LoggerConfig()
     logger_config.reset()
     logger_config.save()
     assert dict(logger_config) == DEFAULT_CONFIG

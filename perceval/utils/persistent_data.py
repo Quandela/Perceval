@@ -42,7 +42,7 @@ class PersistentData:
     r"""
     PersistentData is a class that stores data on the drive to save data between launches of perceval.
     On init, it creates a directory (if it doesn't exist) for storing perceval persistent data.
-    This directory can be set via the parameter, or via an environment variable PCVL_PERSISTENT_PATH.
+    This directory can be set via an environment variable PCVL_PERSISTENT_PATH.
     Default directory depends on the os:
 
     * Linux: '/home/my_user/.local/share/perceval-quandela'
@@ -53,16 +53,14 @@ class PersistentData:
     If the configured directory or the temporary directory cannot be created or read/write in, an error will be raised.
     """
 
-    def __init__(self, directory = None):
+    def __init__(self):
         is_default_folder = False
-        self._directory = directory
-        if self._directory is None:
-            # first, try the env var
-            self._directory = os.getenv('PCVL_PERSISTENT_PATH')
-            if not self._directory:
-                # second, try the default folder
-                self._directory = PlatformDirs(PMetadata.package_name(), PMetadata.author()).user_data_dir
-                is_default_folder = True
+        # first, try the env var
+        self._directory = os.getenv('PCVL_PERSISTENT_PATH')
+        if not self._directory:
+            # second, try the default folder
+            self._directory = PlatformDirs(PMetadata.package_name(), PMetadata.author()).user_data_dir
+            is_default_folder = True
 
         if not self._safe_create_directory():
             if is_default_folder:
