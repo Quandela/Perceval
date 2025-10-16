@@ -87,7 +87,7 @@ class RemoteJob(Job):
     def __init__(self, request_data: dict, rpc_handler: RPCHandler, job_name: str,
                  delta_parameters: dict = None, job_context: dict = None,
                  command_param_names: list = None, refresh_progress_delay: int = 3):
-        super().__init__(delta_parameters=delta_parameters, command_param_names=command_param_names)
+        super().__init__(delta_parameters=make_serialized(delta_parameters), command_param_names=command_param_names)
         self._rpc_handler = make_serialized(rpc_handler)
         self._job_status = JobStatus()
         self._job_context = make_serialized(job_context)
