@@ -28,7 +28,7 @@
 # SOFTWARE.
 import sys
 
-from perceval.serialization import serialize
+from .serialize import serialize
 
 from multipledispatch import dispatch
 
@@ -37,6 +37,9 @@ class SerializedDict(dict):
     """
     Class that mimics a python dict, but internally stores serialized versions of the perceval objects given to it,
     so that json.dumps can always be called on this class (assuming this only contains python native and perceval objects)
+
+    The compression parameter is always the default one. If another value is wanted, call :code:`serialize`
+    with the wanted compression parameter before setting the key or value.
 
     Retrieving the value of a key will always return the serialized value.
     """
@@ -95,6 +98,9 @@ class SerializedList(list):
     """
     Class that mimics a python list, but internally stores serialized versions of the perceval objects given to it,
     so that json.dumps can always be called on this class (assuming this only contains python native and perceval objects)
+
+    The compression parameter is always the default one. If another value is wanted, call :code:`serialize`
+    with the wanted compression parameter before setting the key or value.
 
     Retrieving the value of a key will always return the serialized value.
     """

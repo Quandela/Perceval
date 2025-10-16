@@ -32,7 +32,7 @@ import json
 
 from perceval import FockState, NoiseModel
 from perceval.serialization import serialize
-from perceval.utils._serialized_containers import SerializedList, SerializedDict
+from perceval.serialization._serialized_containers import SerializedList, SerializedDict
 
 def test_basic_dict():
     # No Perceval object, no nested containers
@@ -69,6 +69,9 @@ def test_basic_dict():
     d["noise"] = nm
     assert d["noise"] == serialize(nm)
 
+    # Test jsonifiable
+    json.dumps(d)
+
 
 def test_basic_list():
     # No Perceval object, no nested containers
@@ -94,6 +97,9 @@ def test_basic_list():
 
     l2 = l + [nm]
     assert l2[-1] == serialize(nm)
+
+    # Test jsonifiable
+    json.dumps(l)
 
 
 def test_nested_containers():
