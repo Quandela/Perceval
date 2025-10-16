@@ -385,6 +385,7 @@ def test_cancel_all(mock_write_file):
 
     jg.launch_async_jobs(8)
 
+    # Unfinished jobs are required in order to cancel_all() doing something
     assert jg.progress() == {'Total': 13,
                              'Finished': [0, {'successful': 0, 'unsuccessful': 0}],
                              'Unfinished': [13, {'sent': 8, 'not sent': 5}]}
@@ -392,9 +393,3 @@ def test_cancel_all(mock_write_file):
     jg.cancel_all()
     ## We cannot check that the jobs were cancelled
     ## as the MockRPCHandler cannot modify the response for a given job
-
-    # rpc_handler_responses_builder.set_default_job_status(RunningStatus.CANCELED)
-
-    # assert jg.progress() == {'Total': 13,
-    #                          'Finished': [8, {'successful': 0, 'unsuccessful': 8}],
-    #                          'Unfinished': [5, {'sent': 0, 'not sent': 5}]}
