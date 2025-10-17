@@ -388,13 +388,14 @@ def test_launch_async(mock_write_file):
 def test_cancel_all(mock_write_file):
     rpc_handler_responses_builder = RPCHandlerResponsesBuilder(RPC_HANDLER)
     rpc_handler_responses_builder.set_default_job_status(RunningStatus.WAITING)
+    rpc_handler_responses_builder.set_job_availability_count(8)
 
     jg = JobGroup(TEST_JG_NAME)
 
     for _ in range(13):
         jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'my_remote_job'))
 
-    jg.launch_async_jobs(8)
+    jg.launch_async_jobs()
 
     # Unfinished jobs are required in order to cancel_all() doing something
     assert jg.progress() == {'Total': 13,
