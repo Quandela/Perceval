@@ -44,14 +44,19 @@ class SerializedDict(dict):
     Retrieving the value of a key will always return the serialized value.
     """
 
-    def __init__(self, seq=None, **kwargs):
-        d = dict(seq, **kwargs)
+    def __init__(self, *args, **kwargs):
+        d = dict(*args, **kwargs)
 
         for key, value in d.items():
             self[key] = value
 
     def __setitem__(self, key, value):
         return super().__setitem__(serialize(key), make_serialized(value))
+
+    def setdefault(self, key, default = None, /):
+        if key not in self:
+            self[key] = default
+        return self[key]
 
     def __delitem__(self, key):
         return super().__delitem__(serialize(key))
