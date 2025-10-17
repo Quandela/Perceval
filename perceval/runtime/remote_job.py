@@ -34,7 +34,7 @@ from requests.exceptions import HTTPError, ConnectionError
 
 from .job import Job
 from .job_status import JobStatus, RunningStatus
-from perceval.serialization import deserialize, serialize
+from perceval.serialization import deserialize
 from perceval.serialization._serialized_containers import make_serialized
 from perceval.utils.logging import get_logger, channel
 from .rpc_handler import RPCHandler
