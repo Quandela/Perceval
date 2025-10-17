@@ -164,6 +164,9 @@ class RemoteJob(Job):
 
         return job_info
 
+    def set_job_group_name(self, group_name: str):
+        self._request_data['job_group_name'] = group_name
+
     def _handle_status_error(self, error):
         """
         Handle a potentially non-blocking error

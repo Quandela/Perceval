@@ -377,6 +377,7 @@ class JobGroup:
             while any(availability[(job := j)._rpc_handler.token] for j in jobs_to_run):
                 time.sleep(delay)
 
+                job.set_job_group_name(self.name)
                 token = job._rpc_handler.token
                 availability[token] -= 1
                 jobs_to_run.remove(job)
@@ -483,6 +484,7 @@ class JobGroup:
             if availability[token] > 0:
                 availability[token] -= 1
                 launched += 1
+                job.set_job_group_name(self.name)
                 job.execute_async()
                 self._write_to_file()  # save data after each job (rerun/execution) at launch
 
@@ -512,6 +514,7 @@ class JobGroup:
                 availability[token] -= 1
                 launched += 1
 
+                job.set_job_group_name(self.name)
                 index = self._jobs.index(job)
                 job = job.rerun()
                 if replace_failed_jobs:
@@ -552,6 +555,18 @@ class JobGroup:
                 availability[token] = nb_launchable
 
         return availability
+
+    def cancel_all(self):
+        """
+        Cancels all started (already sent) jobs in the group.
+        """
+        for job in self._jobs:
+            if job.was_sent and not job._job_status.completed:
+                try:
+                    job.cancel()
+                except:
+                    pass
+                self._write_to_file()
 
     def get_results(self) -> list[dict]:
         """
