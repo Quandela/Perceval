@@ -51,13 +51,17 @@ class LocalJob(Job):
                  delta_parameters: dict = None,
                  command_param_names: list = None):
         super().__init__(result_mapping_function=result_mapping_function,
-                         delta_parameters=delta_parameters,
                          command_param_names=command_param_names)
+        self._delta_parameters = delta_parameters or {"command": {}, "mapping": {}}
         self._fn = fn
         self._status = JobStatus()
         self._worker = None
         self._user_cb = None
         self._cancel_requested = False
+
+    @property
+    def delta_parameters(self) -> dict:
+        return self._delta_parameters
 
     def set_progress_callback(self, callback: callable):  # Signature must be (float, str | None)
         """

@@ -35,7 +35,7 @@ from requests.exceptions import HTTPError, ConnectionError
 from .job import Job
 from .job_status import JobStatus, RunningStatus
 from perceval.serialization import deserialize
-from perceval.serialization._serialized_containers import make_serialized
+from perceval.serialization._serialized_containers import make_serialized, SerializedDict
 from perceval.utils.logging import get_logger, channel
 from .rpc_handler import RPCHandler
 
@@ -87,10 +87,11 @@ class RemoteJob(Job):
     def __init__(self, request_data: dict, rpc_handler: RPCHandler, job_name: str,
                  delta_parameters: dict = None, job_context: dict = None,
                  command_param_names: list = None, refresh_progress_delay: int = 3):
-        super().__init__(delta_parameters=make_serialized(delta_parameters), command_param_names=command_param_names)
+        super().__init__(command_param_names=command_param_names)
         self._rpc_handler = make_serialized(rpc_handler)
         self._job_status = JobStatus()
         self._job_context = make_serialized(job_context)
+        self._delta_parameters = make_serialized(delta_parameters or {"command": {}, "mapping": {}})
         self._refresh_progress_delay = refresh_progress_delay  # When syncing an async job (in s)
         self._previous_status_refresh = 0.
         self._status_refresh_error = 0
@@ -98,6 +99,10 @@ class RemoteJob(Job):
         self.name = job_name
         self._request_data = make_serialized(request_data)
         self._results = None
+
+    @property
+    def delta_parameters(self) -> SerializedDict:
+        return self._delta_parameters
 
     @property
     def was_sent(self) -> bool:
