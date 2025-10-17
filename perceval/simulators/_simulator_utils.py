@@ -130,14 +130,20 @@ def _unitary_components_to_circuit(component_list: list, m: int = 0):
     return circuit
 
 
-def _split_by_photon_count(sv: StateVector) -> SVDistribution:
+def _split_by_photon_and_tag_count(sv: StateVector) -> SVDistribution:
     """
-    Split a state vector into a SVDistribution such that each key of the SVD corresponds to one photon count
+    Split a state vector into a SVDistribution such that each key of the SVD corresponds
+    to one photon count and one noise tag count
     """
     counter = defaultdict(lambda: [StateVector(), 0])  # State and prob
     for state, pa in sv:
-        counter[state.n][0] += pa * state
-        counter[state.n][1] += abs(pa) ** 2
+        if isinstance(state, NoisyFockState):
+            split = state.split_state()
+            key = tuple(split[tag].n if tag in split else 0 for tag in range(max(split.keys()) + 1))
+        else:
+            key = state.n
+        counter[key][0] += pa * state
+        counter[key][1] += abs(pa) ** 2
 
     res = SVDistribution()
     for (state, prob) in counter.values():
