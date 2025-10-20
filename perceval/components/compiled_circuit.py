@@ -27,12 +27,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing_extensions import Self
+from __future__ import annotations
+from packaging.version import Version
 from perceval.components.abstract_component import AParametrizedComponent
 from perceval.utils.parameter import Parameter
 
 class ChipID:
-    def __init__(self, name: str, version: str = ""):
+    def __init__(self, name: str, version: Version | None = None):
         self._name = name
         self._version = version
 
@@ -41,7 +42,7 @@ class ChipID:
         return self._name
 
     @property
-    def version(self) -> int:
+    def version(self) -> Version:
         return self._version
 
 
@@ -52,7 +53,7 @@ class ChipParameters:
 
     def get_values(self) -> list[float]:
         result = None
-        if all(p.fixed for p in self._values):
+        if all(p.defined for p in self._values):
             result = []
             for p in self._values:
                 result.append(p.evalf())
@@ -64,7 +65,7 @@ class ChipParameters:
         for p, v in zip(self._values, val):
             p.set_value(val, force = True)
 
-    def need_compilation(self, other: Self) -> bool:
+    def need_compilation(self, other: ChipParameters) -> bool:
         if self._chipId.name != other._chipId.name:
             raise ValueError("Chip mismatch")
         if not (self._chipId.version and other._chipId._version):
