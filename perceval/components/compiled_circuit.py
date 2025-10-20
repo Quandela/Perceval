@@ -28,60 +28,52 @@
 # SOFTWARE.
 
 from __future__ import annotations
+import copy
 from packaging.version import Version
 from perceval.components.abstract_component import AParametrizedComponent
 from perceval.utils.parameter import Parameter
 
-class ChipID:
-    def __init__(self, name: str, version: Version | None = None):
-        self._name = name
-        self._version = version
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    @property
-    def version(self) -> Version:
-        return self._version
-
 
 class ChipParameters:
-    def __init__(self, chipId: ChipID, values: list[Parameter] = None):
-        self._chipId = chipId
-        self._values = values or []
+    def __init__(self, chipName: str, params: list[Parameter], version: Version | None = None):
+        self.chipName = chipName
+        self._params = params
+        self.version = version
 
-    def get_values(self) -> list[float]:
+    def get_values(self) -> list[float] | None:
         result = None
-        if all(p.defined for p in self._values):
+        if all(p.defined for p in self._params):
             result = []
-            for p in self._values:
+            for p in self._params:
                 result.append(p.evalf())
         return result
 
-    def set_values(self, val: list[float]) -> None:
-        if len(val) != len(self._values):
+    def set_values(self, values: list[float]) -> None:
+        if len(values) != len(self._params):
             raise "invalid parameters list"
-        for p, v in zip(self._values, val):
-            p.set_value(val, force = True)
+        for p, v in zip(self._params, values):
+            p.set_value(v, force = True)
 
     def need_compilation(self, other: ChipParameters) -> bool:
-        if self._chipId.name != other._chipId.name:
+        if self.chipName != other.chipName:
             raise ValueError("Chip mismatch")
-        if not (self._chipId.version and other._chipId._version):
+        if not (self.version and other.version):
             return False
 
         # Consider checking closeness of values
-        return self._chipId.version != other._chipId._version
+        return self.version != other.version
 
 
 class CompiledCircuit(AParametrizedComponent):
     def __init__(self, m: int, chipParameters: ChipParameters):
-        super().__init__(m, chipParameters.chipId.name)
+        super().__init__(m, chipParameters.chipName)
         self._chipParameters = chipParameters
+        for p in chipParameters._params:
+            self._set_parameter(p.name, copy.deepcopy(p), None, None)
 
     def setParams(self, chipParams: ChipParameters) -> None:
-        if chipParams._chipId != self._chipParameters._chipId:
+        if chipParams.chipName != self._chipParameters.chipName:
             raise ValueError("Chip mismatch")
-        for p in chipParams._values:
-            super.param(p.name).set_value(p.evalf(), force = True)
+        for p in chipParams._params:
+            if p.defined:
+                super().param(p.name).set_value(p.evalf(), force = True)
