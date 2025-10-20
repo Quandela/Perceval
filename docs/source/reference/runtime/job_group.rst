@@ -8,7 +8,7 @@ group will make sure all data can be retrieved from a single location.
 .. warning::
    JobGroups store their job data in the persistent data directory.
 
-   As these files can grow quite large, you will have to explicitely erase the ones you don't want to keep.
+   As these files can grow quite large, you will have to explicitly erase the ones you don't want to keep.
 
    JobGroup provides the following commands:
 
@@ -56,9 +56,12 @@ provide real-time updates on job execution. To run jobs sequentially with a give
 >>> jg = pcvl.JobGroup("compare_knill_and_ralph_cnot")  # Loads prepared experiment data
 >>> jg.run_sequential(0)  # Will send the 2nd job to the Cloud as soon as the first one is complete
 
-Other methods - :code:`jg.run_parallel()`, :code:`jg.rerun_failed_parallel()`, and :code:`jg.rerun_failed_sequential(delay)`.
+Other methods - :code:`jg.run_parallel()`, :code:`jg.rerun_failed_parallel()`, :code:`jg.rerun_failed_sequential(delay)`,
+:code:`jg.launch_async_jobs()`, and :code:`jg.relaunch_async_failed_jobs()`.
 
-.. note:: The :code:`jg.run_parallel()` method tries to start all jobs in the group on Cloud. An error will occur if it exceeds the limitations defined by the pricing plan (see `Quandela Cloud <https://cloud.quandela.com/pricing>`_).
+.. note:: The :code:`jg.run_parallel()` and `jg.launch_async_jobs()` methods try to start as many jobs as possible according to the pricing plan (see `Quandela Cloud <https://cloud.quandela.com/pricing>`_).
+          This number of jobs can be limited manually by setting the `concurrent_job_count` parameter of `jg.launch_async_jobs()`.
+          Note that for custom clouds that don't expose a way to retrieve the number of possible concurrent job, this parameter is mandatory.
 
 A third script can then prepared to analyze results:
 

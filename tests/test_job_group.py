@@ -179,18 +179,20 @@ def test_classic_run(mock_write_file):
                               'Unfinished': [rj_nmb, {'sent': 0, 'not sent': rj_nmb}]}
 
     # Running jobs
+    rpc_handler_responses_builder.set_job_availability_count(2)
+
     jg.run_parallel()
     expected_write_call_count += 2 * rj_nmb
 
-    assert len(responses.calls) == 2 * rj_nmb
+    assert len(responses.calls) == 2 * rj_nmb + 1  # 1 for token availability call
     assert mock_write_file.call_count == expected_write_call_count
     assert rpc_handler_responses_builder.last_payload.get("job_group_name") == TEST_JG_NAME
 
     group_progress = jg.progress()
 
-    assert len(responses.calls) == rj_nmb * 2
+    assert len(responses.calls) == 2 * rj_nmb + 1
     assert all([CloudEndpoint.from_response(call.response) ==
-               CloudEndpoint.JobStatus for call in responses.calls[rj_nmb:]])
+               CloudEndpoint.JobStatus for call in responses.calls[rj_nmb + 1:]])
     assert mock_write_file.call_count == expected_write_call_count
 
     assert group_progress == {'Total': rj_nmb,
@@ -205,7 +207,7 @@ def test_classic_run(mock_write_file):
 
     group_progress = jg.progress()
 
-    assert len(responses.calls) == rj_nmb * 2
+    assert len(responses.calls) == rj_nmb * 2 + 1
     assert mock_write_file.call_count == expected_write_call_count
 
     current_group_progress = {'Total': rj_nmb*2,
@@ -225,7 +227,7 @@ def test_classic_run(mock_write_file):
     new_jg._from_json(jg._to_json())
 
     # No call on load
-    assert len(responses.calls) == rj_nmb * 2
+    assert len(responses.calls) == rj_nmb * 2 + 1
     assert mock_write_file.call_count == expected_write_call_count
 
     group_progress = jg.progress()
@@ -233,7 +235,7 @@ def test_classic_run(mock_write_file):
     assert group_progress == current_group_progress
 
     # No call on load
-    assert len(responses.calls) == rj_nmb * 2
+    assert len(responses.calls) == rj_nmb * 2 + 1
     assert mock_write_file.call_count == expected_write_call_count
 
 
@@ -347,7 +349,8 @@ def test_launch_async(mock_write_file):
     for _ in range(13):
         jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'my_remote_job'))
 
-    jg.launch_async_jobs(3)
+    rpc_handler_responses_builder.set_job_availability_count(3)
+    jg.launch_async_jobs()
 
     assert rpc_handler_responses_builder.last_payload.get("job_group_name") == TEST_JG_NAME
 
@@ -355,6 +358,7 @@ def test_launch_async(mock_write_file):
                              'Finished': [2, {'successful': 1, 'unsuccessful': 1}],
                              'Unfinished': [11, {'sent': 1, 'not sent': 10}]}
 
+    rpc_handler_responses_builder.set_job_availability_count(100)
     rpc_handler_responses_builder.set_job_status_sequence([])
     rpc_handler_responses_builder.set_default_job_status(RunningStatus.ERROR)
 
@@ -384,13 +388,14 @@ def test_launch_async(mock_write_file):
 def test_cancel_all(mock_write_file):
     rpc_handler_responses_builder = RPCHandlerResponsesBuilder(RPC_HANDLER)
     rpc_handler_responses_builder.set_default_job_status(RunningStatus.WAITING)
+    rpc_handler_responses_builder.set_job_availability_count(8)
 
     jg = JobGroup(TEST_JG_NAME)
 
     for _ in range(13):
         jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'my_remote_job'))
 
-    jg.launch_async_jobs(8)
+    jg.launch_async_jobs()
 
     # Unfinished jobs are required in order to cancel_all() doing something
     assert jg.progress() == {'Total': 13,

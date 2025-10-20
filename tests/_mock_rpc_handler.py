@@ -46,6 +46,7 @@ from perceval.runtime.rpc_handler import (
     _ENDPOINT_PLATFORM_DETAILS,
     _ENDPOINT_JOB_RERUN,
     _JOB_ID_KEY,
+    _ENDPOINT_JOB_AVAILABILITY,
     quote_plus
 )
 from perceval.runtime.job_status import RunningStatus, JobStatus
@@ -119,6 +120,7 @@ class RPCHandlerResponsesBuilder():
         self._job_status_sequence = []
         self._authorized_retry = authorized_retry
         self._custom_status_response = None
+        self._job_availability_response = {"max_jobs_in_queue": 1, "num_jobs_in_queue": 0}
         self.last_payload = {}
         responses.reset()
         self._set_default_responses()
@@ -141,6 +143,7 @@ class RPCHandlerResponsesBuilder():
 
     def _set_default_responses(self) -> None:
         self._set_get_platform_details_responses()
+        self._set_job_availability_responses()
         for method, endpoint in [
             ('POST', _ENDPOINT_JOB_RERUN),
             ('POST', _ENDPOINT_JOB_CANCEL),
@@ -258,6 +261,11 @@ class RPCHandlerResponsesBuilder():
     def set_job_status_custom_responses(self, response: json) -> None:
         self._custom_status_response = response
 
+    def set_job_availability_count(self, count: int) -> None:
+        self._reset_job_availability_responses()
+        self._job_availability_response = {"max_jobs_in_queue": count, "num_jobs_in_queue": 0}
+        self._set_job_availability_responses()
+
     def remove_job_status_custom_responses(self) -> None:
         self._custom_status_response = None
 
@@ -283,6 +291,18 @@ class RPCHandlerResponsesBuilder():
             url=self._rpc_handler.url + _ENDPOINT_PLATFORM_DETAILS + quote_plus(self._rpc_handler.name),
             status=200,
             json=self._platform_info))
+
+    def _set_job_availability_responses(self) -> None:
+        responses.add(responses.Response(
+            method='GET',
+            url=self._rpc_handler.url + _ENDPOINT_JOB_AVAILABILITY[:-1],
+            status=200,
+            json=self._job_availability_response))
+
+    def _reset_job_availability_responses(self) -> None:
+        responses.remove(responses.Response(
+            method='GET',
+            url=self._rpc_handler.url + _ENDPOINT_JOB_AVAILABILITY[:-1]))
 
 
 def get_rpc_handler_for_tests(name: str = "sim:test", url: str = "https://test", token: str = "test_token") -> RPCHandler:
