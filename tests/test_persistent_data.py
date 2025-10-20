@@ -40,8 +40,9 @@ def test_directory():
     assert persistent_data.directory.endswith("perceval-quandela")
 
 
-def test_basic_methods(tmp_path):
-    persistent_data = PersistentData(directory=tmp_path)
+def test_basic_methods(tmp_path, monkeypatch):
+    monkeypatch.setenv('PCVL_PERSISTENT_PATH', str(tmp_path))
+    persistent_data = PersistentData()
     persistent_data.clear_all_data()
 
     assert os.path.exists(persistent_data.directory)
@@ -84,10 +85,12 @@ def test_basic_methods(tmp_path):
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="chmod doesn't works on windows")
-def test_access(tmp_path):
+def test_access(tmp_path, monkeypatch):
+    monkeypatch.setenv('PCVL_PERSISTENT_PATH', str(tmp_path))
+
     # pytest creates tmp_path with access mode depending on temp files management
 
-    persistent_data = PersistentData(directory=tmp_path) # tmp_path is already created, PersistentData will not create it here
+    persistent_data = PersistentData() # tmp_path is already created, PersistentData will not create it here
     # (if tmp_path was not created, it would have been created with mode=0o777 here)
     directory = persistent_data.directory
 
