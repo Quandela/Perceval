@@ -32,9 +32,9 @@ from perceval.components.abstract_component import AParametrizedComponent
 from perceval.utils.parameter import Parameter
 
 class ChipID:
-    def __init__(self, name, version: int = None):
+    def __init__(self, name: str, version: str = ""):
         self._name = name
-        self.version = version
+        self._version = version
 
     @property
     def name(self) -> str:
@@ -66,7 +66,7 @@ class ChipParameters:
 
     def need_compilation(self, other: Self) -> bool:
         if self._chipId.name != other._chipId.name:
-            raise "Chip mismatch"
+            raise ValueError("Chip mismatch")
         if not (self._chipId.version and other._chipId._version):
             return False
 
@@ -81,6 +81,6 @@ class CompiledCircuit(AParametrizedComponent):
 
     def setParams(self, chipParams: ChipParameters) -> None:
         if chipParams._chipId != self._chipParameters._chipId:
-            raise "Chip mismatch"
+            raise ValueError("Chip mismatch")
         for p in chipParams._values:
             super.param(p.name).set_value(p.evalf(), force = True)
