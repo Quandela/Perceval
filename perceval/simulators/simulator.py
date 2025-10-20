@@ -42,7 +42,7 @@ from perceval.utils.density_matrix_utils import extract_upper_triangle
 from perceval.utils.logging import get_logger
 from perceval.runtime import cancel_requested
 
-from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping, _split_by_photon_count, \
+from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping, _split_by_photon_and_tag_count, \
     _list_merge, _separate_state
 from ._simulate_detectors import simulate_detectors
 from .simulator_interface import ISimulator
@@ -543,7 +543,7 @@ class Simulator(ISimulator):
         to_add = SVDistribution()
         for sv, p in trimmed_svd.items():
             if len(sv) != 1 and len(sv.n) != 1:
-                new_svd = _split_by_photon_count(sv)
+                new_svd = _split_by_photon_and_tag_count(sv)
                 to_remove.add(sv)
                 for split_sv, ps in new_svd.items():
                     prob = p * ps
