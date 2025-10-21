@@ -33,14 +33,14 @@ from perceval.components.compiled_circuit import ChipParameters, CompiledCircuit
 from perceval.utils.parameter import Parameter
 import pytest
 
-def test_T():
+def test_need_compilation():
     chip_origin = ChipParameters("myChip", [Parameter("phi_1"), Parameter("phi_2"), Parameter("phi_3")], Version("1.0"))
 
     chip_newer = ChipParameters("myChip", [Parameter("phi_1"), Parameter("phi_2"), Parameter("phi_3")], Version("2.0"))
     assert not chip_origin.need_compilation(chip_origin)
     assert chip_origin.need_compilation(chip_newer)
 
-def test_copy():
+def test_parameters():
     chip_specifications = ChipParameters("myChip", [Parameter("phi_1"), Parameter("phi_2"), Parameter("phi_3")])
     circuit = CompiledCircuit(2, chip_specifications)
     assert len(circuit.get_parameters()) == 3
