@@ -26,17 +26,19 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from unittest.mock import patch
 
 import pytest
 import random
 import sympy as sp
 import numpy
 
-from _test_utils import assert_circuits_eq, assert_experiment_equals
+from _test_utils import assert_circuits_eq, assert_experiment_equals, LogChecker
 from perceval.components import ACircuit, Circuit, BSLayeredPPNR, Detector, BS, PS, TD, LC, Port, Herald, Experiment, \
     catalog, FFConfigurator, FFCircuitProvider
 from perceval.utils import Matrix, E, P, BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, StateVector, \
     NoiseModel, PostSelect, Encoding
+from perceval.utils.logging import ExqaliburLogger
 from perceval.serialization import serialize, deserialize, serialize_binary, deserialize_circuit, deserialize_matrix
 from perceval.serialization._parameter_serialization import serialize_parameter, deserialize_parameter
 import perceval.components.unitary_components as comp
@@ -409,3 +411,18 @@ def test_circuit_with_expression_serialization():
     p_a.set_value(a_value)
     p_b.set_value(b_value)
     assert numpy.allclose(c_deser.compute_unitary(), c.compute_unitary())
+
+@patch.object(ExqaliburLogger, "warn")
+def test_deserialize_unknown_object(mock_warn):
+    serial_unknown = ":PCVL:Unknown:byieozbfuizp"
+
+    with pytest.raises(NotImplementedError):
+        deserialize(serial_unknown)
+
+    with LogChecker(mock_warn):
+        assert deserialize(serial_unknown, strict=False) == serial_unknown
+
+    # Test within a container
+    container = [{serial_unknown: 1}]
+    with LogChecker(mock_warn):
+        assert deserialize(container, strict=False) == container

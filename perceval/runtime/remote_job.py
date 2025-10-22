@@ -329,7 +329,7 @@ class RemoteJob(Job):
             response = self._rpc_handler.get_job_results(self._id)
         except HTTPError as e:
             raise HTTPError(f"Error while retrieving job results: {e}") from None
-        self._results = deserialize(json.loads(response['results']))
+        self._results = deserialize(json.loads(response['results']), strict=False)
         if not isinstance(self._results, dict):
             self._results = None
             return self._results
