@@ -148,9 +148,9 @@ class RemoteProcessor(AProcessor):
         try:
             platform_details = self._rpc_handler.fetch_platform_details()
         except HTTPError as e:
-            raise HTTPError(f"Error while fecthing platform details: {e}") from None
+            raise HTTPError(f"Error while fetching platform details: {e}") from None
         self._status = platform_details.get("status")
-        platform_specs = deserialize(platform_details['specs'])
+        platform_specs = deserialize(platform_details['specs'], strict=False)
         self._specs.update(platform_specs)
         if PERFS_KEY in platform_details:
             self._perfs.update(platform_details[PERFS_KEY])

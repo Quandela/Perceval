@@ -67,7 +67,6 @@ class Processor(AProcessor):
         super().__init__(m_circuit)
 
         self._init_backend(backend)
-        self._previous_noise = None
         self._inputs_map = None
         self._noise_changed_observer()
         self._input_changed_observer()
@@ -83,7 +82,6 @@ class Processor(AProcessor):
         self._source = Source.from_noise_model(self.noise)
         if not self._has_custom_input:
             self._inputs_map = None
-        self._previous_noise = self.noise
 
     @AProcessor.noise.getter
     def noise(self):
