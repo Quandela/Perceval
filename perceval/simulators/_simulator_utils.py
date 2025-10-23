@@ -26,7 +26,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import copy
 from collections import defaultdict
 from math import sqrt
 from multipledispatch import dispatch
@@ -47,17 +46,10 @@ def _to_bsd(sv: StateVector) -> BSDistribution:
 
 @dispatch(StateVector, Annotation)
 def _inject_annotation(sv: StateVector, annotation: Annotation) -> StateVector:
-    if isinstance(annotation, int):
-        res_sv = StateVector()
-        for s, pa in sv.unnormalized_iterator():
-            s = NoisyFockState(s, [annotation]*s.n)
-            res_sv += pa * s
-        return res_sv
     if len(annotation):
         res_sv = StateVector()
         for s, pa in sv.unnormalized_iterator():
-            s = copy.copy(s)
-            s.inject_annotation(annotation)
+            s = s.inject_annotation(annotation)
             res_sv += pa * s
         return res_sv
     return sv
@@ -67,7 +59,7 @@ def _inject_annotation(sv: StateVector, annotation: Annotation) -> StateVector:
 def _inject_annotation(sv: StateVector, annotation: int) -> StateVector:
     res_sv = StateVector()
     for s, pa in sv.unnormalized_iterator():
-        s = NoisyFockState(s, [annotation]*s.n)
+        s = s.inject_annotation(annotation)
         res_sv += pa * s
     return res_sv
 
