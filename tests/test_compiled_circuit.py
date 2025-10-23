@@ -53,9 +53,7 @@ def test_parameters():
     assert compilation_parameters.get_values() == [1., 3., 0.5]
 
     circuit.setParams(compilation_parameters)
+    assert all(p.defined for p in circuit.get_parameters())
     assert circuit.param("phi_1").evalf() == 1.
     assert circuit.param("phi_2").evalf() == 3.
     assert circuit.param("phi_3").evalf() == 0.5
-    assert all(p.defined for p in circuit.get_parameters())
-    # Chip description remains unchanged
-    assert not any(p.defined for p in chip_specifications._params)

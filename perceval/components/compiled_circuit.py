@@ -69,7 +69,7 @@ class CompiledCircuit(AParametrizedComponent):
         super().__init__(m, chipParameters.chipName)
         self._chipParameters = chipParameters
         for p in chipParameters._params:
-            self._set_parameter(p.name, copy.deepcopy(p), None, None)
+            self._set_parameter(p.name, p, None, None)
 
     def setParams(self, chipParams: ChipParameters) -> None:
         if chipParams.chipName != self._chipParameters.chipName:
