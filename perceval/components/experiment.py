@@ -76,7 +76,7 @@ class Experiment:
 
     _no_copiable_attributes = { '_circuit_changed_observers', '_noise_changed_observers', '_input_changed_observers' }
 
-    def __init__(self, m_circuit: int | ACircuit = None, noise: NoiseModel = None, name: str = "Experiment"):
+    def __init__(self, m_circuit: int | AParametrizedComponent = None, noise: NoiseModel = None, name: str = "Experiment"):
         self._input_state = None
         self.name: str = name
 
@@ -130,8 +130,8 @@ class Experiment:
         """
         return self._has_feedforward
 
-    def _init_circuit(self, m_circuit: ACircuit | int):
-        if isinstance(m_circuit, ACircuit):
+    def _init_circuit(self, m_circuit: AParametrizedComponent | int):
+        if isinstance(m_circuit, AParametrizedComponent):
             self.m = m_circuit.m
             self.add(0, m_circuit)
         elif m_circuit is not None:

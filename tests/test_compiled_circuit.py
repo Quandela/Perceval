@@ -30,6 +30,7 @@
 import copy
 from packaging.version import Version
 from perceval.components.compiled_circuit import ChipParameters, CompiledCircuit
+from perceval.components.experiment import Experiment
 from perceval.utils.parameter import Parameter
 import pytest
 
@@ -57,3 +58,11 @@ def test_parameters():
     assert circuit.param("phi_1").evalf() == 1.
     assert circuit.param("phi_2").evalf() == 3.
     assert circuit.param("phi_3").evalf() == 0.5
+
+def test_inheritance():
+    chip_specifications = ChipParameters("myChip", [Parameter("phi_1"), Parameter("phi_2"), Parameter("phi_3")])
+    circuit = CompiledCircuit(2, chip_specifications)
+    exp = Experiment(3, None, "-")
+    exp.add(1, circuit)
+
+    exp = Experiment(circuit, None, "-")
