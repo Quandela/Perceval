@@ -76,7 +76,7 @@ class IDetector(AComponent, ABC):
         :return: The resulting measured state or distribution of all possible measurements.
         """
 
-    def copy(self, subs=None) -> IDetector:
+    def copy(self) -> IDetector:
         return copy.copy(self)
 
     @property

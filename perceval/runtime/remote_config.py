@@ -29,7 +29,7 @@
 import os
 
 from perceval.utils import FileFormat
-from perceval.utils.logging import channel, get_logger
+from perceval.utils.logging import channel, get_logger, deprecated
 from perceval.utils.persistent_data import PersistentData, _CONFIG_FILE_NAME
 
 QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
@@ -53,7 +53,6 @@ class RemoteConfig:
     _proxies = None
     _token = None
     _url = None
-    _cloud_maximal_job_count = None
 
     def __init__(self, persistent_data: PersistentData = PersistentData()):
         self._persistent_data = persistent_data
@@ -167,15 +166,14 @@ class RemoteConfig:
         return RemoteConfig._token_env_var
 
     @staticmethod
+    @deprecated(version="v1.1", reason="RemoteConfig maximal job count is no longer used as it is now directly retrieved from the cloud")
     def set_cloud_maximal_job_count(count: int) -> None:
-        RemoteConfig._cloud_maximal_job_count = count
+        pass
 
     @staticmethod
+    @deprecated(version="v1.1", reason="RemoteConfig maximal job count is no longer used as it is now directly retrieved from the cloud")
     def get_cloud_maximal_job_count() -> int:
-        if not RemoteConfig._cloud_maximal_job_count:
-            get_logger().warn("""cloud_maximal_job_count is not set.
-            Please use RemoteConfig.set_cloud_maximal_job_count([see user pricing plan])""", channel.user)
-        return RemoteConfig._cloud_maximal_job_count
+        return 0
 
     @staticmethod
     def clear_cache():

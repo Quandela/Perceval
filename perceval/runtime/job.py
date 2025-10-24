@@ -36,11 +36,9 @@ from .job_status import JobStatus
 
 
 class Job(ABC):
-    def __init__(self, result_mapping_function: callable = None, delta_parameters: dict = None,
-                 command_param_names: list = None):
+    def __init__(self, result_mapping_function: callable = None, command_param_names: list = None):
         self._results = None
         self._result_mapping_function = result_mapping_function
-        self._delta_parameters: dict = delta_parameters or {"command": {}, "mapping": {}}
         self._param_names: list = command_param_names or []
         self._name: str = "Job"
 
@@ -57,26 +55,31 @@ class Job(ABC):
             raise TypeError("A job name must be a string")
         self._name = new_name if len(new_name) > 0 else "unnamed"
 
-    def _handle_params(self, args, kwargs):
+    @property
+    @abstractmethod
+    def delta_parameters(self) -> dict:
+        pass
+
+    def _handle_params(self, *args, **kwargs):
         """Handle args and kwargs parameters from __call__, execute_sync or execute_async
         Split parameters between the command and the post-process function (mapping),
         See: self._delta_parameters and self._param_names
         """
         args = list(args)
         if len(args) > len(self._param_names):
-            self._delta_parameters['mapping']['max_samples'] = args.pop()
+            self.delta_parameters['mapping']['max_samples'] = args.pop()
         for idx, unnamed_arg in enumerate(args):
             param_name = self._param_names[idx]
             if param_name in kwargs:  # Parameter exists twice (in args and in kwargs)
                 raise RuntimeError(f'Parameter named {param_name} was passed twice (in *args and **kwargs)')
-            self._delta_parameters['command'][param_name] = unnamed_arg
-        for k, v in self._delta_parameters['command'].items():
+            self.delta_parameters['command'][param_name] = unnamed_arg
+        for k, v in self.delta_parameters['command'].items():
             if v is None and k in kwargs:
-                self._delta_parameters['command'][k] = kwargs[k]
+                self.delta_parameters['command'][k] = kwargs[k]
                 del kwargs[k]
-        for k, v in self._delta_parameters['mapping'].items():
+        for k, v in self.delta_parameters['mapping'].items():
             if v is None and k in kwargs:
-                self._delta_parameters['mapping'][k] = kwargs[k]
+                self.delta_parameters['mapping'][k] = kwargs[k]
                 del kwargs[k]
         if kwargs:
             raise RuntimeError(f"Unused parameters in user call ({list(kwargs.keys())})")

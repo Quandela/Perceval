@@ -26,6 +26,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from requests import HTTPError
+
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import ACircuit, Processor, AComponent,  Experiment, Detector
 from perceval.utils import FockState, NoiseModel
@@ -143,9 +145,12 @@ class RemoteProcessor(AProcessor):
         return True
 
     def fetch_data(self):
-        platform_details = self._rpc_handler.fetch_platform_details()
+        try:
+            platform_details = self._rpc_handler.fetch_platform_details()
+        except HTTPError as e:
+            raise HTTPError(f"Error while fetching platform details: {e}") from None
         self._status = platform_details.get("status")
-        platform_specs = deserialize(platform_details['specs'])
+        platform_specs = deserialize(platform_details['specs'], strict=False)
         self._specs.update(platform_specs)
         if PERFS_KEY in platform_details:
             self._perfs.update(platform_details[PERFS_KEY])
@@ -245,7 +250,12 @@ class RemoteProcessor(AProcessor):
             return 1
 
         # Simulation with a noisy source (only losses)
-        exp = self.experiment.copy(param_values)
+        exp = self.experiment.copy()
+        if param_values is not None:
+            params = exp.get_circuit_parameters()
+            for param_name, value in param_values.items():
+                if param_name in params:
+                    params[param_name].set_value(value)
         lp = Processor("SLAP", exp, NoiseModel(transmittance=transmittance))
         lp.min_detected_photons_filter(1)
         if self._thresholded_output:

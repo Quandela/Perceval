@@ -33,7 +33,7 @@ import platform
 
 from perceval.utils.persistent_data import _CONFIG_FILE_NAME
 
-from _mock_persistent_data import RemoteConfigForTest, QUANDELA_CLOUD_URL
+from perceval.runtime.remote_config import RemoteConfig, QUANDELA_CLOUD_URL
 
 
 MISSING_KEY = "MISSING_ENV_VAR"
@@ -49,10 +49,11 @@ URL_FROM_CACHE = "DUMMY_URL_FROM_CACHE"
 URL_FROM_FILE = "DUMMY_URL_FROM_FILE"
 
 
-def test_remote_config_env_var_vs_cache(tmp_path):
+def test_remote_config_env_var_vs_cache(tmp_path, monkeypatch):
     os.environ[ENV_VAR_KEY] = TOKEN_FROM_ENV  # Write a temporary environment variable
+    monkeypatch.setenv('PCVL_PERSISTENT_PATH', str(tmp_path))
 
-    remote_config = RemoteConfigForTest(tmp_path)
+    remote_config = RemoteConfig()
     assert remote_config._get_token_from_env_var() is None
     assert remote_config._token is None
     assert remote_config._proxies is None
@@ -82,8 +83,10 @@ def test_remote_config_env_var_vs_cache(tmp_path):
     assert remote_config._get_token_from_env_var() is None
 
 
-def test_remote_config_from_file(tmp_path):
-    remote_config = RemoteConfigForTest(tmp_path)
+def test_remote_config_from_file(tmp_path, monkeypatch):
+    monkeypatch.setenv('PCVL_PERSISTENT_PATH', str(tmp_path))
+
+    remote_config = RemoteConfig()
     persistent_data = remote_config._persistent_data
     if persistent_data.load_config():
         pytest.skip("Skipping this test because of an existing user config")
@@ -132,8 +135,10 @@ def test_remote_config_from_file(tmp_path):
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="chmod doesn't works on windows")
-def test_config_file_access(tmp_path):
-    remote_config = RemoteConfigForTest(tmp_path)
+def test_config_file_access(tmp_path, monkeypatch):
+    monkeypatch.setenv('PCVL_PERSISTENT_PATH', str(tmp_path))
+
+    remote_config = RemoteConfig()
     persistent_data = remote_config._persistent_data
     if persistent_data.load_config():
         pytest.skip("Skipping this test because of an existing user config")
@@ -165,7 +170,7 @@ def test_config_file_access(tmp_path):
 
     with pytest.warns(UserWarning):
         # warning because config file cannot be retrieved
-        temp_remote_config = RemoteConfigForTest(tmp_path)
+        temp_remote_config = RemoteConfig()
         temp_remote_config._persistent_data = persistent_data
         temp_remote_config.clear_cache()
         assert temp_remote_config.get_token() == ''

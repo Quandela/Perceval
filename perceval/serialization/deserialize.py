@@ -34,6 +34,7 @@ from zlib import decompress
 from perceval.components import Circuit, BSLayeredPPNR, Detector, AComponent, Experiment, PortLocation, Port, Herald, \
     IDetector, AFFConfigurator
 from perceval.utils import Matrix, BSDistribution, SVDistribution, BasicState, BSCount, NoiseModel, PostSelect
+from perceval.utils.logging import get_logger, channel
 from perceval.serialization import _matrix_serialization, deserialize_state, _detector_serialization
 from ._port_deserialization import deserialize_herald, deserialize_port
 from ._constants import (
@@ -216,18 +217,18 @@ DESERIALIZER = {
 }
 
 
-def deserialize(obj):
+def deserialize(obj, strict=True):
     if isinstance(obj, bytes):
         raise TypeError("Generic deserialize function does not handle binary representation. "
                         "Use specialized functions (e.g. deserialize_circuit) instead.")
     if isinstance(obj, dict):
         r = {}
         for k, v in obj.items():
-            r[deserialize(k)] = deserialize(v)
+            r[deserialize(k, strict=strict)] = deserialize(v, strict=strict)
     elif isinstance(obj, list):
         r = []
         for k in obj:
-            r.append(deserialize(k))
+            r.append(deserialize(k, strict=strict))
     elif isinstance(obj, str) and obj.startswith(PCVL_PREFIX):
         if obj.startswith(ZIP_PREFIX):
             # if zip found -> update obj
@@ -241,7 +242,11 @@ def deserialize(obj):
         serial_obj = obj[p+lp+1:]
 
         def serializer_not_implemented(_: str):
-            raise NotImplementedError(f"Not serializer found for {class_obj}")
+            if strict:
+                raise NotImplementedError(f"No serializer found for {class_obj}")
+            get_logger().warn(f"Unknown perceval class {class_obj}, leaving it serialized; Consider upgrading perceval",
+                              channel.user)
+            return obj
 
         deserialize_func = DESERIALIZER.get(class_obj, serializer_not_implemented)
         r = deserialize_func(serial_obj)
@@ -250,14 +255,14 @@ def deserialize(obj):
     return r
 
 
-def deserialize_file(filepath: str):
+def deserialize_file(filepath: str, strict=True):
     """
     Agnosticly deserialize any supported type from a text file.
     """
     if not path.isfile(filepath):
         raise FileNotFoundError(f'No file at path {filepath}')
     with open(filepath, 'r') as f:
-        return deserialize(json.loads(f.read()))
+        return deserialize(json.loads(f.read()), strict=strict)
 
 
 class CircuitBuilder:

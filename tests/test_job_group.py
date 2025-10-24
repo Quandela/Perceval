@@ -66,9 +66,9 @@ def test_load(mock_write_file: MagicMock):
         'id': None,
         'name': "my_job",
         'status': None,
-        'body': {
-            'payload': {'job_context': None},
-            'job_name': "my_job"},
+        'job_context': None,
+        'request_data':  {'payload': {}},
+        'delta_parameters': {'command': {}, 'mapping': {}},
         'metadata': {
             'headers': RPC_HANDLER.headers,
             'platform': RPC_HANDLER.name,
@@ -90,6 +90,8 @@ def test_load(mock_write_file: MagicMock):
     for key, value in last_saved_jg_dict.items():
         if key == 'modified_date':
             assert jg_dict[key] < value
+        elif key == 'request_data':
+            assert jg_dict['body'] == value, f"Failed for key {key}: {jg_dict['body']} != {value}"
         else:
             assert jg_dict[key] == value, f"Failed for key {key}: {jg_dict[key]} != {value}"
 
@@ -114,9 +116,9 @@ def test_add(mock_write_file):
         'id': None,
         'name': job_name,
         'status': None,
-        'body': {
-            'payload': {'job_context': None},
-            'job_name': job_name},
+        'job_context': None,
+        'request_data':  {'payload': {}},
+        'delta_parameters': {'command': {}, 'mapping': {}},
         'metadata': {
             'headers': RPC_HANDLER.headers,
             'platform': RPC_HANDLER.name,
@@ -125,7 +127,6 @@ def test_add(mock_write_file):
     }
 
     for i, job_info in enumerate(jg._to_json()['job_group_data']):
-        remote_job_dict['body']['job_name'] = job_name + str(i)
         remote_job_dict['name'] = job_name + str(i)
         assert job_info == remote_job_dict
 
@@ -151,7 +152,7 @@ def test_add_errors(mock_write_file):
 @pytest.mark.long_test
 @patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
 def test_classic_run(mock_write_file):
-    RPCHandlerResponsesBuilder(RPC_HANDLER)
+    rpc_handler_responses_builder = RPCHandlerResponsesBuilder(RPC_HANDLER)
     rj_nmb = 2
 
     jg = JobGroup(TEST_JG_NAME)
@@ -178,17 +179,20 @@ def test_classic_run(mock_write_file):
                               'Unfinished': [rj_nmb, {'sent': 0, 'not sent': rj_nmb}]}
 
     # Running jobs
+    rpc_handler_responses_builder.set_job_availability_count(2)
+
     jg.run_parallel()
     expected_write_call_count += 2 * rj_nmb
 
-    assert len(responses.calls) == 2 * rj_nmb
+    assert len(responses.calls) == 2 * rj_nmb + 1  # 1 for token availability call
     assert mock_write_file.call_count == expected_write_call_count
+    assert rpc_handler_responses_builder.last_payload.get("job_group_name") == TEST_JG_NAME
 
     group_progress = jg.progress()
 
-    assert len(responses.calls) == rj_nmb * 2
+    assert len(responses.calls) == 2 * rj_nmb + 1
     assert all([CloudEndpoint.from_response(call.response) ==
-               CloudEndpoint.JobStatus for call in responses.calls[rj_nmb:]])
+               CloudEndpoint.JobStatus for call in responses.calls[rj_nmb + 1:]])
     assert mock_write_file.call_count == expected_write_call_count
 
     assert group_progress == {'Total': rj_nmb,
@@ -203,7 +207,7 @@ def test_classic_run(mock_write_file):
 
     group_progress = jg.progress()
 
-    assert len(responses.calls) == rj_nmb * 2
+    assert len(responses.calls) == rj_nmb * 2 + 1
     assert mock_write_file.call_count == expected_write_call_count
 
     current_group_progress = {'Total': rj_nmb*2,
@@ -223,7 +227,7 @@ def test_classic_run(mock_write_file):
     new_jg._from_json(jg._to_json())
 
     # No call on load
-    assert len(responses.calls) == rj_nmb * 2
+    assert len(responses.calls) == rj_nmb * 2 + 1
     assert mock_write_file.call_count == expected_write_call_count
 
     group_progress = jg.progress()
@@ -231,7 +235,7 @@ def test_classic_run(mock_write_file):
     assert group_progress == current_group_progress
 
     # No call on load
-    assert len(responses.calls) == rj_nmb * 2
+    assert len(responses.calls) == rj_nmb * 2 + 1
     assert mock_write_file.call_count == expected_write_call_count
 
 
@@ -277,6 +281,8 @@ def test_run_advance(mock_write_file):
 
     jg.run_parallel()
 
+    assert rpc_handler_responses_builder.last_payload.get("job_group_name") == TEST_JG_NAME
+
     jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'my_remote_job'))
 
     rpc_handler_responses_builder.set_job_status_sequence([])
@@ -307,6 +313,8 @@ def test_rerun(mock_write_file):
 
     jg.run_parallel()
 
+    assert rpc_handler_responses_builder.last_payload.get("job_group_name") == TEST_JG_NAME
+
     jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'my_remote_job'))
 
     rpc_handler_responses_builder.set_job_status_sequence([])
@@ -327,3 +335,73 @@ def test_rerun(mock_write_file):
     assert jg.progress() == {'Total': 6,
                              'Finished': [5, {'successful': 5, 'unsuccessful': 0}],
                              'Unfinished': [1, {'sent': 0, 'not sent': 1}]}
+
+
+@pytest.mark.long_test
+@patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
+def test_launch_async(mock_write_file):
+    rpc_handler_responses_builder = RPCHandlerResponsesBuilder(RPC_HANDLER)
+    rpc_handler_responses_builder.set_job_status_sequence(
+        [RunningStatus.WAITING, RunningStatus.SUCCESS, RunningStatus.ERROR])
+
+    jg = JobGroup(TEST_JG_NAME)
+
+    for _ in range(13):
+        jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'my_remote_job'))
+
+    rpc_handler_responses_builder.set_job_availability_count(3)
+    jg.launch_async_jobs()
+
+    assert rpc_handler_responses_builder.last_payload.get("job_group_name") == TEST_JG_NAME
+
+    assert jg.progress() == {'Total': 13,
+                             'Finished': [2, {'successful': 1, 'unsuccessful': 1}],
+                             'Unfinished': [11, {'sent': 1, 'not sent': 10}]}
+
+    rpc_handler_responses_builder.set_job_availability_count(100)
+    rpc_handler_responses_builder.set_job_status_sequence([])
+    rpc_handler_responses_builder.set_default_job_status(RunningStatus.ERROR)
+
+    jg.launch_async_jobs()
+
+    assert jg.progress() == {'Total': 13,
+                             'Finished': [12, {'successful': 1, 'unsuccessful': 11}],
+                             'Unfinished': [1, {'sent': 1, 'not sent': 0}]}
+
+    rpc_handler_responses_builder.set_default_job_status(RunningStatus.SUCCESS)
+    jg.relaunch_async_failed_jobs(concurrent_job_count=3, replace_failed_jobs=False)
+
+    assert jg.progress() == {'Total': 16,
+                             'Finished': [15, {'successful': 4, 'unsuccessful': 11}],
+                             'Unfinished': [1, {'sent': 1, 'not sent': 0}]}
+
+    jg.relaunch_async_failed_jobs(replace_failed_jobs=True)
+
+    assert jg.progress() == {'Total': 16,
+                             'Finished': [15, {'successful': 15, 'unsuccessful': 0}],
+                             'Unfinished': [1, {'sent': 1, 'not sent': 0}]}
+
+
+@pytest.mark.long_test
+@patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
+
+def test_cancel_all(mock_write_file):
+    rpc_handler_responses_builder = RPCHandlerResponsesBuilder(RPC_HANDLER)
+    rpc_handler_responses_builder.set_default_job_status(RunningStatus.WAITING)
+    rpc_handler_responses_builder.set_job_availability_count(8)
+
+    jg = JobGroup(TEST_JG_NAME)
+
+    for _ in range(13):
+        jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'my_remote_job'))
+
+    jg.launch_async_jobs()
+
+    # Unfinished jobs are required in order to cancel_all() doing something
+    assert jg.progress() == {'Total': 13,
+                             'Finished': [0, {'successful': 0, 'unsuccessful': 0}],
+                             'Unfinished': [13, {'sent': 8, 'not sent': 5}]}
+
+    jg.cancel_all()
+    ## We cannot check that the jobs were cancelled
+    ## as the MockRPCHandler cannot modify the response for a given job
