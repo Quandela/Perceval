@@ -27,31 +27,43 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import pytest
+import time
+import warnings
 
-from perceval.utils import StateVector
-
-from ._test_utils import assert_sv_close
+from functools import wraps
 
 
-def test_utils():
-    sv_0_1 = StateVector([0, 1])
-    sv_1_0 = StateVector([1, 0])
-    sv_1_1 = StateVector([1, 1])
+def retry(exception_to_check: type[Exception], tries: int = 4, delay: float = 0, backoff: float = 1, logger=None):
+    """Retry calling the decorated function using an exponential backoff.
 
-    sv1 = sv_0_1 + sv_1_0
-    sv1_bis = 1.0000001*sv_0_1 + 0.9999999*sv_1_0
-    sv2 = sv_0_1 - sv_1_0
-    sv3 = sv_0_1 + sv_1_1
-    sv4 = sv_0_1
+    http://www.saltycrane.com/blog/2009/11/trying-out-retry-decorator-python/
+    original from: http://wiki.python.org/moin/PythonDecoratorLibrary#Retry
 
-    assert_sv_close(sv1, sv1_bis)
+    :param exception_to_check: the exception type(s) to check; may be a tuple of types
+    :param tries: number of tries (not retries) before giving up
+    :param delay: initial delay between retries in seconds
+    :param backoff: backoff multiplier e.g. value of 2 will double the delay each retry
+    :param logger: logger to use. If None, send a warning
+    """
+    def deco_retry(f):
 
-    with pytest.raises(AssertionError):
-        assert_sv_close(sv1, sv2)
-    with pytest.raises(AssertionError):
-        assert_sv_close(sv1, sv3)
-    with pytest.raises(AssertionError):
-        assert_sv_close(sv1, sv4)
-    with pytest.raises(AssertionError):
-        assert_sv_close(sv4, sv1)
+        @wraps(f)
+        def f_retry(*args, **kwargs):
+            mtries, mdelay = tries, delay
+            while mtries > 1:
+                try:
+                    return f(*args, **kwargs)
+                except exception_to_check as e:
+                    msg = f"{e}, Retrying in {mdelay} seconds..."
+                    if logger:
+                        logger.warning(msg)
+                    else:
+                        warnings.warn(msg)
+                    time.sleep(mdelay)
+                    mtries -= 1
+                    mdelay *= backoff
+            return f(*args, **kwargs)
+
+        return f_retry  # true decorator
+
+    return deco_retry

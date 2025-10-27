@@ -47,7 +47,7 @@ from perceval.rendering.circuit import ASkin, PhysSkin
 from perceval.algorithm import AProcessTomography
 
 
-TEST_IMG_DIR = Path(__file__).resolve().parent / 'imgs'
+TEST_IMG_DIR = Path(__file__).resolve().parent / 'rendering' / 'imgs'
 
 
 def strip_line_12(s: str) -> str:

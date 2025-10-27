@@ -26,32 +26,61 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
 import pytest
+from perceval import Processor, BS, TD, FockState, BSDistribution
+from .._test_utils import assert_bsd_close
 
-from perceval.utils import StateVector
+p = Processor("SLOS", 2)
 
-from ._test_utils import assert_sv_close
+p.add(0, BS())
+p.add(0, TD(1))
+p.add(0, BS())
+
+def test_without_herald():
+    p.with_input(FockState([1, 0]))
+    p.min_detected_photons_filter(0)
+
+    expected = BSDistribution()
+    expected[FockState([0, 0])] = 0.25
+    expected[FockState([1, 0])] = 0.25
+    expected[FockState([0, 1])] = 0.25
+    expected[FockState([2, 0])] = 0.125
+    expected[FockState([0, 2])] = 0.125
+
+    assert_bsd_close(p.probs()["results"], expected)
 
 
-def test_utils():
-    sv_0_1 = StateVector([0, 1])
-    sv_1_0 = StateVector([1, 0])
-    sv_1_1 = StateVector([1, 1])
+def test_with_selection():
+    p.with_input(FockState([1, 0]))
+    p.min_detected_photons_filter(1)
 
-    sv1 = sv_0_1 + sv_1_0
-    sv1_bis = 1.0000001*sv_0_1 + 0.9999999*sv_1_0
-    sv2 = sv_0_1 - sv_1_0
-    sv3 = sv_0_1 + sv_1_1
-    sv4 = sv_0_1
+    expected = BSDistribution()
+    expected[FockState([1, 0])] = 1/3
+    expected[FockState([0, 1])] = 1/3
+    expected[FockState([2, 0])] = 1/6
+    expected[FockState([0, 2])] = 1/6
 
-    assert_sv_close(sv1, sv1_bis)
+    expected_p_perf = 3/4
 
-    with pytest.raises(AssertionError):
-        assert_sv_close(sv1, sv2)
-    with pytest.raises(AssertionError):
-        assert_sv_close(sv1, sv3)
-    with pytest.raises(AssertionError):
-        assert_sv_close(sv1, sv4)
-    with pytest.raises(AssertionError):
-        assert_sv_close(sv4, sv1)
+    res = p.probs()
+
+    assert_bsd_close(p.probs()["results"], expected)
+    assert pytest.approx(res["global_perf"]) == expected_p_perf, "Wrong physical performance with time delays"
+
+
+def test_with_heralds():
+    p.add_herald(1, 0)
+    p.with_input(FockState([1]))
+    p.min_detected_photons_filter(0)
+
+    expected = BSDistribution()
+    expected[FockState([0])] = 0.4
+    expected[FockState([1])] = 0.4
+    expected[FockState([2])] = 0.2
+
+    expected_l_perf = 5/8
+
+    res = p.probs()
+
+    assert_bsd_close(p.probs()["results"], expected)
+    assert pytest.approx(res["global_perf"]) == expected_l_perf, "Wrong logical performance with time delays"
