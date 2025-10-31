@@ -32,6 +32,7 @@ import copy
 from abc import ABC, abstractmethod
 from enum import Enum
 from functools import cache
+from math import comb
 
 from .abstract_component import AComponent
 from .linear_circuit import Circuit
@@ -263,7 +264,7 @@ class Detector(IDetector):
 
         remaining_p = 1
         result = BSDistribution()
-        max_detectable = min(self._max, theoretical_photons)
+        max_detectable = min(self._max, theoretical_photons) if self._max is not None else theoretical_photons
         for i in range(0, max_detectable):
             p_i = self._cond_probability(i, theoretical_photons)
             result.add(FockState([i]), p_i)
@@ -288,6 +289,8 @@ class Detector(IDetector):
             return 1 if nph == 0 else (1 - self._wire_efficiency) ** nph
         if nph < det:
             return 0
+        if self._wires is None:
+            return comb(nph, det) * pow(self._wire_efficiency, det) * pow(1 - self._wire_efficiency, nph - det)
         return self._cond_probability(det - 1, nph - 1) * (self._wires - det + 1) * self._wire_efficiency / self._wires \
             + self._cond_probability(det, nph - 1) * (self._wire_efficiency * det / self._wires + 1 - self._wire_efficiency)
 
