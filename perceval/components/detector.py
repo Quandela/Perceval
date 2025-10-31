@@ -234,7 +234,7 @@ class Detector(IDetector):
         return d
 
     @staticmethod
-    def ppnr(n_wires: int, max_detections: int = None, wire_efficiency: float = 1) -> Detector:
+    def ppnr(n_wires: int = None, max_detections: int = None, wire_efficiency: float = 1) -> Detector:
         """Builds an interleaved pseudo-PNR detector."""
         d = Detector(n_wires, max_detections, wire_efficiency)
         d.name = f"PPNR"
@@ -290,7 +290,7 @@ class Detector(IDetector):
         if nph < det:
             return 0
         if self._wires is None:
-            return comb(nph, det) * pow(self._wire_efficiency, det) * pow(1 - self._wire_efficiency, nph - det)
+            return comb(nph, det) * self._wire_efficiency ** det * (1 - self._wire_efficiency) ** (nph - det)
         return self._cond_probability(det - 1, nph - 1) * (self._wires - det + 1) * self._wire_efficiency / self._wires \
             + self._cond_probability(det, nph - 1) * (self._wire_efficiency * det / self._wires + 1 - self._wire_efficiency)
 
