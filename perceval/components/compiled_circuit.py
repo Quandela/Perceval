@@ -32,14 +32,15 @@ from perceval.components.linear_circuit import ACircuit
 from perceval.utils.matrix import Matrix
 
 class CompiledCircuit(ACircuit):
-    def __init__(self, name: str, template: ACircuit | int, version: Version, parameters: list[float]):
-        m = template if isinstance(template, int) else template.m
+    def __init__(self, name: str, template_or_size: ACircuit | int, version: Version, parameters: list[float]):
+        m = template_or_size if isinstance(template_or_size, int) else template_or_size.m
+        template = template_or_size if isinstance(template_or_size, ACircuit) else None
         super().__init__(m, name)
         self.version = version
         self.parameters = parameters
-        if isinstance(template, ACircuit):
-            assert len(template.params) == len(parameters), "Incorrect BasicState size"
             self._template = template
+        if self._template:
+            assert len(self._template.params) == len(self.parameters), "Incorrect BasicState size"
 
     def _compute_unitary(self,
                          assign: dict = None,
