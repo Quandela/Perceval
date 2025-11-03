@@ -34,12 +34,12 @@ from perceval.components.experiment import Experiment
 import pytest
 
 def test_inheritance():
-    circuit = CompiledCircuit(2, "chip name", Version("1.0"))
+    circuit = CompiledCircuit("chip name", 2, Version("1.0"), [])
     exp = Experiment(3, None, "-")
     exp.add(1, circuit)
 
     exp = Experiment(circuit, None, "-")
 
 def test_compute_unitary():
-    circuit = CompiledCircuit(2, "chip name", Version("1.0"), [0., 0.], MZIPhaseFirst().build_circuit())
-    circuit.compute_unitary()
+    circuit = CompiledCircuit("chip name", MZIPhaseFirst().build_circuit(), Version("1.0"), [0., 0.])
+    assert circuit.compute_unitary().is_unitary()

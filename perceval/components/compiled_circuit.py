@@ -32,11 +32,14 @@ from perceval.components.linear_circuit import ACircuit
 from perceval.utils.matrix import Matrix
 
 class CompiledCircuit(ACircuit):
-    def __init__(self, m: int, name: str, version: Version, parameters: list[float] = None, template: ACircuit | None = None):
+    def __init__(self, name: str, template: ACircuit | int, version: Version, parameters: list[float]):
+        m = template if isinstance(template, int) else template.m
         super().__init__(m, name)
         self.version = version
         self.parameters = parameters
-        self.template = template
+        if isinstance(template, ACircuit):
+            assert len(template.params) == len(parameters), "Incorrect BasicState size"
+            self._template = template
 
     def _compute_unitary(self,
                          assign: dict = None,
@@ -48,11 +51,11 @@ class CompiledCircuit(ACircuit):
         :return: the unitary matrix, will be a :class:`~perceval.utils.matrix.MatrixS` if symbolic, or a ~`MatrixN`
                  if not.
         """
-        if not self.template:
+        if not self._template:
             raise RuntimeError("Missing template to compute unitary for CompiledCircuit")
-        for f, p in zip(self.parameters, self.template.get_parameters()):
+        for f, p in zip(self.parameters, self._template.get_parameters()):
             p.set_value(f)
-        return self.template.compute_unitary(dict, use_symbolic)
+        return self._template.compute_unitary(dict, use_symbolic)
 
     def describe(self) -> str:
         """
