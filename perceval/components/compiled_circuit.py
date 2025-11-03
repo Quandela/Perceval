@@ -38,7 +38,7 @@ class CompiledCircuit(ACircuit):
         super().__init__(m, name)
         self.version = version
         self.parameters = parameters
-            self._template = template
+        self._template = template
         if self._template:
             assert len(self._template.params) == len(self.parameters), "Incorrect BasicState size"
 
