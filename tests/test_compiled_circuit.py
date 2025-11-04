@@ -27,6 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import numpy as np
 from packaging.version import Version
 from perceval.components.compiled_circuit import CompiledCircuit
 from perceval.components.core_catalog.mzi import MZIPhaseFirst
@@ -41,5 +42,5 @@ def test_inheritance():
     exp = Experiment(circuit, None, "-")
 
 def test_compute_unitary():
-    circuit = CompiledCircuit("chip name", MZIPhaseFirst().build_circuit(), Version("1.0"), [0., 0.])
-    assert circuit.compute_unitary().is_unitary()
+    circuit = CompiledCircuit("chip name", MZIPhaseFirst().build_circuit(), [0., 1.], Version("1.0"))
+    assert np.allclose(circuit.compute_unitary(), MZIPhaseFirst().build_circuit(phi_a = 0, phi_b = 1.).compute_unitary())

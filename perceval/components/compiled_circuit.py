@@ -32,7 +32,7 @@ from perceval.components.linear_circuit import ACircuit
 from perceval.utils.matrix import Matrix
 
 class CompiledCircuit(ACircuit):
-    def __init__(self, name: str, template_or_size: ACircuit | int, version: Version, parameters: list[float]):
+    def __init__(self, name: str, template_or_size: ACircuit | int, parameters: list[float], version: Version | None = None):
         m = template_or_size if isinstance(template_or_size, int) else template_or_size.m
         template = template_or_size if isinstance(template_or_size, ACircuit) else None
         super().__init__(m, name)
@@ -52,11 +52,11 @@ class CompiledCircuit(ACircuit):
         :return: the unitary matrix, will be a :class:`~perceval.utils.matrix.MatrixS` if symbolic, or a ~`MatrixN`
                  if not.
         """
-        if not self._template:
+        if self._template is None:
             raise RuntimeError("Missing template to compute unitary for CompiledCircuit")
         for f, p in zip(self.parameters, self._template.get_parameters()):
             p.set_value(f)
-        return self._template.compute_unitary(dict, use_symbolic)
+        return self._template.compute_unitary(None, use_symbolic)
 
     def describe(self) -> str:
         """
@@ -64,4 +64,7 @@ class CompiledCircuit(ACircuit):
 
         :return: code generating the component
         """
-        pass
+        if self.version == None:
+            return f"CompiledCircuit({self.name}, {self.m}, {self.parameters}, None)"
+        else:
+            return f"CompiledCircuit({self.name}, {self.m}, {self.parameters}, '{self.version}')"
