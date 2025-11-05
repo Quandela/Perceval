@@ -64,7 +64,7 @@ class CompiledCircuit(ACircuit):
 
         :return: code generating the component
         """
-        if self.version == None:
-            return f"CompiledCircuit({self.name}, {self.m}, {self.parameters}, None)"
+        if self.version is None:
+            return f"CompiledCircuit({self.name}, {self.m}, {self.parameters})"
         else:
             return f"CompiledCircuit({self.name}, {self.m}, {self.parameters}, '{self.version}')"
