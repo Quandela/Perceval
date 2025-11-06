@@ -144,10 +144,10 @@ def test_match_rewrite_phase():
     matched = a.match(pattern2)
     for k, v in matched.v_map.items():
         pattern2.param(k).set_value(v)
-    v = pattern2.compute_unitary(False)
+    v = pattern2.compute_unitary()
     res = optimize(rewrite2, v, norm.frobenius, sign=-1)
     assert pytest.approx(1) == res.fun+1
-    assert pytest.approx(v[0, 0]) == rewrite2.compute_unitary(False)[0, 0]
+    assert pytest.approx(v[0, 0]) == rewrite2.compute_unitary()[0, 0]
 
 
 def test_match_switch_phases():
