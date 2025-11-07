@@ -317,3 +317,11 @@ class RemoteProcessor(AProcessor):
         if extra_parameters:
             my_dict.update(extra_parameters)
         get_logger().log_resources(my_dict)
+
+    def compute_physical_logical_perf(self, value: bool):
+        """
+        Tells the simulator to compute or not the physical and logical performances when possible
+
+        :param value: True to compute the physical and logical performances, False otherwise.
+        """
+        self.set_parameter("compute_physical_logical_perf", value)
