@@ -26,8 +26,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from base64 import b64decode
-
 from packaging.version import Version
 
 from perceval.serialization import _schema_circuit_pb2 as pb
@@ -139,16 +137,8 @@ def deserialize_ff_circuit_provider(m: int, serial_ffcp, known_params: dict = No
     return ffcp
 
 
-def deserialize_compiled_circuit(serial_cc, known_params: dict = None) -> CompiledCircuit:
+def deserialize_cc(serial_cc, known_params: dict = None) -> CompiledCircuit:
     from .deserialize import deserialize_circuit
-
-    if not isinstance(serial_cc, pb.CompiledCircuit):
-        pb_binary_repr = serial_cc
-        serial_cc = pb.CompiledCircuit()
-        if isinstance(pb_binary_repr, bytes):
-            serial_cc.ParseFromString(pb_binary_repr)
-        else:
-            serial_cc.ParseFromString(b64decode(pb_binary_repr))
 
     name = serial_cc.name
     m = serial_cc.n_mode
