@@ -133,3 +133,9 @@ def deserialize_ff_circuit_provider(m: int, serial_ffcp, known_params: dict = No
     if serial_ffcp.block_circuit_size:
         ffcp.block_circuit_size()
     return ffcp
+
+
+def deserialize_compiled_circuit(serial_cc, known_params: dict = None) -> FFCircuitProvider:
+    from perceval.serialization.deserialize import CompiledCircuitBuilder
+    builder = CompiledCircuitBuilder(serial_cc, known_params)
+    return builder.resolve()

@@ -29,6 +29,7 @@
 
 from multipledispatch import dispatch
 
+from perceval.components.compiled_circuit import CompiledCircuit
 from perceval.serialization import _schema_circuit_pb2 as pb
 from perceval.components import ACircuit, Circuit, AComponent, Herald, Port
 import perceval.components.unitary_components as comp
@@ -189,6 +190,11 @@ class ComponentSerializer:
         pb_circ = serialize_circuit(circuit)
         self._pb.circuit.CopyFrom(pb_circ)
 
+    @dispatch(CompiledCircuit)
+    def _serialize(self, circuit: CompiledCircuit):
+        pb_circ = serialize_compiled_circuit(circuit)
+        self._pb.compiled_circuit.CopyFrom(pb_circ)
+
 
 def serialize_circuit(circuit: ACircuit) -> pb.Circuit:
     if not isinstance(circuit, Circuit):
@@ -201,6 +207,20 @@ def serialize_circuit(circuit: ACircuit) -> pb.Circuit:
     comp_serializer = ComponentSerializer()
     for r, c in circuit._components:
         pb_circuit.components.extend([comp_serializer.serialize(r[0], c)])
+    return pb_circuit
+
+
+def serialize_compiled_circuit(circuit: CompiledCircuit) -> pb.CompiledCircuit:
+    pb_circuit = pb.CompiledCircuit()
+    if circuit.name != Circuit.DEFAULT_NAME:
+        pb_circuit.name = circuit.name
+    pb_circuit.n_mode = circuit.m
+    for param in circuit.parameters:
+        pb_circuit.parameters.extend([param])
+    pb_circuit.version = str(circuit.version)
+    if circuit.template is not None:
+        pb_template = serialize_circuit(circuit.template)
+        pb_circuit.template.CopyFrom(pb_template)
     return pb_circuit
 
 
