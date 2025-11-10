@@ -31,7 +31,8 @@ from abc import ABC, abstractmethod
 from multipledispatch import dispatch
 
 from perceval import Experiment
-from perceval.components import ACircuit, AFFConfigurator, AProcessor, PERM, AComponent, TD, LC
+from perceval.components import ACircuit, AFFConfigurator, PERM, AComponent, TD, LC
+from perceval.components.compiled_circuit import CompiledCircuit  # TODO
 from perceval.utils import format_parameters, ModeType
 
 
@@ -103,6 +104,13 @@ class ASkin(ABC):
             end_w = start_w + comp_width
             w[r] = [end_w] * comp.m
         return max(w) + 1, min(p.circuit_size, height+2)
+
+    @dispatch(CompiledCircuit, bool)
+    def get_size(self, c: CompiledCircuit, recursive: bool = False) -> tuple[int, int]:
+        """Gets the size of a circuit in arbitrary unit. If composite, it will take its components into account"""
+        if c._template is not None:
+            return self.get_size(c._template, recursive)
+        return c.m, c.m
 
     def measure(self, c: AComponent) -> tuple[int, int]:
         """

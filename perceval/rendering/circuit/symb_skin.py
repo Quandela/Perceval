@@ -35,6 +35,7 @@ from perceval.components import AComponent, AFFConfigurator, Circuit, Port, Port
 from ._canvas_shapes import ShapeFactory
 from .abstract_skin import ASkin, ModeType
 from .skin_common import bs_convention_color
+from ...components.compiled_circuit import CompiledCircuit
 
 
 class SymbSkin(ASkin):
@@ -55,7 +56,7 @@ class SymbSkin(ASkin):
     def get_width(self, c) -> int:
         return self.get_width(c.circuit_template())
 
-    @dispatch(cp.Unitary)
+    @dispatch((cp.Unitary, CompiledCircuit))
     def get_width(self, c) -> int:
         return c.m
 
@@ -83,6 +84,10 @@ class SymbSkin(ASkin):
     @dispatch(AFFConfigurator)
     def get_shape(self, c):
         return self.ffconf_shape
+
+    @dispatch(CompiledCircuit)
+    def get_shape(self, c):
+        return self.comp_circuit_shape
 
     @dispatch(cp.BS)
     def get_shape(self, c):
@@ -336,3 +341,11 @@ class SymbSkin(ASkin):
         canvas.add_mpath(ShapeFactory.half_circle_port_out(10, 20), stroke="black", stroke_width=1, fill="white")
         if detector.name:
             canvas.add_text((12, 12), text=detector.name, size=5, ta="left", fontstyle="italic")
+
+    def comp_circuit_shape(self, circuit, canvas, mode_style):
+        w = circuit.m
+        for i in range(w):
+            canvas.add_mpath(["M", 0, 25 + i * 50, "l", 50 * w, 0], **self.style[ModeType.PHOTONIC])
+        shape = ShapeFactory.rounded_corner_square(6.25 * w, 6)
+        canvas.add_mpath(shape, **self.style[ModeType.PHOTONIC], fill="orange")
+        canvas.add_text((25 * w, 25 * w), size=10, ta="middle", text=circuit.name, max_size=50 * w)
