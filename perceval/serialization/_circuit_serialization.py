@@ -215,8 +215,7 @@ def serialize_compiled_circuit(circuit: CompiledCircuit) -> pb.CompiledCircuit:
     if circuit.name != Circuit.DEFAULT_NAME:
         pb_circuit.name = circuit.name
     pb_circuit.n_mode = circuit.m
-    for param in circuit.parameters:
-        pb_circuit.parameters.extend([param])
+    pb_circuit.parameters.extend(circuit.parameters)
     pb_circuit.version = str(circuit.version)
     if circuit.template is not None:
         pb_template = serialize_circuit(circuit.template)

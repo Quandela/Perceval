@@ -26,6 +26,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from base64 import b64decode
+
+from packaging.version import Version
 
 from perceval.serialization import _schema_circuit_pb2 as pb
 from perceval.serialization._parameter_serialization import deserialize_parameter
@@ -33,6 +36,7 @@ from perceval.serialization._matrix_serialization import deserialize_pb_matrix
 import perceval.components.unitary_components as comp
 import perceval.components.non_unitary_components as nu
 from perceval.components.feed_forward_configurator import FFConfigurator, FFCircuitProvider
+from perceval.components.compiled_circuit import CompiledCircuit
 from perceval.utils import BasicState
 
 
@@ -135,7 +139,27 @@ def deserialize_ff_circuit_provider(m: int, serial_ffcp, known_params: dict = No
     return ffcp
 
 
-def deserialize_compiled_circuit(serial_cc, known_params: dict = None) -> FFCircuitProvider:
-    from perceval.serialization.deserialize import CompiledCircuitBuilder
-    builder = CompiledCircuitBuilder(serial_cc, known_params)
-    return builder.resolve()
+def deserialize_compiled_circuit(serial_cc, known_params: dict = None) -> CompiledCircuit:
+    from .deserialize import deserialize_circuit
+
+    if not isinstance(serial_cc, pb.CompiledCircuit):
+        pb_binary_repr = serial_cc
+        serial_cc = pb.CompiledCircuit()
+        if isinstance(pb_binary_repr, bytes):
+            serial_cc.ParseFromString(pb_binary_repr)
+        else:
+            serial_cc.ParseFromString(b64decode(pb_binary_repr))
+
+    name = serial_cc.name
+    m = serial_cc.n_mode
+    version = Version(serial_cc.version)
+    parameters = serial_cc.parameters
+    template = deserialize_circuit(serial_cc.template, known_params) \
+        if serial_cc.template and serial_cc.template.n_mode > 0 else None
+
+    if not name:
+        name = None
+
+    compiled_circuit = CompiledCircuit(name, template or m, parameters, version)
+
+    return compiled_circuit

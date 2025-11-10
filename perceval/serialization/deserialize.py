@@ -31,10 +31,8 @@ from os import path
 import json
 from zlib import decompress
 
-from packaging.version import Version
-
 from perceval.components import Circuit, BSLayeredPPNR, Detector, AComponent, Experiment, PortLocation, Port, Herald, \
-    IDetector, AFFConfigurator, CompiledCircuit
+    IDetector, AFFConfigurator
 from perceval.utils import Matrix, BSDistribution, SVDistribution, BasicState, BSCount, NoiseModel, PostSelect
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import _matrix_serialization, deserialize_state, _detector_serialization
@@ -135,19 +133,6 @@ def deserialize_experiment(pb_e: pb.Experiment, known_params: dict = None) -> Ex
     return builder.resolve()
 
 
-def deserialize_compiled_circuit(pb_cc: pb.CompiledCircuit, known_params: dict = None) -> CompiledCircuit:
-    if not isinstance(pb_cc, pb.CompiledCircuit):
-        pb_binary_repr = pb_cc
-        pb_cc = pb.CompiledCircuit()
-        if isinstance(pb_binary_repr, bytes):
-            pb_cc.ParseFromString(pb_binary_repr)
-        else:
-            pb_cc.ParseFromString(b64decode(pb_binary_repr))
-
-    builder = CompiledCircuitBuilder(pb_cc, known_params)
-    return builder.resolve()
-
-
 def deserialize_svdistribution(serial_svd) -> SVDistribution:
     assert serial_svd[0] == '{' and serial_svd[-1] == '}', "Invalid serialized SVDistribution"
     if len(serial_svd) == 2:
@@ -229,7 +214,7 @@ DESERIALIZER = {
     HERALD_TAG: deserialize_herald,
     PORT_TAG: deserialize_port,
     EXPERIMENT_TAG: deserialize_experiment,
-    COMPILED_CIRCUIT_TAG: deserialize_compiled_circuit,
+    COMPILED_CIRCUIT_TAG: _cd.deserialize_compiled_circuit,
 }
 
 
@@ -424,25 +409,3 @@ class ExperimentBuilder:
             experiment.set_postselection(deserialize(post_select_str))
 
         return experiment
-
-
-class CompiledCircuitBuilder:
-
-    def __init__(self, pb_cc: pb.CompiledCircuit, params: dict):
-        self._pb_cc = pb_cc
-        self._params = params or dict()
-
-    def resolve(self):
-        name = self._pb_cc.name
-        m = self._pb_cc.n_mode
-        version = Version(self._pb_cc.version)
-        parameters = self._pb_cc.parameters
-        template = deserialize_circuit(self._pb_cc.template, self._params) \
-            if self._pb_cc.template and self._pb_cc.template.n_mode > 0 else None
-
-        if not name:
-            name = None
-
-        compiled_circuit = CompiledCircuit(name, template or m, parameters, version)
-
-        return compiled_circuit
