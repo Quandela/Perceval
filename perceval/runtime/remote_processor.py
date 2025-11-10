@@ -320,7 +320,7 @@ class RemoteProcessor(AProcessor):
 
     def compute_physical_logical_perf(self, value: bool):
         """
-        Tells the simulator to compute or not the physical and logical performances when possible
+        Split performance into the physical and logical parts - when available
 
         :param value: True to compute the physical and logical performances, False otherwise.
         """
