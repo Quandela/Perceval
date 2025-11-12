@@ -126,6 +126,11 @@ class RPCHandler:
         endpoint = self.build_endpoint(_ENDPOINT_PLATFORM_DETAILS_NEW, quote_name, _PROCESSOR_SECTION)
         try:
             response = self.get_request(endpoint)
+            # TEMPORARY CODE
+            # TODO: to be removed in version 1.2
+            if 'architecture' not in response.get('specs', {}):
+                raise requests.HTTPError("Missing required 'architecture' field, falling back to the old endpoint "
+                                         "containing the 'specific_circuit' field.")
         except requests.HTTPError:
             # try the old endpoint
             endpoint = self.build_endpoint(_ENDPOINT_PLATFORM_DETAILS, quote_name)
