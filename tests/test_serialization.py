@@ -28,7 +28,6 @@
 # SOFTWARE.
 from unittest.mock import patch
 
-import numpy as np
 import pytest
 import random
 import sympy as sp
@@ -326,7 +325,7 @@ def test_compiled_circuit_serialization():
     c_ser = serialize(circuit)
     c_deser = deserialize(c_ser)
     assert_compiled_circuit_equals(circuit, c_deser)
-    assert np.allclose(c_deser.compute_unitary(), MZIPhaseFirst().build_circuit(phi_a=0, phi_b=1.).compute_unitary())
+
 
 def test_json():
     svd = SVDistribution()

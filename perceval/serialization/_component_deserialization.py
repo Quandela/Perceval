@@ -138,18 +138,14 @@ def deserialize_ff_circuit_provider(m: int, serial_ffcp, known_params: dict = No
 
 
 def deserialize_cc(serial_cc, known_params: dict = None) -> CompiledCircuit:
-    from .deserialize import deserialize_circuit
-
     name = serial_cc.name
     m = serial_cc.n_mode
     version = Version(serial_cc.version)
     parameters = serial_cc.parameters
-    template = deserialize_circuit(serial_cc.template, known_params) \
-        if serial_cc.template and serial_cc.template.n_mode > 0 else None
 
     if not name:
         name = None
 
-    compiled_circuit = CompiledCircuit(name, template or m, parameters, version)
+    compiled_circuit = CompiledCircuit(name, m, parameters, version)
 
     return compiled_circuit

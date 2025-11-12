@@ -219,11 +219,6 @@ def assert_compiled_circuit_equals(cc_1: CompiledCircuit, cc_2: CompiledCircuit)
     assert cc_1.name == cc_2.name
     assert cc_1.parameters == cc_2.parameters
     assert cc_1.version == cc_2.version
-    if cc_1.template is not None:
-        assert cc_2.template is not None
-        assert_circuits_eq(cc_1.template, cc_2.template)
-    else:
-        assert cc_2.template is None
 
 
 def dict2svd(d: dict):

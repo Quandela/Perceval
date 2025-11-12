@@ -217,9 +217,6 @@ def serialize_compiled_circuit(circuit: CompiledCircuit) -> pb.CompiledCircuit:
     pb_circuit.n_mode = circuit.m
     pb_circuit.parameters.extend(circuit.parameters)
     pb_circuit.version = str(circuit.version)
-    if circuit.template is not None:
-        pb_template = serialize_circuit(circuit.template)
-        pb_circuit.template.CopyFrom(pb_template)
     return pb_circuit
 
 
