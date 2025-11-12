@@ -264,7 +264,7 @@ def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compac
 
     if isinstance(c, AProcessTomography):
         pdisplay_to_file(c, img_path, output_format=Format.MPLOT)
-    elif isinstance(c, (AComponent, AProcessor)):
+    elif isinstance(c, (AComponent, AProcessor, Experiment)):
         pdisplay_to_file(c, img_path, output_format=Format.MPLOT,
                               recursive=recursive, skin=skin)
     else:
@@ -280,7 +280,7 @@ def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compac
         if isinstance(c, AProcessTomography):
             ok, msg = _check_qpt(img_path, TEST_IMG_DIR /
                                  Path(circuit_name + ".svg"))
-        elif isinstance(c, (AComponent, AProcessor)):
+        elif isinstance(c, (AComponent, AProcessor, Experiment)):
             ok, msg = _check_circuit(img_path, TEST_IMG_DIR /
                                      Path(circuit_name + ".svg"))
         else:

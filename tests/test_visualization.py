@@ -32,6 +32,8 @@ import pytest
 import sys
 import sympy as sp
 
+from perceval import P, Experiment
+from perceval.components.compiled_circuit import CompiledCircuit
 from perceval.utils import Matrix, BasicState, Parameter, InterferometerShape
 from perceval.components import (BS, PS, PBS, WP, HWP, PERM, QWP, PR, Unitary, TD, Detector, catalog, FFConfigurator,
                                  FFCircuitProvider, Circuit, GenericInterferometer, Processor)
@@ -446,3 +448,32 @@ def test_svg_dump_feed_forward_phys(tmp_path, save_figs):
 def test_svg_dump_feed_forward_phys_norec(tmp_path, save_figs):
     p = create_processor_with_feed_forward()
     _save_or_check(p, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=False)
+
+@pytest.mark.rendering
+def test_svg_dump_compiled_circuit_no_template(tmp_path, save_figs):
+    c = CompiledCircuit("Ascella", 2, [1.23])
+    _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs)
+
+@pytest.mark.rendering
+def test_svg_dump_compiled_circuit_no_template_symb(tmp_path, save_figs):
+    c = CompiledCircuit("Ascella", 2, [1.23])
+    _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, skin_type=SymbSkin)
+
+@pytest.mark.rendering
+def test_svg_dump_compiled_circuit_with_template(tmp_path, save_figs):
+    template = Circuit(2).add(0, BS()).add(0, PS(P("phi"))).add(0, BS())
+    c = CompiledCircuit("Ascella", template, [1.23])
+    _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs)
+
+@pytest.mark.rendering
+def test_svg_dump_compiled_circuit_with_template_recursive(tmp_path, save_figs):
+    template = Circuit(2).add(0, BS()).add(0, PS(P("phi"))).add(0, BS())
+    c = CompiledCircuit("Ascella", template, [1.23])
+    _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
+
+@pytest.mark.rendering
+def test_svg_dump_compiled_circuit_with_template_experiment(tmp_path, save_figs):
+    c = CompiledCircuit("Ascella", 2, [1.23])
+    e = Experiment(c)
+    e.add(0, BS())
+    _save_or_check(e, tmp_path, sys._getframe().f_code.co_name, save_figs)

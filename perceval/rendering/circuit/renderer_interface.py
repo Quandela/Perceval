@@ -86,7 +86,7 @@ class ICircuitRenderer(ABC):
                         p.set_value(f)
                     c = template
 
-                if c.is_composite():
+                if c.is_composite() and not isinstance(c, CompiledCircuit):
                     if c._components:
                         if recursive:
                             self._current_subblock_info = self._subblock_info.setdefault(c, {})

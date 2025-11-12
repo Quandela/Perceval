@@ -96,6 +96,8 @@ class ASkin(ABC):
             r = slice(modes[0], modes[0] + comp.m)
             start_w = max(w[r])
             if comp.is_composite() and recursive:
+                if isinstance(comp, CompiledCircuit) and comp._template is not None:
+                    comp = comp._template
                 comp_width, _ = self.get_size(comp, False)
             elif isinstance(comp, AFFConfigurator) and recursive:
                 comp_width, _ = self.get_size(comp.circuit_template(), False)
