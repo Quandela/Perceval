@@ -36,7 +36,7 @@ from functools import wraps
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from perceval import BasicState, Parameter, Expression
+from perceval import BasicState, Parameter, Expression, CompiledCircuit
 from perceval.components import ACircuit, PS, IDetector, AFFConfigurator, FFConfigurator, FFCircuitProvider, \
     BSLayeredPPNR, Detector, Experiment, Circuit, AProcessor, AComponent
 from perceval.components.abstract_component import AParametrizedComponent
@@ -170,6 +170,9 @@ def assert_component_list_eq(comp_a, comp_b):
         elif isinstance(input_comp, PS) or not isinstance(input_comp, ACircuit):
             assert input_comp.describe() == output_comp.describe()
 
+        elif isinstance(input_comp, CompiledCircuit):
+            assert_compiled_circuit_equals(input_comp, output_comp)
+
         elif input_comp.defined and output_comp.defined:
             assert (input_comp.compute_unitary() == output_comp.compute_unitary()).all()
 
@@ -210,6 +213,12 @@ def assert_experiment_equals(experiment1: Experiment, experiment2: Experiment):
     assert experiment1.is_unitary == experiment2.is_unitary
     assert experiment1.has_td == experiment2.has_td
     assert experiment1.has_feedforward == experiment2.has_feedforward
+
+def assert_compiled_circuit_equals(cc_1: CompiledCircuit, cc_2: CompiledCircuit):
+    assert cc_1.m == cc_2.m
+    assert cc_1.name == cc_2.name
+    assert cc_1.parameters == cc_2.parameters
+    assert cc_1.version == cc_2.version
 
 
 def dict2svd(d: dict):
