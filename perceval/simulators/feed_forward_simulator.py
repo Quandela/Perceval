@@ -29,13 +29,12 @@
 import copy
 from typing import Any
 
-from perceval.components import Processor, AComponent, Barrier, PERM, IDetector, Herald, PortLocation, Source, Experiment, DetectionType
-from perceval.utils import (NoiseModel, BasicState, FockState, NoisyFockState, BSDistribution, SVDistribution, StateVector,
+from perceval.components import Processor, AComponent, Barrier, PERM, IDetector, Herald, PortLocation, Source, Experiment
+from perceval.utils import (NoiseModel, BasicState, FockState, BSDistribution, SVDistribution, StateVector,
                             partial_progress_callable, get_logger, deprecated)
 from perceval.utils.logging import channel
-from perceval.components.feed_forward_configurator import AFFConfigurator, FFCircuitProvider
-from perceval.backends import AStrongSimulationBackend, SLAPBackend
-from ._simulator_utils import _parse_feed_forward_info
+from perceval.components.feed_forward_configurator import AFFConfigurator
+from perceval.backends import AStrongSimulationBackend, IFFBackend
 
 from .simulator_interface import ISimulator
 
@@ -310,62 +309,6 @@ class FFSimulator(ISimulator):
             return state.remove_modes(list(self._heralds.keys()))
         return state
 
-    def _can_simulate_directly(self, input_state, detectors: list[IDetector] = None) -> bool:
-        # Conditions:
-        # - Use SLAP,
-        # - No change of number of photons outside the backend
-        #   - Detectors of measured modes are PNR,
-        #   - No NoisyFockState as input (as they require merging)
-        # - Configurators don't configure on modes above them, nor do they point to heralded or non-unitary experiments
-
-        if isinstance(input_state, NoisyFockState):
-            return False
-
-        if isinstance(input_state, tuple):
-            source = input_state[0]
-            if source.partially_distinguishable:
-                return False
-
-        if isinstance(input_state, SVDistribution):
-            for state in input_state:
-                if isinstance(state, NoisyFockState):
-                    return False
-
-        if not isinstance(self._backend, SLAPBackend):
-            return False
-
-        def accept(p):
-            if isinstance(p, Processor):
-                p = p.experiment
-            if isinstance(p, Experiment) and (p.heralds or p.in_heralds or not p.is_unitary):
-                return False
-            return True
-
-        measured_modes = set()
-
-        for i, (r, c) in enumerate(self._components):
-            if isinstance(c, AFFConfigurator):
-                if c.circuit_offset < 0:
-                    return False
-
-                if isinstance(c, FFCircuitProvider):
-                    if not accept(c.default_circuit):
-                        return False
-
-                    if not all(accept(p) for p in c.circuit_map.values()):
-                        return False
-
-            measured_modes.update(r)
-
-        if detectors is not None:
-            for m in measured_modes:
-                if detectors[m] is not None and detectors[m].type != DetectionType.PNR:
-                    return False
-
-        get_logger().info("Perform a direct feed-forward simulation", channel.general)
-
-        return True
-
     def probs(self, input_state: BasicState) -> BSDistribution:
         """
         Compute the probability distribution from a BasicState input
@@ -374,15 +317,13 @@ class FFSimulator(ISimulator):
 
         :return: A BSDistribution
         """
-        if self._can_simulate_directly(input_state):
-            sim = self._get_sim_params(SVDistribution(input_state), [], input_state.m, filter_states = True)[0]
+        if isinstance(self._backend, IFFBackend) and self._backend.can_simulate_feed_forward(self._components, input_state):
+            m = input_state.m
+            get_logger().info("Perform a direct feed-forward simulation", channel.general)
+            sim = self._get_sim_params(SVDistribution(input_state), [], m, filter_states = True)[0]
             sim.keep_heralds(self._keep_heralds)
-            c0, ff_info = _parse_feed_forward_info(self._components, input_state.m)
-            self._backend.set_circuit(c0)
-            self._backend.set_feed_forward(ff_info)
-            res = sim.probs(input_state)
-            self._backend.reset_feed_forward()
-            return res
+            self._backend.set_feed_forward(self._components, m)
+            return sim.probs(input_state)
 
         return self._probs_svd(SVDistribution(input_state))[0]
 
@@ -402,7 +343,7 @@ class FFSimulator(ISimulator):
             * results is the post-selected output state distribution
             * global_perf is the probability that a state is post-selected
         """
-        if self._can_simulate_directly(input_dist, detectors):
+        if isinstance(self._backend, IFFBackend) and self._backend.can_simulate_feed_forward(self._components, input_dist, detectors):
             if isinstance(input_dist, tuple):
                 m = input_dist[1].m
             else:
@@ -410,30 +351,22 @@ class FFSimulator(ISimulator):
             sim, input_dist, detectors  = self._get_sim_params(input_dist, [], m, detectors, filter_states=True)
             sim.compute_physical_logical_perf(self._compute_physical_logical_perf)
             sim.keep_heralds(self._keep_heralds)
-            c0, ff_info = _parse_feed_forward_info(self._components, m)
-            self._backend.set_circuit(c0)
-            self._backend.set_feed_forward(ff_info)
-            res = sim.probs_svd(input_dist, detectors, progress_callback)
-            self._backend.reset_feed_forward()
-            return res
+            self._backend.set_feed_forward(self._components, m)
+            return sim.probs_svd(input_dist, detectors, progress_callback)
 
         res = self._probs_svd(input_dist, detectors, progress_callback)
         return {'results': res[0],
                 'global_perf': res[1]}
 
     def evolve(self, input_state: FockState | StateVector) -> StateVector:
-        if not self._can_simulate_directly(input_state):
+        if not isinstance(self._backend, IFFBackend) or not self._backend.can_simulate_feed_forward(self._components, input_state):
             raise RuntimeError("Cannot perform state evolution with feed-forward")
 
-        sim = self._get_sim_params(SVDistribution(input_state), [], input_state.m, filter_states = True)[0]
+        m = input_state.m
+        sim = self._get_sim_params(SVDistribution(input_state), [], m, filter_states = True)[0]
         sim.keep_heralds(self._keep_heralds)
-        c0, ff_info = _parse_feed_forward_info(self._components, input_state.m)
-        self._backend.set_circuit(c0)
-        self._backend.set_feed_forward(ff_info)
-        res = sim.evolve(input_state)
-        self._backend.reset_feed_forward()
-
-        return res
+        self._backend.set_feed_forward(self._components, m)
+        return sim.evolve(input_state)
 
     def set_precision(self, precision: float):
         self._precision = precision

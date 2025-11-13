@@ -30,8 +30,9 @@ from abc import ABC, abstractmethod
 from typing import Iterable
 
 import exqalibur as xq
+from exqalibur import SVDistribution
 
-from perceval.components import ACircuit
+from perceval.components import ACircuit, AComponent, IDetector, Source
 from perceval.utils import BasicState, FockState, BSDistribution, BSSamples, StateVector, allstate_iterator, global_params
 
 
@@ -164,12 +165,6 @@ class AStrongSimulationBackend(ABackend):
             self.clear_iterator_cache()
         super().set_circuit(circuit)
 
-    def set_feed_forward(self, ff_descriptor):
-        raise NotImplementedError(f"Direct Feed-forward is not implemented in the {self.name} backend")
-
-    def reset_feed_forward(self):
-        raise NotImplementedError(f"Direct Feed-forward is not implemented in the {self.name} backend")
-
     @abstractmethod
     def prob_amplitude(self, output_state: FockState) -> complex:
         """Computes the probability amplitude for a given output state. The input state and the circuit must already be set"""
@@ -211,3 +206,30 @@ class AStrongSimulationBackend(ABackend):
         for output_state in self._get_iterator(self._input_state):
             res += output_state * self.prob_amplitude(output_state)
         return res
+
+
+class IFFBackend(ABC):
+
+    @staticmethod
+    @abstractmethod
+    def can_simulate_feed_forward(components: list[tuple[tuple, AComponent]],
+                                  input_state: BasicState | SVDistribution | tuple[Source, FockState],
+                                  detectors: list[IDetector] = None) -> bool:
+        """
+        :param components: The list of components in the circuit, containing at least one FFConfigurator.
+        :param input_state: The input state to simulate. Can be a BasicState, a SVD, or a tuple[Source, FockState]
+        :param detectors: The detectors to apply at the end of the computation.
+        :return: True if the output of the simulation will be correct, False otherwise.
+        """
+        pass
+
+    @abstractmethod
+    def set_feed_forward(self, components: list[tuple[tuple, AComponent]], m: int) -> None:
+        """
+        Sets the components containing at least one FFConfigurator in the backend.
+        This should be used in place of :code:`set_circuit`
+
+        :param components: The list of components in the circuit, containing at least one FFConfigurator.
+        :param m: The number of modes in the circuit.
+        """
+        pass

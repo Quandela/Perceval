@@ -29,13 +29,11 @@
 from collections import defaultdict
 from math import sqrt
 
-from exqalibur import ConfiguratorMap
 from multipledispatch import dispatch
 from typing import Iterable
 
 from perceval.utils import FockState, NoisyFockState, AnnotatedFockState, BSDistribution, StateVector, Annotation, SVDistribution, Matrix
-from perceval.components import Circuit, AComponent, ACircuit, Experiment, IDetector, AFFConfigurator, FFCircuitProvider, \
-    FFConfigurator, Barrier, Processor
+from perceval.components import Circuit
 
 
 def _to_bsd(sv: StateVector) -> BSDistribution:
@@ -171,57 +169,3 @@ def _list_merge(distributions: list[Iterable[tuple[FockState, float]]], prob_thr
         _inner_tensor_product(distributions[1:], bs, p)
 
     return res
-
-def _parse_feed_forward_info(components: list[tuple[tuple[int, ...], AComponent]], circuit_size: int) -> tuple[Circuit, list[ConfiguratorMap | tuple[Matrix, int]]]:
-    """
-    :param components: A list of placed components containing feed-forward such that:
-        - None of the configurators configures modes above it
-        - None of the configurators points to a heralded or non-unitary experiment
-    :param circuit_size: The size of the circuit
-    :return:
-    """
-    # TODO: move this inside SLAP ?
-
-    main_unitary = Circuit(circuit_size)
-
-    config_map: dict[FockState, Matrix] = None
-
-    res = []
-
-    for r, c in components:
-        if isinstance(c, Experiment):
-            assert c.is_unitary
-            c = c.unitary_circuit()
-
-        if isinstance(c, IDetector) or isinstance(c, Barrier):
-            continue
-
-        if isinstance(c, ACircuit):
-            if not config_map:
-                main_unitary.add(r, c)
-            else:
-                res.append((c.compute_unitary(), r[0]))
-            continue
-
-        elif not isinstance(c, AFFConfigurator):
-            raise ValueError("Received non-unitary components")
-
-        config_modes = c.config_modes(r)
-        default_circuit = c.default_circuit
-
-        if isinstance(c, FFCircuitProvider):
-            config_map = {}
-            for measure, sub_c in c.circuit_map.items():
-                if isinstance(sub_c, Experiment):
-                    sub_c = sub_c.unitary_circuit()
-                elif isinstance(sub_c, Processor):
-                    sub_c = sub_c.linear_circuit()
-
-                config_map[measure] = sub_c.compute_unitary()
-
-        elif isinstance(c, FFConfigurator):
-            config_map = {measure: c.configure(measure).compute_unitary() for measure in c._configs.keys()}
-
-        res.append(ConfiguratorMap(r[0], r[-1], config_modes[0], config_map, default_circuit.compute_unitary()))
-
-    return main_unitary, res
