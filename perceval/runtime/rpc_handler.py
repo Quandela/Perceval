@@ -36,6 +36,8 @@ import requests
 from perceval.utils.logging import get_logger, channel
 
 _ENDPOINT_PLATFORM_DETAILS = '/api/platform/'
+_ENDPOINT_PLATFORM_DETAILS_NEW = '/api/platforms/'
+_PROCESSOR_SECTION = '/processor'
 _ENDPOINT_JOB_CREATE = '/api/job'
 _ENDPOINT_JOB_STATUS = '/api/job/status/'
 _ENDPOINT_JOB_CANCEL = '/api/job/cancel/'
@@ -119,8 +121,21 @@ class RPCHandler:
     def fetch_platform_details(self):
         """fetch platform details and settings"""
         quote_name = quote_plus(self.name)
-        endpoint = self.build_endpoint(_ENDPOINT_PLATFORM_DETAILS, quote_name)
-        return self.get_request(endpoint)
+
+        # first, try the new endpoint
+        endpoint = self.build_endpoint(_ENDPOINT_PLATFORM_DETAILS_NEW, quote_name, _PROCESSOR_SECTION)
+        try:
+            response = self.get_request(endpoint)
+            # TEMPORARY CODE
+            # TODO: to be removed in version 1.2
+            if 'architecture' not in response.get('specs', {}):
+                raise requests.HTTPError("Missing required 'architecture' field, falling back to the old endpoint "
+                                         "containing the 'specific_circuit' field.")
+        except requests.HTTPError:
+            # try the old endpoint
+            endpoint = self.build_endpoint(_ENDPOINT_PLATFORM_DETAILS, quote_name)
+            response =  self.get_request(endpoint)
+        return response
 
     def create_job(self, payload) -> str:
         """create a job
