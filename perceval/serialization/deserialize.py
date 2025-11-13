@@ -32,10 +32,11 @@ import json
 from zlib import decompress
 
 from perceval.components import Circuit, BSLayeredPPNR, Detector, AComponent, Experiment, PortLocation, Port, Herald, \
-    IDetector, AFFConfigurator
+    IDetector, AFFConfigurator, CompiledCircuit
 from perceval.utils import Matrix, BSDistribution, SVDistribution, BasicState, BSCount, NoiseModel, PostSelect
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import _matrix_serialization, deserialize_state, _detector_serialization
+from ._component_deserialization import deserialize_cc
 from ._port_deserialization import deserialize_herald, deserialize_port
 from ._constants import (
     SEP,
@@ -52,7 +53,7 @@ from ._constants import (
     NOISE_TAG,
     POSTSELECT_TAG,
     BS_LAYERED_DETECTOR_TAG,
-    DETECTOR_TAG, COMPONENT_TAG, HERALD_TAG, PORT_TAG, VALUE_NOT_SET, EXPERIMENT_TAG,
+    DETECTOR_TAG, COMPONENT_TAG, HERALD_TAG, PORT_TAG, VALUE_NOT_SET, EXPERIMENT_TAG, COMPILED_CIRCUIT_TAG,
 )
 from ._state_serialization import deserialize_statevector, deserialize_bssamples
 from . import _component_deserialization as _cd
@@ -131,6 +132,18 @@ def deserialize_experiment(pb_e: pb.Experiment, known_params: dict = None) -> Ex
 
     builder = ExperimentBuilder(pb_e, known_params)
     return builder.resolve()
+
+
+def deserialize_compiled_circuit(pb_cc: pb.CompiledCircuit, known_params: dict = None) -> CompiledCircuit:
+    if not isinstance(pb_cc, pb.CompiledCircuit):
+        pb_binary_repr = pb_cc
+        pb_cc = pb.CompiledCircuit()
+        if isinstance(pb_binary_repr, bytes):
+            pb_cc.ParseFromString(pb_binary_repr)
+        else:
+            pb_cc.ParseFromString(b64decode(pb_binary_repr))
+
+    return deserialize_cc(pb_cc, known_params)
 
 
 def deserialize_svdistribution(serial_svd) -> SVDistribution:
@@ -214,6 +227,7 @@ DESERIALIZER = {
     HERALD_TAG: deserialize_herald,
     PORT_TAG: deserialize_port,
     EXPERIMENT_TAG: deserialize_experiment,
+    COMPILED_CIRCUIT_TAG: deserialize_compiled_circuit,
 }
 
 
@@ -278,7 +292,8 @@ class CircuitBuilder:
         'time_delay': _cd.deserialize_dt,
         'polarization_rotator': _cd.deserialize_pr,
         'polarized_beam_splitter': _cd.deserialize_pbs,
-        'loss_channel': _cd.deserialize_lc
+        'loss_channel': _cd.deserialize_lc,
+        'compiled_circuit': _cd.deserialize_cc
     }
     deserialize_fn_m = {  # Deserialization functions requiring m value
         'barrier': _cd.deserialize_barrier,

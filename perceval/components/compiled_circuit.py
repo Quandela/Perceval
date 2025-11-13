@@ -38,9 +38,9 @@ class CompiledCircuit(ACircuit):
         super().__init__(m, name)
         self.version = version
         self.parameters = parameters
-        self._template = template
-        if self._template:
-            assert len(self._template.params) == len(self.parameters), "Incorrect BasicState size"
+        self.template = template
+        if self.template:
+            assert len(self.template.params) == len(self.parameters), "Incorrect BasicState size"
 
     def _compute_unitary(self,
                          assign: dict = None,
@@ -52,11 +52,11 @@ class CompiledCircuit(ACircuit):
         :return: the unitary matrix, will be a :class:`~perceval.utils.matrix.MatrixS` if symbolic, or a ~`MatrixN`
                  if not.
         """
-        if self._template is None:
+        if self.template is None:
             raise RuntimeError("Missing template to compute unitary for CompiledCircuit")
-        for f, p in zip(self.parameters, self._template.get_parameters()):
+        for f, p in zip(self.parameters, self.template.get_parameters()):
             p.set_value(f)
-        return self._template.compute_unitary(None, use_symbolic)
+        return self.template.compute_unitary(None, use_symbolic)
 
     def describe(self) -> str:
         """

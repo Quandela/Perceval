@@ -32,10 +32,9 @@ from packaging.version import Version
 from perceval.components.compiled_circuit import CompiledCircuit
 from perceval.components.core_catalog.mzi import MZIPhaseFirst
 from perceval.components.experiment import Experiment
-import pytest
 
 def test_inheritance():
-    circuit = CompiledCircuit("chip name", 2, Version("1.0"), [])
+    circuit = CompiledCircuit("chip name", 2, [], Version("1.0"))
     exp = Experiment(3, None, "-")
     exp.add(1, circuit)
 
