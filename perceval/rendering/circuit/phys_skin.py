@@ -33,11 +33,11 @@ from multipledispatch import dispatch
 from perceval.components import (AComponent, AFFConfigurator, Circuit,
                                  Port, Herald, PortLocation, IDetector, DetectionType,
                                  unitary_components as cp,
-                                 non_unitary_components as nu)
+                                 non_unitary_components as nu,
+                                 CompiledCircuit)
 from ._canvas_shapes import ShapeFactory
 from .abstract_skin import ASkin, ModeType
 from .skin_common import bs_convention_color
-from ...components.compiled_circuit import CompiledCircuit
 
 
 class PhysSkin(ASkin):

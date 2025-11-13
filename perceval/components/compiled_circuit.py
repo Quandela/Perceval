@@ -70,4 +70,4 @@ class CompiledCircuit(ACircuit):
             return f"CompiledCircuit({self.name}, {self.m}, {self.parameters}, '{self.version}')"
 
     def is_composite(self) -> bool:
-        return self._template is not None and self._template.is_composite()
+        return self.template is not None and self.template.is_composite()

@@ -29,9 +29,8 @@
 from abc import ABC, abstractmethod
 from copy import deepcopy
 
-from perceval.components.compiled_circuit import CompiledCircuit
 from perceval.utils import ModeType
-from perceval.components import ACircuit, Circuit, APort
+from perceval.components import ACircuit, Circuit, APort, CompiledCircuit
 
 
 class ICircuitRenderer(ABC):
@@ -65,8 +64,8 @@ class ICircuitRenderer(ABC):
                        precision: float = 1e-6,
                        nsimplify: bool = True) -> None:
         """Renders the input circuit"""
-        if isinstance(circuit, CompiledCircuit) and circuit._template is not None:
-            template = deepcopy(circuit._template)
+        if isinstance(circuit, CompiledCircuit) and circuit.template is not None:
+            template = deepcopy(circuit.template)
             template.name = circuit.name
             for f, p in zip(circuit.parameters, template.get_parameters()):
                 p.set_value(f)
@@ -79,8 +78,8 @@ class ICircuitRenderer(ABC):
             for r, c in circuit._components:
                 shiftr = tuple(p + shift for p in r)
 
-                if isinstance(c, CompiledCircuit) and c._template is not None and recursive:
-                    template = deepcopy(c._template)
+                if isinstance(c, CompiledCircuit) and c.template is not None and recursive:
+                    template = deepcopy(c.template)
                     template.name = c.name
                     for f, p in zip(c.parameters, template.get_parameters()):
                         p.set_value(f)
