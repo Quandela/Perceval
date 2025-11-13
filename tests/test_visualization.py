@@ -473,7 +473,8 @@ def test_svg_dump_compiled_circuit_with_template_recursive(tmp_path, save_figs):
 
 @pytest.mark.rendering
 def test_svg_dump_compiled_circuit_with_template_experiment(tmp_path, save_figs):
-    c = CompiledCircuit("Ascella", 2, [1.23])
+    template = Circuit(2).add(0, BS()).add(0, PS(P("phi"))).add(0, BS())
+    c = CompiledCircuit("Ascella", template, [1.23])
     e = Experiment(c)
     e.add(0, BS())
-    _save_or_check(e, tmp_path, sys._getframe().f_code.co_name, save_figs)
+    _save_or_check(e, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
