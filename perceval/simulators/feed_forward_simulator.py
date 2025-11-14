@@ -348,6 +348,7 @@ class FFSimulator(ISimulator):
                 m = input_dist[1].m
             else:
                 m = input_dist.m
+            get_logger().info("Perform a direct feed-forward simulation", channel.general)
             sim, input_dist, detectors  = self._get_sim_params(input_dist, [], m, detectors, filter_states=True)
             sim.compute_physical_logical_perf(self._compute_physical_logical_perf)
             sim.keep_heralds(self._keep_heralds)

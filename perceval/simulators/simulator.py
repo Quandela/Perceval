@@ -715,7 +715,7 @@ class Simulator(ISimulator):
             res_bsd, self._postselect, self._heralds, self._keep_heralds)
         return self.format_results(res_bsd, physical_perf, self._logical_perf * logical_perf_coeff)
 
-    def _evolve_no_compute(self, decomposed_input, n_photons): # TODO : input_state is needed only for log, use input_state.n instead
+    def _evolve_no_compute(self, decomposed_input, n_photons):
         """Uses the cached results to compute the evolution of the state described in decomposed_input"""
         result_sv = StateVector()
         for probampli, instate_map, n in decomposed_input:
