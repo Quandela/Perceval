@@ -168,6 +168,10 @@ class AProcessor(ABC):
     def clear_postselection(self):
         self.experiment.clear_postselection()
 
+    @abstractmethod
+    def compute_physical_logical_perf(self, value: bool):
+        pass
+
     def _state_selected(self, state: BasicState) -> bool:
         """
         Computes if the state is selected given heralds and post selection function
