@@ -27,9 +27,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from abc import ABC, abstractmethod
+from copy import deepcopy
 
 from perceval.utils import ModeType
-from perceval.components import ACircuit, Circuit, APort
+from perceval.components import ACircuit, Circuit, APort, CompiledCircuit
 
 
 class ICircuitRenderer(ABC):
@@ -63,13 +64,28 @@ class ICircuitRenderer(ABC):
                        precision: float = 1e-6,
                        nsimplify: bool = True) -> None:
         """Renders the input circuit"""
+        if isinstance(circuit, CompiledCircuit) and circuit.template is not None:
+            template = deepcopy(circuit.template)
+            template.name = circuit.name
+            for f, p in zip(circuit.parameters, template.get_parameters()):
+                p.set_value(f)
+            circuit = template
+
         if not isinstance(circuit, Circuit):
             self.append_circuit(tuple(p + shift for p in range(circuit.m)), circuit)
 
         if circuit.is_composite() and circuit.ncomponents() > 0:
             for r, c in circuit._components:
                 shiftr = tuple(p + shift for p in r)
-                if c.is_composite():
+
+                if isinstance(c, CompiledCircuit) and c.template is not None and recursive:
+                    template = deepcopy(c.template)
+                    template.name = c.name
+                    for f, p in zip(c.parameters, template.get_parameters()):
+                        p.set_value(f)
+                    c = template
+
+                if c.is_composite() and not isinstance(c, CompiledCircuit):
                     if c._components:
                         if recursive:
                             self._current_subblock_info = self._subblock_info.setdefault(c, {})
