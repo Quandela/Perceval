@@ -32,10 +32,12 @@ import pytest
 import random
 import sympy as sp
 import numpy
+from packaging.version import Version
 
-from .._test_utils import assert_circuits_eq, assert_experiment_equals, LogChecker
+from .._test_utils import assert_circuits_eq, assert_experiment_equals, LogChecker, assert_compiled_circuit_equals
 from perceval.components import ACircuit, Circuit, BSLayeredPPNR, Detector, BS, PS, TD, LC, Port, Herald, Experiment, \
-    catalog, FFConfigurator, FFCircuitProvider
+    catalog, FFConfigurator, FFCircuitProvider, CompiledCircuit
+from perceval.components.core_catalog import MZIPhaseFirst
 from perceval.utils import Matrix, E, P, BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, StateVector, \
     NoiseModel, PostSelect, Encoding
 from perceval.utils.logging import ExqaliburLogger
@@ -267,6 +269,8 @@ def test_detector_serialization(detector):
 
 
 def test_experiment_serialization():
+    compiled_circuit = CompiledCircuit("chip name", 2, [], Version("1.0"))
+
     # Empty experiment
     e = Experiment()
     ser_e = serialize(e)
@@ -292,8 +296,8 @@ def test_experiment_serialization():
     ffc.add_configuration((1, 0), {"phi_a": 0, "phi_b": 3})
     e.add(0, ffc)
 
-    ffcp = FFCircuitProvider(1, 0, Circuit(2) // BS.H(), "ffcp name")
-    ffcp.add_configuration((0,), Circuit(2) // BS.Rx())
+    ffcp = FFCircuitProvider(1, 0, compiled_circuit // BS.H(), "ffcp name")
+    ffcp.add_configuration((0,), compiled_circuit // BS.Rx())
     subexp = Experiment(2)
     subexp.add(0, BS.Ry())
     ffcp.add_configuration((1,), subexp)
@@ -306,6 +310,20 @@ def test_experiment_serialization():
     ser_e = serialize(e)
     e_2 = deserialize(ser_e)
     assert_experiment_equals(e, e_2)
+
+    # include compiled circuit
+    e = Experiment(3, None, "-")
+    e.add(1, compiled_circuit)
+    ser_e = serialize(e)
+    e_2 = deserialize(ser_e)
+    assert_experiment_equals(e, e_2)
+
+
+def test_compiled_circuit_serialization():
+    circuit = CompiledCircuit("chip name", MZIPhaseFirst().build_circuit(), [0., 1.], Version("1.0"))
+    c_ser = serialize(circuit)
+    c_deser = deserialize(c_ser)
+    assert_compiled_circuit_equals(circuit, c_deser)
 
 
 def test_json():

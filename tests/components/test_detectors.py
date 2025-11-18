@@ -108,6 +108,14 @@ def test_interleaved_ppnr():
     assert s[2] in res and res[s[2]] == pytest.approx(5589/6250)  # = p2_5wires + p3_5wires
     assert len(res) == 3
 
+    detector_infinity_wires = Detector.ppnr(wire_efficiency=0.7)
+    res = detector_infinity_wires.detect(3)
+    assert s[0] in res and res[s[0]] == pytest.approx(0.027) # Probability to detect 0 photons is no longer 0
+    assert s[1] in res and res[s[1]] == pytest.approx(3*0.7*0.09)
+    assert s[2] in res and res[s[2]] == pytest.approx(3*0.49*0.3)
+    assert s[3] in res and res[s[3]] == pytest.approx(0.7**3)
+    assert len(res) == 4
+
 
 def test_bs_layered_ppnr():
     detector = BSLayeredPPNR(1)

@@ -33,7 +33,8 @@ from multipledispatch import dispatch
 from perceval.components import (AComponent, AFFConfigurator, Circuit,
                                  Port, Herald, PortLocation, IDetector, DetectionType,
                                  unitary_components as cp,
-                                 non_unitary_components as nu)
+                                 non_unitary_components as nu,
+                                 CompiledCircuit)
 from ._canvas_shapes import ShapeFactory
 from .abstract_skin import ASkin, ModeType
 from .skin_common import bs_convention_color
@@ -55,7 +56,7 @@ class PhysSkin(ASkin):
         """Absolute fallback"""
         return 1
 
-    @dispatch(cp.Unitary)
+    @dispatch((cp.Unitary, CompiledCircuit))
     def get_width(self, c) -> int:
         return c.m
 
@@ -122,6 +123,10 @@ class PhysSkin(ASkin):
     @dispatch(AFFConfigurator)
     def get_shape(self, c):
         return self.ffconf_shape
+
+    @dispatch(CompiledCircuit)
+    def get_shape(self, c):
+        return self.comp_circuit_shape
 
     @dispatch(Port, PortLocation)
     def get_shape(self, port, location):
@@ -374,3 +379,10 @@ class PhysSkin(ASkin):
         if herald.name:
             canvas.add_text((13, 11), text='[' + herald.name + ']', size=6, ta="middle", fontstyle="italic")
         canvas.add_text((8, 28), text=str(herald.expected), size=7, ta="middle")
+
+    def comp_circuit_shape(self, circuit, canvas, mode_style):
+        m = circuit.m
+        for i in range(m):
+            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*m, 0], **self.style[ModeType.PHOTONIC])
+        canvas.add_rect((5, 5), 50*m-10, 50*m-10, fill="orange")
+        canvas.add_text((25*m, 25*m), size=10, ta="middle", text=circuit.name, max_size=50*m)

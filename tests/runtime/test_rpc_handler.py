@@ -33,7 +33,7 @@ import requests
 
 import responses
 
-from tests.runtime._mock_rpc_handler import RPCHandlerResponsesBuilder, DEFAULT_PLATFORM_INFO
+from tests.runtime._mock_rpc_handler import RPCHandlerResponsesBuilder, DEFAULT_PLATFORM_INFO, ARCHITECTURE_PLATFORM_INFO
 
 from perceval.runtime.rpc_handler import (
     RPCHandler,
@@ -178,4 +178,18 @@ def test_get_platform_details():
 
     RPCHandlerResponsesBuilder(rpc_handler, platform_details=platform_info)
 
+    assert platform_info == rpc_handler.fetch_platform_details()
+
+
+def test_get_platform_details_with_architecture():
+    rpc_handler = RPCHandler(PLATFORM_NAME, URL, TOKEN)
+
+    platform_info = DEFAULT_PLATFORM_INFO
+    platform_info['name'] = PLATFORM_NAME
+    RPCHandlerResponsesBuilder(rpc_handler, platform_details=platform_info, use_new_platform_details_url=False)
+    assert platform_info == rpc_handler.fetch_platform_details()
+
+    platform_info = ARCHITECTURE_PLATFORM_INFO
+    platform_info['name'] = PLATFORM_NAME
+    RPCHandlerResponsesBuilder(rpc_handler, platform_details=platform_info, use_new_platform_details_url=True)
     assert platform_info == rpc_handler.fetch_platform_details()

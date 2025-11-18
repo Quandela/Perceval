@@ -28,6 +28,7 @@
 # SOFTWARE.
 from collections import defaultdict
 from math import sqrt
+
 from multipledispatch import dispatch
 from typing import Iterable
 

@@ -715,7 +715,7 @@ class Simulator(ISimulator):
             res_bsd, self._postselect, self._heralds, self._keep_heralds)
         return self.format_results(res_bsd, physical_perf, self._logical_perf * logical_perf_coeff)
 
-    def _evolve_no_compute(self, decomposed_input, input_state): # TODO : input_state is needed only for log, use input_state.n instead
+    def _evolve_no_compute(self, decomposed_input, n_photons):
         """Uses the cached results to compute the evolution of the state described in decomposed_input"""
         result_sv = StateVector()
         for probampli, instate_map, n in decomposed_input:
@@ -737,7 +737,7 @@ class Simulator(ISimulator):
         result_sv, self._logical_perf = post_select_statevector(result_sv, self._postselect, self._heralds,
                                                                 self._keep_heralds)
         self.log_resources("evolve", {
-            'n': input_state.n if isinstance(input_state.n, int) else max(input_state.n)})
+            'n': n_photons if isinstance(n_photons, int) else max(n_photons)})
         return result_sv
 
     def _prepare_decomposed_input(self, input_state: SVDistribution):
@@ -761,7 +761,7 @@ class Simulator(ISimulator):
         """
         decomposed_input = self._prepare_decomposed_input(SVDistribution(input_state))
 
-        result_sv = self._evolve_no_compute(decomposed_input, input_state)
+        result_sv = self._evolve_no_compute(decomposed_input, input_state.n)
         return result_sv
 
     def evolve_svd(self,
@@ -792,7 +792,7 @@ class Simulator(ISimulator):
             # It is intended to reject if any of the component doesn't have enough photons
             if min(sv.n) >= self.min_detected_photons_filter:
                 decomposed_input = [(pa, _annot_state_mapping(st), max(sv.n)) for st, pa in sv]
-                new_sv = self._evolve_no_compute(decomposed_input, sv)
+                new_sv = self._evolve_no_compute(decomposed_input, sv.n)
                 success_prob = p * self._logical_perf
                 global_perf += success_prob
                 if new_sv.m != 0:

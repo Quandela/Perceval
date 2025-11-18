@@ -44,6 +44,8 @@ from perceval.runtime.rpc_handler import (
     _ENDPOINT_JOB_RESULT,
     _ENDPOINT_JOB_STATUS,
     _ENDPOINT_PLATFORM_DETAILS,
+    _ENDPOINT_PLATFORM_DETAILS_NEW,
+    _PROCESSOR_SECTION,
     _ENDPOINT_JOB_RERUN,
     _JOB_ID_KEY,
     _ENDPOINT_JOB_AVAILABILITY,
@@ -65,7 +67,27 @@ DEFAULT_PLATFORM_INFO = {
             'max_photon_count': 6,
             'min_mode_count': 1,
             'min_photon_count': 1,
-        }
+        },
+        'specific_circuit': 'serialized circuit'
+    },
+    'status': 'available',
+    'type': 'simulator',
+}
+
+ARCHITECTURE_PLATFORM_INFO = {
+    'id': str(uuid.uuid4()),
+    'name': None,
+    'perfs': {},
+    'specs': {
+        'available_commands': ['probs'],
+        'connected_input_modes': [0, 2, 4, 6, 8, 10],
+        'constraints': {
+            'max_mode_count': 20,
+            'max_photon_count': 6,
+            'min_mode_count': 1,
+            'min_photon_count': 1,
+        },
+        'architecture': 'serialized experiment'
     },
     'status': 'available',
     'type': 'simulator',
@@ -96,6 +118,8 @@ class CloudEndpoint(Enum):
             return CloudEndpoint.CreateJob
         if _ENDPOINT_PLATFORM_DETAILS in response.url:
             return CloudEndpoint.PlatformDetails
+        if _ENDPOINT_PLATFORM_DETAILS_NEW in response.url:
+            return CloudEndpoint.PlatformDetails
 
 
 class RPCHandlerResponsesBuilder():
@@ -110,7 +134,8 @@ class RPCHandlerResponsesBuilder():
                  rpc_handler: RPCHandler,
                  platform_details: dict = DEFAULT_PLATFORM_INFO,
                  default_job_status: RunningStatus | None = RunningStatus.SUCCESS,
-                 authorized_retry=4) -> None:
+                 authorized_retry=4,
+                 use_new_platform_details_url: bool = False) -> None:
 
         self._rpc_handler = rpc_handler
         platform_details['name'] = rpc_handler.name
@@ -123,7 +148,7 @@ class RPCHandlerResponsesBuilder():
         self._job_availability_response = {"max_jobs_in_queue": 1, "num_jobs_in_queue": 0}
         self.last_payload = {}
         responses.reset()
-        self._set_default_responses()
+        self._set_default_responses(use_new_platform_details_url)
 
     def set_default_job_status(self, default_job_status: RunningStatus | None) -> None:
         """Set the status of the job that rpc_handler.create_job will produce.
@@ -141,15 +166,18 @@ class RPCHandlerResponsesBuilder():
         """
         self._job_status_sequence = job_status_sequence
 
-    def _set_default_responses(self) -> None:
+    def _set_default_responses(self, use_new_platform_details_url: bool = False) -> None:
         self._set_get_platform_details_responses()
+        if use_new_platform_details_url:
+            self._set_get_new_platform_details_responses(200)
+        else:
+            self._set_get_new_platform_details_responses(404)
         self._set_job_availability_responses()
         for method, endpoint in [
             ('POST', _ENDPOINT_JOB_RERUN),
             ('POST', _ENDPOINT_JOB_CANCEL),
             ('GET', _ENDPOINT_JOB_STATUS),
-            ('GET', _ENDPOINT_JOB_RESULT),
-            ('GET', _ENDPOINT_PLATFORM_DETAILS)
+            ('GET', _ENDPOINT_JOB_RESULT)
         ]:
             responses.add(responses.Response(
                 method=method,
@@ -165,8 +193,7 @@ class RPCHandlerResponsesBuilder():
             ('POST', _ENDPOINT_JOB_RERUN),
             ('POST', _ENDPOINT_JOB_CANCEL),
             ('GET', _ENDPOINT_JOB_STATUS),
-            ('GET', _ENDPOINT_JOB_RESULT),
-            ('GET', _ENDPOINT_PLATFORM_DETAILS)
+            ('GET', _ENDPOINT_JOB_RESULT)
         ]:
             responses.remove(responses.Response(
                 method=method,
@@ -290,6 +317,13 @@ class RPCHandlerResponsesBuilder():
             method='GET',
             url=self._rpc_handler.url + _ENDPOINT_PLATFORM_DETAILS + quote_plus(self._rpc_handler.name),
             status=200,
+            json=self._platform_info))
+
+    def _set_get_new_platform_details_responses(self, status: int) -> None:
+        responses.add(responses.Response(
+            method='GET',
+            url=self._rpc_handler.url + _ENDPOINT_PLATFORM_DETAILS_NEW + quote_plus(self._rpc_handler.name) + _PROCESSOR_SECTION,
+            status=status,
             json=self._platform_info))
 
     def _set_job_availability_responses(self) -> None:

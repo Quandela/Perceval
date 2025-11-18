@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from packaging.version import Version
 
 from perceval.serialization import _schema_circuit_pb2 as pb
 from perceval.serialization._parameter_serialization import deserialize_parameter
@@ -33,6 +34,7 @@ from perceval.serialization._matrix_serialization import deserialize_pb_matrix
 import perceval.components.unitary_components as comp
 import perceval.components.non_unitary_components as nu
 from perceval.components.feed_forward_configurator import FFConfigurator, FFCircuitProvider
+from perceval.components.compiled_circuit import CompiledCircuit
 from perceval.utils import BasicState
 
 
@@ -133,3 +135,17 @@ def deserialize_ff_circuit_provider(m: int, serial_ffcp, known_params: dict = No
     if serial_ffcp.block_circuit_size:
         ffcp.block_circuit_size()
     return ffcp
+
+
+def deserialize_cc(serial_cc, known_params: dict = None) -> CompiledCircuit:
+    name = serial_cc.name
+    m = serial_cc.n_mode
+    version = Version(serial_cc.version)
+    parameters = serial_cc.parameters
+
+    if not name:
+        name = None
+
+    compiled_circuit = CompiledCircuit(name, m, parameters, version)
+
+    return compiled_circuit

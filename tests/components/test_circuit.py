@@ -126,7 +126,7 @@ def test_helloword():
 
 def test_empty_circuit():
     c = Circuit(4)
-    m = c.compute_unitary(False)
+    m = c.compute_unitary()
     assert m.shape == (4, 4)
     assert np.allclose(m, Matrix.eye(4))
     assert pdisplay_circuit(c).replace(" ", "") == """

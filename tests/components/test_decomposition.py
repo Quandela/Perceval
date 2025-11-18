@@ -109,9 +109,9 @@ def test_perm_rectangle_bs_1():
     ub = (pcvl.Circuit(2)
           // (0, comp.PS(phi=pcvl.Parameter("φ_a")))
           // comp.BS(theta=pcvl.P("theta")))
-    m = c.compute_unitary(False)
+    m = c.compute_unitary()
     c1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape=pcvl.InterferometerShape.RECTANGLE, constraints=[(0, None)])
-    m1 = c1.compute_unitary(False)
+    m1 = c1.compute_unitary()
     np.testing.assert_array_almost_equal(abs(m), abs(m1), decimal=6)
     c2 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape=pcvl.InterferometerShape.RECTANGLE, constraints=[(None, 0)])
     assert c2 is None
@@ -122,7 +122,7 @@ def test_id_decomposition_rectangle():
     c = pcvl.Circuit(4)
     co = CircuitOptimizer()
     c1 = co.optimize_rectangle(pcvl.Matrix(c.U), pcvl.catalog["mzi phase first"].generate, phase_at_output=True)
-    m1 = c1.compute_unitary(False)
+    m1 = c1.compute_unitary()
     assert norm.fidelity(c.compute_unitary(), m1) > 1 - co.threshold
 
 
@@ -130,7 +130,7 @@ def test_id_decomposition_triangle():
     # identity matrix decompose as ... identity
     c = pcvl.Circuit(4)
     c1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), pcvl.catalog["mzi phase last"].build_circuit(), shape=pcvl.InterferometerShape.TRIANGLE)
-    np.testing.assert_array_almost_equal(pcvl.Matrix.eye(4, use_symbolic=False), c1.compute_unitary(False), decimal=6)
+    np.testing.assert_array_almost_equal(pcvl.Matrix.eye(4, use_symbolic=False), c1.compute_unitary(), decimal=6)
     assert c1.ncomponents() == 0
 
     # With ignore_identity_block=False, the decomposed circuit contains multiple MZIs with trivial values
@@ -174,7 +174,7 @@ def test_simple_phase():
         c1 = pcvl.Circuit.decomposition(m, pcvl.catalog["mzi phase last"].build_circuit(), phase_shifter_fn=comp.PS,
                                         shape=pcvl.InterferometerShape.TRIANGLE, max_try=5)
         assert c1 is not None
-        np.testing.assert_array_almost_equal(m, c1.compute_unitary(False), decimal=6)
+        np.testing.assert_array_almost_equal(m, c1.compute_unitary(), decimal=6)
 
 
 def test_decompose_non_unitary():
@@ -190,7 +190,7 @@ def test_decomposition_large():
         c1 = pcvl.Circuit.decomposition(m, pcvl.catalog["mzi phase last"].build_circuit(), phase_shifter_fn=comp.PS,
                                         shape=pcvl.InterferometerShape.TRIANGLE, max_try=1)
         assert c1 is not None
-        np.testing.assert_array_almost_equal(m, c1.compute_unitary(False), decimal=6)
+        np.testing.assert_array_almost_equal(m, c1.compute_unitary(), decimal=6)
 
 
 def test_decomposition_perm():
@@ -210,7 +210,7 @@ def test_decomposition_inverse_rx():
                                    inverse_v=True,
                                    inverse_h=True,
                                    phase_shifter_fn=comp.PS)
-    np.testing.assert_array_almost_equal(u, c.compute_unitary(False), decimal=6)
+    np.testing.assert_array_almost_equal(u, c.compute_unitary(), decimal=6)
 
 
 def test_decomposition_inverse_h():
@@ -224,4 +224,4 @@ def test_decomposition_inverse_h():
                                    inverse_v=True,
                                    inverse_h=True,
                                    phase_shifter_fn=comp.PS)
-    np.testing.assert_array_almost_equal(u, c.compute_unitary(False), decimal=6)
+    np.testing.assert_array_almost_equal(u, c.compute_unitary(), decimal=6)
