@@ -28,8 +28,6 @@
 # SOFTWARE.
 import sys
 
-import perceval as pcvl  # Ugly, but avoids circular imports
-
 from perceval.utils import SVDistribution, BasicState, FockState, AnnotatedFockState, StateVector, NoiseModel
 from perceval.utils.logging import get_logger, channel
 
@@ -58,7 +56,7 @@ class Processor(AProcessor):
     :param noise: a NoiseModel containing noise parameters (defaults to no noise)
     :param name: a textual name for the processor (defaults to "Local processor")
     """
-    def __init__(self, backend: pcvl.ABackend | str, m_circuit: int | ACircuit | Experiment = None,
+    def __init__(self, backend, m_circuit: int | ACircuit | Experiment = None,
                  noise: NoiseModel = None, name: str = "Local processor"):
         if not isinstance(m_circuit, Experiment):
             m_circuit = Experiment(m_circuit, noise=noise, name=name)
@@ -113,10 +111,12 @@ class Processor(AProcessor):
 
     def _init_backend(self, backend):
         if isinstance(backend, str):
-            assert backend in pcvl.BACKEND_LIST, f"Simulation backend '{backend}' does not exist"
-            self.backend = pcvl.BACKEND_LIST[backend]()
+            from perceval import BACKEND_LIST
+            assert backend in BACKEND_LIST, f"Simulation backend '{backend}' does not exist"
+            self.backend = BACKEND_LIST[backend]()
         else:
-            assert isinstance(backend, pcvl.ABackend), f"'backend' must be an ABackend (got {type(backend)})"
+            from perceval import ABackend
+            assert isinstance(backend, ABackend), f"'backend' must be an ABackend (got {type(backend)})"
             self.backend = backend
 
     def type(self) -> ProcessorType:
@@ -162,7 +162,8 @@ class Processor(AProcessor):
     def samples(self, max_samples: int, max_shots: int = None, progress_callback=None) -> dict:
         self.check_min_detected_photons_filter()
         from perceval.simulators import NoisySamplingSimulator
-        assert isinstance(self.backend, pcvl.ASamplingBackend), "A sampling backend is required to call samples method"
+        from perceval.backends import ASamplingBackend
+        assert isinstance(self.backend, ASamplingBackend), "A sampling backend is required to call samples method"
         sampling_simulator = NoisySamplingSimulator(self.backend)
         sampling_simulator.sleep_between_batches = 0  # Remove sleep time between batches of samples in local simulation
         sampling_simulator.set_circuit(self.linear_circuit())
@@ -207,7 +208,8 @@ class Processor(AProcessor):
 
     @property
     def available_commands(self) -> list[str]:
-        return ["samples" if isinstance(self.backend, pcvl.ASamplingBackend) else "probs"]
+        from perceval.backends import ASamplingBackend
+        return ["samples" if isinstance(self.backend, ASamplingBackend) else "probs"]
 
     def log_resources(self, method: str, extra_parameters: dict):
         """Log resources of the processor

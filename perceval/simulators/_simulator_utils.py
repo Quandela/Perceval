@@ -32,7 +32,7 @@ from math import sqrt
 from multipledispatch import dispatch
 from typing import Iterable
 
-from perceval.utils import FockState, NoisyFockState, AnnotatedFockState, BSDistribution, StateVector, Annotation, SVDistribution, Matrix
+from perceval.utils import FockState, NoisyFockState, AnnotatedFockState, BSDistribution, StateVector, Annotation, SVDistribution
 from perceval.components import Circuit
 
 
