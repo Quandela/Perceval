@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from ._abstract_backends import ABackend, ASamplingBackend, AStrongSimulationBackend
+from ._abstract_backends import ABackend, ASamplingBackend, AStrongSimulationBackend, IFFBackend
 from ._clifford2017 import Clifford2017Backend
 from ._mps import MPSBackend
 from ._naive import NaiveBackend
