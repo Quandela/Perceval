@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .processor import AProcessor
+from .processor import AProcessor, Processor
 from ._pauli import PauliType, PauliEigenStateType, get_pauli_eigen_state_prep_circ, get_pauli_basis_measurement_circuit
 
 
@@ -72,17 +72,18 @@ def processor_circuit_configurator(processor, prep_state_indices: list, meas_pau
         raise TypeError(
             "Indices for the measurement circuits should be a PauliType")
 
-    p = processor.copy()
-    p.clear_input_and_circuit(processor.m)  # Clear processor content but keep its size
+    experiment = processor.experiment
+    e = experiment.copy()
+    e.clear_input_and_circuit(experiment.m)  # Clear experiment content but keep its size
 
     for c in _prep_state_circuit_preparer(prep_state_indices):
-        p.add(*c)  # Add state preparation circuit to the left of the operator
+        e.add(*c)  # Add state preparation circuit to the left of the operator
 
-    p.add(0, processor)  # including the operator (as a processor)
+    e.add(0, experiment)  # including the operator (as an experiment)
 
     for c in _meas_state_circuit_preparer(meas_pauli_basis_indices):
-        p.add(*c)  # Add measurement basis circuit to the right of the operator
+        e.add(*c)  # Add measurement basis circuit to the right of the operator
 
-    p.min_detected_photons_filter(0)  # QPU would have a problem with this
+    e.min_detected_photons_filter(0)  # QPU would have a problem with this
 
-    return p
+    return Processor(processor.backend, e)
