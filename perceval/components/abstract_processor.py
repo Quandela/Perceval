@@ -168,6 +168,10 @@ class AProcessor(ABC):
     def clear_postselection(self):
         self.experiment.clear_postselection()
 
+    @abstractmethod
+    def compute_physical_logical_perf(self, value: bool):
+        pass
+
     def _state_selected(self, state: BasicState) -> bool:
         """
         Computes if the state is selected given heralds and post selection function
@@ -179,10 +183,6 @@ class AProcessor(ABC):
         if self.experiment.post_select_fn is not None:
             return self.experiment.post_select_fn(state)
         return True
-
-    def copy(self):
-        get_logger().debug(f"Copy processor {self.name}", channel.general)
-        return copy.deepcopy(self)
 
     def set_circuit(self, circuit: ACircuit) -> AProcessor:
         r"""

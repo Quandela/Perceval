@@ -533,8 +533,8 @@ class Circuit(ACircuit):
         self._components = _new_components
 
     def compute_unitary(self,
-                        use_symbolic: bool = False,
                         assign: dict = None,
+                        use_symbolic: bool = False,
                         use_polarization: bool = None) -> Matrix:
         self.assign(assign)
         if use_polarization is None:

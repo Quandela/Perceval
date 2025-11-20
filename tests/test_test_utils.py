@@ -31,7 +31,7 @@ import pytest
 
 from perceval.utils import StateVector
 
-from _test_utils import assert_sv_close
+from ._test_utils import assert_sv_close
 
 
 def test_utils():
