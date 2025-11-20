@@ -26,8 +26,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
-
 from .feed_forward_simulator import FFSimulator
 from .simulator_interface import ISimulator
 from .simulator import Simulator
@@ -68,7 +66,6 @@ class SimulatorFactory:
         min_detected_photons = None
         post_select = None
         heralds = None
-        source = None
         noise = None
         m = None
 
@@ -76,7 +73,6 @@ class SimulatorFactory:
             if backend is None:
                 # If no backend was chosen, the backend type set in the Processor is used
                 backend = circuit.backend
-            source = circuit.source
             circuit = circuit.experiment
 
         if not isinstance(circuit, ACircuit):
@@ -124,7 +120,6 @@ class SimulatorFactory:
             assert not sim_polarization, "Cannot simulate polarization in a feed-forward simulation"
             simulator = FFSimulator(backend)
             simulator.set_noise(noise)
-            simulator.set_source(source)
 
         else:
             simulator = Simulator(backend)

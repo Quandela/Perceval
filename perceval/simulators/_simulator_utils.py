@@ -26,9 +26,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import copy
 from collections import defaultdict
 from math import sqrt
+
 from multipledispatch import dispatch
 from typing import Iterable
 
@@ -47,17 +47,10 @@ def _to_bsd(sv: StateVector) -> BSDistribution:
 
 @dispatch(StateVector, Annotation)
 def _inject_annotation(sv: StateVector, annotation: Annotation) -> StateVector:
-    if isinstance(annotation, int):
-        res_sv = StateVector()
-        for s, pa in sv.unnormalized_iterator():
-            s = NoisyFockState(s, [annotation]*s.n)
-            res_sv += pa * s
-        return res_sv
     if len(annotation):
         res_sv = StateVector()
         for s, pa in sv.unnormalized_iterator():
-            s = copy.copy(s)
-            s.inject_annotation(annotation)
+            s = s.inject_annotation(annotation)
             res_sv += pa * s
         return res_sv
     return sv
@@ -67,7 +60,7 @@ def _inject_annotation(sv: StateVector, annotation: Annotation) -> StateVector:
 def _inject_annotation(sv: StateVector, annotation: int) -> StateVector:
     res_sv = StateVector()
     for s, pa in sv.unnormalized_iterator():
-        s = NoisyFockState(s, [annotation]*s.n)
+        s = s.inject_annotation(annotation)
         res_sv += pa * s
     return res_sv
 
@@ -130,14 +123,20 @@ def _unitary_components_to_circuit(component_list: list, m: int = 0):
     return circuit
 
 
-def _split_by_photon_count(sv: StateVector) -> SVDistribution:
+def _split_by_photon_and_tag_count(sv: StateVector) -> SVDistribution:
     """
-    Split a state vector into a SVDistribution such that each key of the SVD corresponds to one photon count
+    Split a state vector into a SVDistribution such that each key of the SVD corresponds
+    to one photon count and one noise tag count
     """
     counter = defaultdict(lambda: [StateVector(), 0])  # State and prob
     for state, pa in sv:
-        counter[state.n][0] += pa * state
-        counter[state.n][1] += abs(pa) ** 2
+        if isinstance(state, NoisyFockState):
+            split = state.split_state()
+            key = tuple(split[tag].n if tag in split else 0 for tag in range(max(split.keys()) + 1))
+        else:
+            key = state.n
+        counter[key][0] += pa * state
+        counter[key][1] += abs(pa) ** 2
 
     res = SVDistribution()
     for (state, prob) in counter.values():

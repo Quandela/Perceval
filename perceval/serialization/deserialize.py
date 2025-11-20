@@ -26,17 +26,17 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
-
 from base64 import b64decode
 from os import path
 import json
 from zlib import decompress
 
 from perceval.components import Circuit, BSLayeredPPNR, Detector, AComponent, Experiment, PortLocation, Port, Herald, \
-    IDetector, AFFConfigurator
+    IDetector, AFFConfigurator, CompiledCircuit
 from perceval.utils import Matrix, BSDistribution, SVDistribution, BasicState, BSCount, NoiseModel, PostSelect
+from perceval.utils.logging import get_logger, channel
 from perceval.serialization import _matrix_serialization, deserialize_state, _detector_serialization
+from ._component_deserialization import deserialize_cc
 from ._port_deserialization import deserialize_herald, deserialize_port
 from ._constants import (
     SEP,
@@ -53,7 +53,7 @@ from ._constants import (
     NOISE_TAG,
     POSTSELECT_TAG,
     BS_LAYERED_DETECTOR_TAG,
-    DETECTOR_TAG, COMPONENT_TAG, HERALD_TAG, PORT_TAG, VALUE_NOT_SET, EXPERIMENT_TAG,
+    DETECTOR_TAG, COMPONENT_TAG, HERALD_TAG, PORT_TAG, VALUE_NOT_SET, EXPERIMENT_TAG, COMPILED_CIRCUIT_TAG,
 )
 from ._state_serialization import deserialize_statevector, deserialize_bssamples
 from . import _component_deserialization as _cd
@@ -132,6 +132,18 @@ def deserialize_experiment(pb_e: pb.Experiment, known_params: dict = None) -> Ex
 
     builder = ExperimentBuilder(pb_e, known_params)
     return builder.resolve()
+
+
+def deserialize_compiled_circuit(pb_cc: pb.CompiledCircuit, known_params: dict = None) -> CompiledCircuit:
+    if not isinstance(pb_cc, pb.CompiledCircuit):
+        pb_binary_repr = pb_cc
+        pb_cc = pb.CompiledCircuit()
+        if isinstance(pb_binary_repr, bytes):
+            pb_cc.ParseFromString(pb_binary_repr)
+        else:
+            pb_cc.ParseFromString(b64decode(pb_binary_repr))
+
+    return deserialize_cc(pb_cc, known_params)
 
 
 def deserialize_svdistribution(serial_svd) -> SVDistribution:
@@ -215,21 +227,22 @@ DESERIALIZER = {
     HERALD_TAG: deserialize_herald,
     PORT_TAG: deserialize_port,
     EXPERIMENT_TAG: deserialize_experiment,
+    COMPILED_CIRCUIT_TAG: deserialize_compiled_circuit,
 }
 
 
-def deserialize(obj):
+def deserialize(obj, strict=True):
     if isinstance(obj, bytes):
         raise TypeError("Generic deserialize function does not handle binary representation. "
                         "Use specialized functions (e.g. deserialize_circuit) instead.")
     if isinstance(obj, dict):
         r = {}
         for k, v in obj.items():
-            r[deserialize(k)] = deserialize(v)
+            r[deserialize(k, strict=strict)] = deserialize(v, strict=strict)
     elif isinstance(obj, list):
         r = []
         for k in obj:
-            r.append(deserialize(k))
+            r.append(deserialize(k, strict=strict))
     elif isinstance(obj, str) and obj.startswith(PCVL_PREFIX):
         if obj.startswith(ZIP_PREFIX):
             # if zip found -> update obj
@@ -243,7 +256,11 @@ def deserialize(obj):
         serial_obj = obj[p+lp+1:]
 
         def serializer_not_implemented(_: str):
-            raise NotImplementedError(f"Not serializer found for {class_obj}")
+            if strict:
+                raise NotImplementedError(f"No serializer found for {class_obj}")
+            get_logger().warn(f"Unknown perceval class {class_obj}, leaving it serialized; Consider upgrading perceval",
+                              channel.user)
+            return obj
 
         deserialize_func = DESERIALIZER.get(class_obj, serializer_not_implemented)
         r = deserialize_func(serial_obj)
@@ -252,14 +269,14 @@ def deserialize(obj):
     return r
 
 
-def deserialize_file(filepath: str):
+def deserialize_file(filepath: str, strict=True):
     """
     Agnosticly deserialize any supported type from a text file.
     """
     if not path.isfile(filepath):
         raise FileNotFoundError(f'No file at path {filepath}')
     with open(filepath, 'r') as f:
-        return deserialize(json.loads(f.read()))
+        return deserialize(json.loads(f.read()), strict=strict)
 
 
 class CircuitBuilder:
@@ -275,7 +292,8 @@ class CircuitBuilder:
         'time_delay': _cd.deserialize_dt,
         'polarization_rotator': _cd.deserialize_pr,
         'polarized_beam_splitter': _cd.deserialize_pbs,
-        'loss_channel': _cd.deserialize_lc
+        'loss_channel': _cd.deserialize_lc,
+        'compiled_circuit': _cd.deserialize_cc
     }
     deserialize_fn_m = {  # Deserialization functions requiring m value
         'barrier': _cd.deserialize_barrier,

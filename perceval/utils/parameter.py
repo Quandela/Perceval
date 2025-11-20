@@ -30,7 +30,11 @@
 from __future__ import annotations
 
 import random
+from copy import deepcopy
+
 import sympy as sp
+
+from .logging import deprecated
 
 
 class Parameter:
@@ -45,7 +49,6 @@ class Parameter:
     :param max_v: maximal value that the parameter can take, is used in circuit optimization
     :param periodic: True if the parameter is periodic, False otherwise (default True)
     """
-    _id = 0
 
     def __init__(self, name: str, value: float = None,
                  min_v: float = None, max_v: float = None, periodic: bool = True):
@@ -63,10 +66,8 @@ class Parameter:
 
         self.name = name
         self._periodic = periodic
-        self._pid = Parameter._id
         self._original = None
         self._params = {self}  # set of sub parameters
-        Parameter._id += 1
 
     @property
     def _is_expression(self):
@@ -93,20 +94,8 @@ class Parameter:
         """
         return float(self._value)
 
-    def copy(self, subs: dict[str, Parameter] = None) -> Parameter:
-        if self.fixed:
-            return Parameter(name=self.name, value=float(self), min_v=self._min, max_v=self._max, periodic=self._periodic)
-
-        if subs is None:
-            subs = {}
-        if self.name not in subs:
-            p = Parameter(name=self.name, value=None, min_v=self._min, max_v=self._max, periodic=self._periodic)
-            if self.defined:
-                p.set_value(float(self))
-
-            subs[self.name] = p
-
-        return subs[self.name]
+    def copy(self) -> Parameter:
+        return deepcopy(self)
 
     def evalf(self, subs: dict = None) -> float:
         r"""Convert the parameter to float, will fail if the parameter has no defined value
@@ -223,10 +212,11 @@ class Parameter:
         """
         self._max = m
 
+    @deprecated(version = "v1.1", reason = "Use id(self) or self.is_identical_to(other) instead")
     @property
     def pid(self):
         r"""Unique identifier for the parameter"""
-        return self._pid
+        return id(self)
 
     def __mul__(self, other):
         if isinstance(other, Parameter):
@@ -357,18 +347,8 @@ class Expression(Parameter):
         """
         return all(p.fixed for p in self._params)
 
-    def copy(self, subs: dict[str, Parameter] = None) -> Expression:
-        if self.fixed:
-            new_params = {p.copy(subs) for p in self._params}
-            return Expression(self.name, new_params)
-
-        if subs is None:
-            subs = {}
-        if self.name not in subs:
-            new_params = {p.copy(subs) for p in self._params}
-            subs[self.name] = Expression(self.name, new_params)
-
-        return subs[self.name]
+    def copy(self) -> Expression:
+        return deepcopy(self)
 
 
 

@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
+from __future__ import annotations  # Python 3.11 : Replace using Self typing
 
 import json
 import time
@@ -34,7 +34,8 @@ from requests.exceptions import HTTPError, ConnectionError
 
 from .job import Job
 from .job_status import JobStatus, RunningStatus
-from perceval.serialization import deserialize, serialize
+from perceval.serialization import deserialize
+from perceval.serialization._serialized_containers import make_serialized, SerializedDict
 from perceval.utils.logging import get_logger, channel
 from .rpc_handler import RPCHandler
 
@@ -86,17 +87,22 @@ class RemoteJob(Job):
     def __init__(self, request_data: dict, rpc_handler: RPCHandler, job_name: str,
                  delta_parameters: dict = None, job_context: dict = None,
                  command_param_names: list = None, refresh_progress_delay: int = 3):
-        super().__init__(delta_parameters=delta_parameters, command_param_names=command_param_names)
-        self._rpc_handler = rpc_handler
+        super().__init__(command_param_names=command_param_names)
+        self._rpc_handler = make_serialized(rpc_handler)
         self._job_status = JobStatus()
-        self._job_context = job_context
+        self._job_context = make_serialized(job_context)
+        self._delta_parameters = make_serialized(delta_parameters or {"command": {}, "mapping": {}})
         self._refresh_progress_delay = refresh_progress_delay  # When syncing an async job (in s)
         self._previous_status_refresh = 0.
         self._status_refresh_error = 0
         self._id = None
         self.name = job_name
-        self._request_data = request_data
+        self._request_data = make_serialized(request_data)
         self._results = None
+
+    @property
+    def delta_parameters(self) -> SerializedDict:
+        return self._delta_parameters
 
     @property
     def was_sent(self) -> bool:
@@ -129,12 +135,17 @@ class RemoteJob(Job):
 
     @staticmethod
     def _from_dict(my_dict: dict, rpc_handler):
-        if my_dict['status'] == 'SUCCESS':
-            body = None
-        else:
-            body = my_dict['body']
+        # Perceval <= 1.0.1 stores 'body' containing the computed payload
+        body = my_dict.get('body')
+        # Perceval > 1.0.1 stores 'request_data' & 'delta_parameters' & 'job_context' allowing to re-computed the payload
+        request_data = my_dict.get('request_data')
+        job_context = my_dict.get('job_context')
+        delta_parameters = my_dict.get('delta_parameters')
+
+        if my_dict['status'] != 'SUCCESS' and not body and not request_data:
+            raise RuntimeError(f"Missing job description")
         name = my_dict.get('name')
-        rj = RemoteJob(body, rpc_handler, name)
+        rj = RemoteJob(request_data or body, rpc_handler, name, delta_parameters, job_context)
         rj._id = my_dict['id']
         if my_dict['status'] is not None:
             rj._job_status.status = RunningStatus[my_dict['status']]
@@ -153,10 +164,14 @@ class RemoteJob(Job):
                                 'proxies': self._rpc_handler.proxies}
 
         if not self._job_status.success:
-            # Save the job payload for later use in the cloud unless the status is 'success'.
-            job_info['body'] = self._create_payload_data()
+            job_info['delta_parameters'] = self._delta_parameters
+            job_info['job_context'] = self._job_context
+            job_info['request_data'] = self._request_data
 
         return job_info
+
+    def set_job_group_name(self, group_name: str):
+        self._request_data['job_group_name'] = group_name
 
     def _handle_status_error(self, error):
         """
@@ -242,7 +257,7 @@ class RemoteJob(Job):
 
     def _create_payload_data(self, *args, **kwargs) -> dict:
         # creates the payload for the job and returns the prepared job data
-        self._handle_params(args, kwargs)
+        self._handle_params(*args, **kwargs)
         if self._delta_parameters['mapping']:
             if self._job_context is None:
                 self._job_context = {}
@@ -250,15 +265,16 @@ class RemoteJob(Job):
 
         kwargs = self._delta_parameters['command']
         kwargs['job_context'] = self._job_context
-        self._request_data['job_name'] = self._name
-        self._request_data['payload'].update(kwargs)
+        request_data = self._request_data
+        request_data['job_name'] = self._name
+        request_data['payload'].update(kwargs)
         self._check_max_shots_samples_validity()
-        return self._request_data
+        return request_data
 
     def execute_async(self, *args, **kwargs) -> RemoteJob:
         assert self._job_status.waiting, "job has already been executed"
         try:
-            self._id = self._rpc_handler.create_job(serialize(self._create_payload_data(*args, **kwargs)))
+            self._id = self._rpc_handler.create_job(self._create_payload_data(*args, **kwargs))
             get_logger().info(f"Send payload to the Cloud (got job id: {self._id})", channel.general)
             self._job_status.status = RunningStatus.WAITING
 
@@ -279,7 +295,10 @@ class RemoteJob(Job):
     def cancel(self):
         if self.status.status in (RunningStatus.RUNNING, RunningStatus.WAITING, RunningStatus.SUSPENDED):
             get_logger().info(f"Programmatically request job {self._id} cancellation", channel.general)
-            self._rpc_handler.cancel_job(self._id)
+            try:
+                self._rpc_handler.cancel_job(self._id)
+            except HTTPError as e:
+                raise HTTPError(f"Error while trying to cancel job: {e}") from None
             self._job_status.stop_run(RunningStatus.CANCEL_REQUESTED, 'Cancellation requested by user')
         else:
             raise RuntimeError('Job is not waiting or running, cannot cancel it')
@@ -296,15 +315,21 @@ class RemoteJob(Job):
                 f"Cannot rerun current job because job status is: {self.status} (should be either CANCELED or ERROR)")
 
         job_dict = self._to_dict()
-        job_dict['id'] = self._rpc_handler.rerun_job(self._id)
+        try:
+            job_dict['id'] = self._rpc_handler.rerun_job(self._id)
+        except HTTPError as e:
+            raise HTTPError(f"Error while trying to rerun job: {e}") from None
         job_dict['status'] = RunningStatus.WAITING.name
         return RemoteJob._from_dict(job_dict, self._rpc_handler)
 
     def _get_results(self) -> dict | None:
         if self._results and self.status.completed:
             return self._results
-        response = self._rpc_handler.get_job_results(self._id)
-        self._results = deserialize(json.loads(response['results']))
+        try:
+            response = self._rpc_handler.get_job_results(self._id)
+        except HTTPError as e:
+            raise HTTPError(f"Error while retrieving job results: {e}") from None
+        self._results = deserialize(json.loads(response['results']), strict=False)
         if not isinstance(self._results, dict):
             self._results = None
             return self._results

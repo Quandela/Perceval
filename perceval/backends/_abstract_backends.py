@@ -26,13 +26,13 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Iterable
 
 import exqalibur as xq
+from exqalibur import SVDistribution
 
-from perceval.components import ACircuit
+from perceval.components import ACircuit, AComponent, IDetector, Source
 from perceval.utils import BasicState, FockState, BSDistribution, BSSamples, StateVector, allstate_iterator, global_params
 
 
@@ -98,8 +98,9 @@ class AStrongSimulationBackend(ABackend):
         self._cache_iterator: dict = dict()
         self._masks_str: list[str] | None = None
         self._mask: xq.FSMask | None = None
+        self._no_limit_modes: list[int] | None = None
 
-    def set_mask(self, masks: str | list[str], n = None):
+    def set_mask(self, masks: str | list[str], n = None, at_least_modes = None):
         r"""
         Sets new masks, replacing the former ones if they exist. Clear possible cached data that depend on the mask.
         Masks are useful to limit strong simulation to only a part of the Fock space, ultimately saving memory and
@@ -111,6 +112,8 @@ class AStrongSimulationBackend(ABackend):
             empty modes.
         :param n: The number of photons to instantiate the mask with.
             This corresponds to the total number of photons in your non-separated state.
+        :param at_least_modes: A list containing the modes on which the accepted number of photons can be anything higher
+            than or equal to the given value in the condition.
         """
         self.clear_mask()
         if isinstance(masks, str):
@@ -121,13 +124,17 @@ class AStrongSimulationBackend(ABackend):
             assert len(m) == mask_length, "Inconsistent mask lengths"
         self._masks_str = masks
         self._mask_n = n
+        self._no_limit_modes = at_least_modes
         self._init_mask()
 
     def _init_mask(self):
         if self._masks_str is not None and self._input_state is not None:
             instate = self._input_state
             assert len(self._masks_str[0]) == instate.m, "Mask and input state lengths have to be the same"
-            self._mask = xq.FSMask(instate.m, self._mask_n or instate.n, self._masks_str)
+            if self._no_limit_modes:
+                self._mask = xq.FSMask(instate.m, self._mask_n or instate.n, self._masks_str, self._no_limit_modes)
+            else:
+                self._mask = xq.FSMask(instate.m, self._mask_n or instate.n, self._masks_str)
 
     def clear_mask(self):
         """
@@ -199,3 +206,30 @@ class AStrongSimulationBackend(ABackend):
         for output_state in self._get_iterator(self._input_state):
             res += output_state * self.prob_amplitude(output_state)
         return res
+
+
+class IFFBackend(ABC):
+
+    @staticmethod
+    @abstractmethod
+    def can_simulate_feed_forward(components: list[tuple[tuple, AComponent]],
+                                  input_state: BasicState | SVDistribution | tuple[Source, FockState],
+                                  detectors: list[IDetector] = None) -> bool:
+        """
+        :param components: The list of components in the circuit, containing at least one FFConfigurator.
+        :param input_state: The input state to simulate. Can be a BasicState, a SVD, or a tuple[Source, FockState]
+        :param detectors: The detectors to apply at the end of the computation.
+        :return: True if the output of the simulation will be correct, False otherwise.
+        """
+        pass
+
+    @abstractmethod
+    def set_feed_forward(self, components: list[tuple[tuple, AComponent]], m: int) -> None:
+        """
+        Sets the components containing at least one FFConfigurator in the backend.
+        This should be used in place of :code:`set_circuit`
+
+        :param components: The list of components in the circuit, containing at least one FFConfigurator.
+        :param m: The number of modes in the circuit.
+        """
+        pass

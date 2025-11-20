@@ -26,18 +26,17 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
+from __future__ import annotations  # Python 3.11 : Replace using Self typing
 
-import copy
 from abc import ABC, abstractmethod
 
 from .unitary_components import Unitary
-from .abstract_component import AComponent
+from .abstract_component import AParametrizedComponent
 from .linear_circuit import ACircuit
 from perceval.utils import BasicState, Matrix
 
 
-class AFFConfigurator(AComponent, ABC):
+class AFFConfigurator(AParametrizedComponent, ABC):
     DEFAULT_NAME = "FFC"
 
     """
@@ -104,9 +103,6 @@ class AFFConfigurator(AComponent, ABC):
         assert isinstance(offset, int), f"A feed-forward configurator offset must be an integer (received {offset})"
         self._offset = offset
 
-    def copy(self, subs=None) -> AFFConfigurator:
-        return copy.copy(self)
-
 
 class FFCircuitProvider(AFFConfigurator):
     DEFAULT_NAME = "FFC"
@@ -130,11 +126,25 @@ class FFCircuitProvider(AFFConfigurator):
         assert not isinstance(default_circuit, AFFConfigurator), \
             "Can't add directly a Feed-forward configurator to a configurator (use a Processor)"
         super().__init__(m, offset, default_circuit, name)
+        self._params = self._get_parameters(default_circuit, True, True)
         self._map: dict[BasicState, ACircuit] = {}
+
+    @staticmethod
+    def _get_parameters(circ, all_params: bool, expressions: bool) -> dict:
+        if isinstance(circ, ACircuit):
+            res = {p.name: p for p in circ.get_parameters(all_params, expressions)}
+        else:  # This is a Processor or an Experiment
+            res = {}
+            for _, c in circ.components:
+                if isinstance(c, AParametrizedComponent):
+                    res.update({p.name: p for p in c.get_parameters(all_params, expressions)})
+
+        return res
 
     def reset_map(self):
         self._max_circuit_size = self.default_circuit.m
         self._map = {}
+        self._params = self._get_parameters(self.default_circuit, True, True)
 
     @property
     def circuit_map(self):
@@ -160,6 +170,15 @@ class FFCircuitProvider(AFFConfigurator):
         from .abstract_processor import AProcessor
         if isinstance(circuit, AProcessor):
             circuit = circuit.experiment
+
+        params = self._get_parameters(circuit, False, True)
+        for _, param in params.items():
+            if not param.fixed:
+                for internal_p in param._params:
+                    if internal_p.name in self._params and internal_p is not self._params[internal_p.name]:
+                        raise RuntimeError(f"two parameters with the same name in the circuit {internal_p.name}")
+
+        self._params.update(params)
 
         self._map[state] = circuit
         return self

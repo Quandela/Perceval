@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from __future__ import annotations
+from __future__ import annotations  # Python 3.11 : Replace using Self typing
 
 import copy
 import random
@@ -466,8 +466,8 @@ class Circuit(ACircuit):
         for _, p in component._params.items():
             if not p.fixed:
                 for internal_p in p._params:
-                    if internal_p.name in self._params and internal_p._pid != self._params[internal_p.name]._pid:
-                        raise RuntimeError("two parameters with the same name in the circuit (%s)" % p.name)
+                    if internal_p.name in self._params and internal_p is not self._params[internal_p.name]:
+                        raise RuntimeError(f"two parameters with the same name in the circuit {internal_p.name}")
                     self._params[internal_p.name] = internal_p
 
         # register the component
@@ -533,8 +533,8 @@ class Circuit(ACircuit):
         self._components = _new_components
 
     def compute_unitary(self,
-                        use_symbolic: bool = False,
                         assign: dict = None,
+                        use_symbolic: bool = False,
                         use_polarization: bool = None) -> Matrix:
         self.assign(assign)
         if use_polarization is None:
@@ -546,16 +546,9 @@ class Circuit(ACircuit):
             u = Matrix.eye(self._m, use_symbolic=use_symbolic)
         return u
 
-    def copy(self, subs: dict | list = None):
+    def copy(self):
         """Return a deep copy of the current circuit"""
-        nc = copy.deepcopy(self)
-        if subs is None:
-            subs = {}
-        nc._params = {}
-        nc._components = []
-        for r, c in self._components:
-            nc.add(r, c.copy(subs=subs))
-        return nc
+        return copy.deepcopy(self)
 
     @staticmethod
     def decomposition(U: MatrixN,

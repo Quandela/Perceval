@@ -26,8 +26,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
-
 from ._validated_params import AValidatedParam, ValidatedBool, ValidatedFloat
 from math import pi
 
@@ -81,6 +79,9 @@ class NoiseModel:
         return NoiseModel(**self.__dict__())
 
     def __str__(self) -> str:
+        return str(self.__dict__())
+
+    def __repr__(self) -> str:
         return str(self.__dict__())
 
     def __dict__(self) -> dict:

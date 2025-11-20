@@ -34,9 +34,10 @@ from ._constants import *
 from ._detector_serialization import serialize_bs_layer, serialize_detector
 from ._experiment_serialization import serialize_experiment
 from ._matrix_serialization import serialize_matrix
-from ._circuit_serialization import serialize_circuit, serialize_component, serialize_herald, serialize_port
+from ._circuit_serialization import serialize_circuit, serialize_component, serialize_herald, serialize_port, \
+    serialize_compiled_circuit
 from ._state_serialization import serialize_state, serialize_statevector, serialize_bssamples
-from perceval.components import ACircuit, BSLayeredPPNR, Detector, AComponent, Herald, Port, Experiment
+from perceval.components import ACircuit, BSLayeredPPNR, Detector, AComponent, Herald, Port, Experiment, CompiledCircuit
 from perceval.utils import Matrix, BasicState, SVDistribution, BSDistribution, BSCount, BSSamples, StateVector, \
     simple_float, NoiseModel, PostSelect
 from base64 import b64encode
@@ -66,7 +67,9 @@ def _handle_compression(serialized_obj: str, do_compress: bool) -> str:
 
 
 @dispatch(AComponent, compress=(list, bool))
-def serialize(component: AComponent, compress=True) -> str:
+def serialize(component: AComponent, compress=None) -> str:
+    if compress is None:
+        compress = True
     tag = COMPONENT_TAG
     compress = _handle_compress_parameter(compress, tag)
     return _handle_compression(
@@ -75,7 +78,9 @@ def serialize(component: AComponent, compress=True) -> str:
 
 
 @dispatch(ACircuit, compress=(list, bool))
-def serialize(circuit: ACircuit, compress=True) -> str:
+def serialize(circuit: ACircuit, compress=None) -> str:
+    if compress is None:
+        compress = True
     tag = CIRCUIT_TAG
     compress = _handle_compress_parameter(compress, tag)
     return _handle_compression(
@@ -84,7 +89,9 @@ def serialize(circuit: ACircuit, compress=True) -> str:
 
 
 @dispatch(Experiment, compress=(list, bool))
-def serialize(experiment: Experiment, compress=True) -> str:
+def serialize(experiment: Experiment, compress=None) -> str:
+    if compress is None:
+        compress = True
     tag = EXPERIMENT_TAG
     compress = _handle_compress_parameter(compress, tag)
     return _handle_compression(
@@ -92,8 +99,21 @@ def serialize(experiment: Experiment, compress=True) -> str:
         do_compress=compress)
 
 
+@dispatch(CompiledCircuit, compress=(list, bool))
+def serialize(compiled_circuit: CompiledCircuit, compress=None) -> str:
+    if compress is None:
+        compress = True
+    tag = COMPILED_CIRCUIT_TAG
+    compress = _handle_compress_parameter(compress, tag)
+    return _handle_compression(
+        f"{PCVL_PREFIX}{tag}{SEP}" + b64encoding(serialize_compiled_circuit(compiled_circuit).SerializeToString()),
+        do_compress=compress)
+
+
 @dispatch(Herald, compress=(list, bool))
-def serialize(herald: Herald, compress=True) -> str:
+def serialize(herald: Herald, compress=None) -> str:
+    if compress is None:
+        compress = True
     tag = HERALD_TAG
     compress = _handle_compress_parameter(compress, tag)
     return _handle_compression(
@@ -101,7 +121,9 @@ def serialize(herald: Herald, compress=True) -> str:
 
 
 @dispatch(Port, compress=(list, bool))
-def serialize(port: Port, compress=True) -> str:
+def serialize(port: Port, compress=None) -> str:
+    if compress is None:
+        compress = True
     tag = PORT_TAG
     compress = _handle_compress_parameter(compress, tag)
     return _handle_compression(
@@ -109,7 +131,9 @@ def serialize(port: Port, compress=True) -> str:
 
 
 @dispatch(Matrix, compress=(list, bool))
-def serialize(m: Matrix, compress=False) -> str:
+def serialize(m: Matrix, compress=None) -> str:
+    if compress is None:
+        compress = False
     tag = MATRIX_TAG
     compress = _handle_compress_parameter(compress, tag)
     return _handle_compression(f"{PCVL_PREFIX}{tag}{SEP}" + b64encoding(serialize_matrix(m).SerializeToString()),
@@ -117,7 +141,9 @@ def serialize(m: Matrix, compress=False) -> str:
 
 
 @dispatch(BasicState, compress=(list, bool))
-def serialize(obj, compress=False) -> str:
+def serialize(obj, compress=None) -> str:
+    if compress is None:
+        compress = False
     tag = BS_TAG
     compress = _handle_compress_parameter(compress, tag)
     return _handle_compression(f"{PCVL_PREFIX}{tag}{SEP}" + serialize_state(obj), do_compress=compress)
@@ -125,14 +151,18 @@ def serialize(obj, compress=False) -> str:
 
 
 @dispatch(StateVector, compress=(list, bool))
-def serialize(sv, compress=False) -> str:
+def serialize(sv, compress=None) -> str:
+    if compress is None:
+        compress = False
     tag = SV_TAG
     compress = _handle_compress_parameter(compress, tag)
     return _handle_compression(f"{PCVL_PREFIX}{tag}{SEP}" + serialize_statevector(sv), do_compress=compress)
 
 
 @dispatch(SVDistribution, compress=(list, bool))
-def serialize(dist: SVDistribution, compress=False) -> str:
+def serialize(dist: SVDistribution, compress=None) -> str:
+    if compress is None:
+        compress = False
     tag = SVD_TAG
     compress = _handle_compress_parameter(compress, tag)
     serial_svd = f"{PCVL_PREFIX}{tag}{SEP}{{" \
@@ -143,7 +173,9 @@ def serialize(dist: SVDistribution, compress=False) -> str:
 
 
 @dispatch(BSDistribution, compress=(list, bool))
-def serialize(dist: BSDistribution, compress=True) -> str:
+def serialize(dist: BSDistribution, compress=None) -> str:
+    if compress is None:
+        compress = True
     tag = BSD_TAG
     compress = _handle_compress_parameter(compress, tag)
     serial_bsd = f"{PCVL_PREFIX}{tag}{SEP}{{" \
@@ -153,7 +185,9 @@ def serialize(dist: BSDistribution, compress=True) -> str:
 
 
 @dispatch(BSCount, compress=(list, bool))
-def serialize(obj, compress=True) -> str:
+def serialize(obj, compress=None) -> str:
+    if compress is None:
+        compress = True
     tag = BSC_TAG
     compress = _handle_compress_parameter(compress, tag)
     serial_bsc = f"{PCVL_PREFIX}{tag}{SEP}{{" \
@@ -163,44 +197,54 @@ def serialize(obj, compress=True) -> str:
 
 
 @dispatch(BSSamples, compress=(list, bool))
-def serialize(obj, compress=True) -> str:
+def serialize(obj, compress=None) -> str:
+    if compress is None:
+        compress = True
     tag = BSS_TAG
     compress = _handle_compress_parameter(compress, tag)
     return _handle_compression(f"{PCVL_PREFIX}{tag}{SEP}" + serialize_bssamples(obj), do_compress=compress)
 
 
 @dispatch(NoiseModel, compress=(list, bool))
-def serialize(obj, compress=False):
+def serialize(obj, compress=None):
+    if compress is None:
+        compress = False
     tag = NOISE_TAG
     compress = _handle_compress_parameter(compress, tag)
     return _handle_compression(f"{PCVL_PREFIX}{tag}{SEP}" + json.dumps(obj.__dict__()), do_compress=compress)
 
 
 @dispatch(PostSelect, compress=(list, bool))
-def serialize(ps: PostSelect, compress=False):
+def serialize(ps: PostSelect, compress=None):
+    if compress is None:
+        compress = False
     tag = POSTSELECT_TAG
     compress = _handle_compress_parameter(compress, tag)
     return _handle_compression(f"{PCVL_PREFIX}{tag}{SEP}{ps}", do_compress=compress)
 
 
 @dispatch(BSLayeredPPNR, compress=(list, bool))
-def serialize(obj: BSLayeredPPNR, do_compress=False):
+def serialize(obj: BSLayeredPPNR, compress=None):
+    if compress is None:
+        compress = False
     tag = BS_LAYERED_DETECTOR_TAG
-    compress = _handle_compress_parameter(do_compress, tag)
+    compress = _handle_compress_parameter(compress, tag)
     return _handle_compression(f"{PCVL_PREFIX}{tag}{SEP}" + b64encoding(serialize_bs_layer(obj).SerializeToString()),
                                do_compress=compress)
 
 
 @dispatch(Detector, compress=(list, bool))
-def serialize(obj: Detector, do_compress=False):
+def serialize(obj: Detector, compress=None):
+    if compress is None:
+        compress = False
     tag = DETECTOR_TAG
-    compress = _handle_compress_parameter(do_compress, tag)
+    compress = _handle_compress_parameter(compress, tag)
     return _handle_compression(f"{PCVL_PREFIX}{tag}{SEP}" + b64encoding(serialize_detector(obj).SerializeToString()),
                                do_compress=compress)
 
 
 @dispatch(dict, compress=(list, bool))
-def serialize(obj, compress=False) -> dict:
+def serialize(obj, compress=None) -> dict:
     r = {}
     for k, v in obj.items():
         r[serialize(k, compress=compress)] = serialize(v, compress=compress)
@@ -208,7 +252,7 @@ def serialize(obj, compress=False) -> dict:
 
 
 @dispatch(list, compress=(list, bool))
-def serialize(obj, compress=False) -> list:
+def serialize(obj, compress=None) -> list:
     r = []
     for k in obj:
         r.append(serialize(k, compress=compress))
@@ -216,11 +260,11 @@ def serialize(obj, compress=False) -> list:
 
 
 @dispatch(object, compress=(list, bool))
-def serialize(obj, compress=False) -> object:
+def serialize(obj, compress=None) -> object:
     return obj
 
 
-def serialize_to_file(obj, filepath: str, compress=False) -> None:
+def serialize_to_file(obj, filepath: str, compress=None) -> None:
     serial_repr = serialize(obj, compress=compress)
     with open(filepath, mode="w") as f:
         f.write(json.dumps(serial_repr))

@@ -5,6 +5,15 @@ While, with its latest versions, Perceval tends to stabilise its public API, som
 
 This section lists the major breaking changes.
 
+Breaking changes in Perceval 1.1
+--------------------------------
+
+JobGroup number of parallel launch
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The number of jobs that a user can run is now directly retrieved from the cloud.
+AS such, the `set_cloud_maximal_job_count` and `get_cloud_maximal_job_count` from `RemoteConfig` are now deprecated and no longer work.
+
 Breaking changes in Perceval 1.0
 --------------------------------
 

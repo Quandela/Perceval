@@ -26,11 +26,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
-
 import sys
 
-from perceval.backends import ABackend, ASamplingBackend, BACKEND_LIST
 from perceval.utils import SVDistribution, BasicState, FockState, AnnotatedFockState, StateVector, NoiseModel
 from perceval.utils.logging import get_logger, channel
 
@@ -38,7 +35,6 @@ from .abstract_processor import AProcessor, ProcessorType
 from .experiment import Experiment
 from .linear_circuit import ACircuit, Circuit
 from .source import Source
-from .unitary_components import PS
 
 
 class Processor(AProcessor):
@@ -60,14 +56,16 @@ class Processor(AProcessor):
     :param noise: a NoiseModel containing noise parameters (defaults to no noise)
     :param name: a textual name for the processor (defaults to "Local processor")
     """
-    def __init__(self, backend: ABackend | str, m_circuit: int | ACircuit | Experiment = None,
+    def __init__(self, backend, m_circuit: int | ACircuit | Experiment = None,
                  noise: NoiseModel = None, name: str = "Local processor"):
         if not isinstance(m_circuit, Experiment):
             m_circuit = Experiment(m_circuit, noise=noise, name=name)
+        elif noise:
+            m_circuit = m_circuit.copy()  # Create a copy so that we don't change the input experiment
+            m_circuit.noise = noise
         super().__init__(m_circuit)
 
         self._init_backend(backend)
-        self._previous_noise = None
         self._inputs_map = None
         self._noise_changed_observer()
         self._input_changed_observer()
@@ -83,7 +81,6 @@ class Processor(AProcessor):
         self._source = Source.from_noise_model(self.noise)
         if not self._has_custom_input:
             self._inputs_map = None
-        self._previous_noise = self.noise
 
     @AProcessor.noise.getter
     def noise(self):
@@ -114,9 +111,11 @@ class Processor(AProcessor):
 
     def _init_backend(self, backend):
         if isinstance(backend, str):
+            from perceval import BACKEND_LIST
             assert backend in BACKEND_LIST, f"Simulation backend '{backend}' does not exist"
             self.backend = BACKEND_LIST[backend]()
         else:
+            from perceval import ABackend
             assert isinstance(backend, ABackend), f"'backend' must be an ABackend (got {type(backend)})"
             self.backend = backend
 
@@ -163,6 +162,7 @@ class Processor(AProcessor):
     def samples(self, max_samples: int, max_shots: int = None, progress_callback=None) -> dict:
         self.check_min_detected_photons_filter()
         from perceval.simulators import NoisySamplingSimulator
+        from perceval.backends import ASamplingBackend
         assert isinstance(self.backend, ASamplingBackend), "A sampling backend is required to call samples method"
         sampling_simulator = NoisySamplingSimulator(self.backend)
         sampling_simulator.sleep_between_batches = 0  # Remove sleep time between batches of samples in local simulation
@@ -208,6 +208,7 @@ class Processor(AProcessor):
 
     @property
     def available_commands(self) -> list[str]:
+        from perceval.backends import ASamplingBackend
         return ["samples" if isinstance(self.backend, ASamplingBackend) else "probs"]
 
     def log_resources(self, method: str, extra_parameters: dict):

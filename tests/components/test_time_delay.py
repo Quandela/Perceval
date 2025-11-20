@@ -1,0 +1,86 @@
+# MIT License
+#
+# Copyright (c) 2022 Quandela
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+import pytest
+from perceval import Processor, BS, TD, FockState, BSDistribution
+from .._test_utils import assert_bsd_close
+
+p = Processor("SLOS", 2)
+
+p.add(0, BS())
+p.add(0, TD(1))
+p.add(0, BS())
+
+def test_without_herald():
+    p.with_input(FockState([1, 0]))
+    p.min_detected_photons_filter(0)
+
+    expected = BSDistribution()
+    expected[FockState([0, 0])] = 0.25
+    expected[FockState([1, 0])] = 0.25
+    expected[FockState([0, 1])] = 0.25
+    expected[FockState([2, 0])] = 0.125
+    expected[FockState([0, 2])] = 0.125
+
+    assert_bsd_close(p.probs()["results"], expected)
+
+
+def test_with_selection():
+    p.with_input(FockState([1, 0]))
+    p.min_detected_photons_filter(1)
+
+    expected = BSDistribution()
+    expected[FockState([1, 0])] = 1/3
+    expected[FockState([0, 1])] = 1/3
+    expected[FockState([2, 0])] = 1/6
+    expected[FockState([0, 2])] = 1/6
+
+    expected_p_perf = 3/4
+
+    res = p.probs()
+
+    assert_bsd_close(p.probs()["results"], expected)
+    assert pytest.approx(res["global_perf"]) == expected_p_perf, "Wrong physical performance with time delays"
+
+
+def test_with_heralds():
+    p.add_herald(1, 0)
+    p.with_input(FockState([1]))
+    p.min_detected_photons_filter(0)
+
+    expected = BSDistribution()
+    expected[FockState([0])] = 0.4
+    expected[FockState([1])] = 0.4
+    expected[FockState([2])] = 0.2
+
+    expected_l_perf = 5/8
+
+    res = p.probs()
+
+    assert_bsd_close(p.probs()["results"], expected)
+    assert pytest.approx(res["global_perf"]) == expected_l_perf, "Wrong logical performance with time delays"

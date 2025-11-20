@@ -1,0 +1,101 @@
+# MIT License
+#
+# Copyright (c) 2022 Quandela
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+from perceval.utils.versions.version_utils import keep_latest_versions
+
+def test_version_filtering():
+
+    # All different minor: all should be kept
+    versions = [
+        "v0.1.0",
+        "v0.2.0",
+        "v0.3.1",
+    ]
+
+    filtered = keep_latest_versions(versions)
+    assert filtered == versions
+
+    # Same minor: Only the highest patch should be kept
+    versions = [
+        "v0.1.0",
+        "v0.2.0",
+        "v0.2.1",
+    ]
+
+    filtered = keep_latest_versions(versions)
+    assert filtered == ["v0.1.0", "v0.2.1"]
+
+    # Test that we drop alphas and betas
+    versions = [
+        "v0.1.0",
+        "v0.2.0",
+        "v0.2.1-beta1",
+        "v0.3.0",
+        "v0.3.1-alpha2",
+    ]
+
+    filtered = keep_latest_versions(versions)
+    assert filtered == ["v0.1.0", "v0.2.0", "v0.3.0"]
+
+    # Test the optional minimum version
+    versions = [
+        "v0.1.0",
+        "v0.2.0",
+        "v0.2.1",
+        "v0.3.0",
+    ]
+
+    filtered = keep_latest_versions(versions, mini="v0.2.1")
+    assert filtered == ["v0.2.1", "v0.3.0"]
+
+    # Test mixing major and minor
+    versions = [
+        "v0.1.0",
+        "v0.2.0",
+        "v0.2.1",
+        "v1.0.0",
+        "v1.0.1",
+        "v1.1.0",
+    ]
+
+    filtered = keep_latest_versions(versions)
+    assert filtered == ["v0.1.0", "v0.2.1", "v1.0.1", "v1.1.0"]
+
+    # Test with "randomly" ordered versions (same list than previous test)
+    versions = [
+        "v1.1.0",
+        "v0.1.0",
+        "v0.2.1",
+        "v1.0.0",
+        "v0.2.0",
+        "v1.0.1",
+    ]
+
+    filtered = keep_latest_versions(versions)
+    assert filtered == ["v0.1.0", "v0.2.1", "v1.0.1", "v1.1.0"]

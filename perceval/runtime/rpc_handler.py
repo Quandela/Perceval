@@ -27,18 +27,23 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 """rpc handler module"""
+from __future__ import annotations
 
+import traceback
 from urllib.parse import quote_plus
 
 import requests
-from requests import HTTPError
+from perceval.utils.logging import get_logger, channel
 
 _ENDPOINT_PLATFORM_DETAILS = '/api/platform/'
+_ENDPOINT_PLATFORM_DETAILS_NEW = '/api/platforms/'
+_PROCESSOR_SECTION = '/processor'
 _ENDPOINT_JOB_CREATE = '/api/job'
 _ENDPOINT_JOB_STATUS = '/api/job/status/'
 _ENDPOINT_JOB_CANCEL = '/api/job/cancel/'
 _ENDPOINT_JOB_RERUN = '/api/job/rerun/'
 _ENDPOINT_JOB_RESULT = '/api/job/result/'
+_ENDPOINT_JOB_AVAILABILITY = '/api/jobs/availability/'
 
 _JOB_ID_KEY = 'job_id'
 
@@ -73,13 +78,64 @@ class RPCHandler:
             endpath = f"/{'/'.join(str(x).strip('/') for x in args)}"
         return f'{self.url}/{endpoint.strip("/")}{endpath}'
 
+    def get_request(self, endpoint: str) -> None | dict:
+        # requests may throw an IO Exception, let the user deal with it
+        try:
+            resp = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)
+            resp.raise_for_status()
+        except Exception as e:
+            error_info = ''.join(traceback.format_stack()[:-1])
+            get_logger().debug(error_info, channel.general)
+            raise e
+
+        try:
+            return resp.json()
+        except Exception as e:
+            error_info = ''.join(traceback.format_stack()[:-1])
+            get_logger().debug(error_info, channel.general)
+            raise requests.HTTPError(f"Could not read json response from url: {endpoint}. \n{e}")
+
+    def post_request(self, endpoint: str, payload: dict | None, with_json_response: bool) -> None | dict:
+        # requests may throw an IO Exception, let the user deal with it
+        try:
+            request = requests.post(endpoint, headers=self.headers, json=payload, timeout=self.request_timeout, proxies=self.proxies)
+        except Exception as e:
+            error_info = ''.join(traceback.format_stack()[:-1])
+            get_logger().debug(error_info, channel.general)
+            raise e
+
+        json_res = None
+        if with_json_response:
+            try:
+                json_res = request.json()
+            except Exception as e:
+                json_res = {'error': f'{e}'}
+
+        if request.status_code != 200:
+            error_info = ''.join(traceback.format_stack())
+            get_logger().debug(error_info, channel.general)
+            raise requests.HTTPError(f"Url: {endpoint} answered with status code {request.status_code}.")
+
+        return json_res
+
     def fetch_platform_details(self):
         """fetch platform details and settings"""
         quote_name = quote_plus(self.name)
-        endpoint = self.build_endpoint(_ENDPOINT_PLATFORM_DETAILS, quote_name)
-        resp = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)
-        resp.raise_for_status()
-        return resp.json()
+
+        # first, try the new endpoint
+        endpoint = self.build_endpoint(_ENDPOINT_PLATFORM_DETAILS_NEW, quote_name, _PROCESSOR_SECTION)
+        try:
+            response = self.get_request(endpoint)
+            # TEMPORARY CODE
+            # TODO: to be removed in version 1.2
+            if 'architecture' not in response.get('specs', {}):
+                raise requests.HTTPError("Missing required 'architecture' field, falling back to the old endpoint "
+                                         "containing the 'specific_circuit' field.")
+        except requests.HTTPError:
+            # try the old endpoint
+            endpoint = self.build_endpoint(_ENDPOINT_PLATFORM_DETAILS, quote_name)
+            response =  self.get_request(endpoint)
+        return response
 
     def create_job(self, payload) -> str:
         """create a job
@@ -89,15 +145,8 @@ class RPCHandler:
         :return: job id
         """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_CREATE)
-        request = requests.post(endpoint, headers=self.headers, json=payload, timeout=self.request_timeout, proxies=self.proxies)
-        try:
-            json_res = request.json()
-        except Exception as e:
-            json_res = {'error': f'{e}'}
-
-        if request.status_code != 200:
-            raise HTTPError(json_res.get('error', 'Unspecified error'))
-
+        json_res = self.post_request(endpoint, payload, True)
+        assert _JOB_ID_KEY in json_res, f'Missing {_JOB_ID_KEY} field in create_job response'
         return json_res[_JOB_ID_KEY]
 
     def cancel_job(self, job_id: str) -> None:
@@ -106,8 +155,7 @@ class RPCHandler:
         :param job_id: id of the job to cancel
         """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_CANCEL, job_id)
-        req = requests.post(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)
-        req.raise_for_status()
+        self.post_request(endpoint, None, False)
 
     def rerun_job(self, job_id: str) -> str:
         """Rerun a job as a another freshly created job
@@ -116,10 +164,9 @@ class RPCHandler:
         :return: id of the new job
         """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_RERUN, job_id)
-        req = requests.post(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)
-        req.raise_for_status()
-        assert _JOB_ID_KEY in req.json(), f'Missing {_JOB_ID_KEY} field in rerun response'
-        return req.json()[_JOB_ID_KEY]
+        json_res = self.post_request(endpoint, None, True)
+        assert _JOB_ID_KEY in json_res, f'Missing {_JOB_ID_KEY} field in rerun_job response'
+        return json_res[_JOB_ID_KEY]
 
     def get_job_status(self, job_id: str) -> dict:
         """get the status of a job
@@ -128,11 +175,7 @@ class RPCHandler:
         :return: status of the job
         """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_STATUS, job_id)
-
-        # requests may throw an IO Exception, let the user deal with it
-        res = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)
-        res.raise_for_status()
-        return res.json()
+        return self.get_request(endpoint)
 
     def get_job_results(self, job_id: str) -> dict:
         """get job results
@@ -141,8 +184,11 @@ class RPCHandler:
         :return: results of the job
         """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_RESULT, job_id)
+        return self.get_request(endpoint)
 
-        # requests may throw an IO Exception, let the user deal with it
-        res = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)
-        res.raise_for_status()
-        return res.json()
+    def get_job_availability(self) -> dict:
+        """get job availability
+        :return: The availability of the token
+        """
+        endpoint = self.build_endpoint(_ENDPOINT_JOB_AVAILABILITY)
+        return self.get_request(endpoint)

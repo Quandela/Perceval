@@ -26,14 +26,13 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
-
 import os
 import json
+import tempfile
 import warnings
 from platformdirs import PlatformDirs
 
-from .metadata import PMetadata
+from .versions import PMetadata
 from ._enums import FileFormat
 
 _CONFIG_FILE_NAME = "config.json"
@@ -42,27 +41,40 @@ SUB_DIRECTORIES = ['logs', 'job_group']
 class PersistentData:
     r"""
     PersistentData is a class that stores data on the drive to save data between launches of perceval.
-    On init, it creates a directory (if it doesn't exist) for storing perceval persistent data
+    On init, it creates a directory (if it doesn't exist) for storing perceval persistent data.
+    This directory can be set via an environment variable PCVL_PERSISTENT_PATH.
     Default directory depends on the os:
 
     * Linux: '/home/my_user/.local/share/perceval-quandela'
     * Windows: 'C:\\Users\\my_user\\AppData\\Local\\quandela\\perceval-quandela'
     * Darwin: '/Users/my_user/Library/Application Support/perceval-quandela'
 
-    If the directory cannot be created or read/write in, a warning will inform the user
+    If the default directory cannot be created or read/write in, a temporary directory will be used.
+    If the configured directory or the temporary directory cannot be created or read/write in, an error will be raised.
     """
 
-    def __init__(self, directory = None):
-        if directory is None:
-            directory = PlatformDirs(PMetadata.package_name(), PMetadata.author()).user_data_dir
-        self._directory = directory
-        try:
-            self._create_directory()
-        except OSError as exc:
-            warnings.warn(UserWarning(f"{exc}"))
-            return
-        if not self.is_writable() or not self.is_readable():
-            warnings.warn(UserWarning(f"Cannot read or write in {self._directory}"))
+    def __init__(self):
+        is_default_folder = False
+        # first, try the env var
+        self._directory = os.getenv('PCVL_PERSISTENT_PATH')
+        if not self._directory:
+            # second, try the default folder
+            self._directory = PlatformDirs(PMetadata.package_name(), PMetadata.author()).user_data_dir
+            is_default_folder = True
+
+        if not self._safe_create_directory():
+            if is_default_folder:
+                # third, try the temp folder
+                warnings.warn(UserWarning(f"Can't read or write in default folder {self._directory}."))
+                self._directory = tempfile.gettempdir()
+                warnings.warn(UserWarning(f"Using temp folder {self._directory}."))
+                if not self._safe_create_directory():
+                    raise PermissionError(f"Can't read or write in temp folder {self._directory}. "
+                                          f"No folder is usable for persistent data. "
+                                          f"Another folder can be set with the environment variable PCVL_PERSISTENT_PATH.")
+            else:
+                raise PermissionError(f"Can't read or write in configured folder {self._directory}. "
+                                      f"Check the environment variable PCVL_PERSISTENT_PATH.")
 
     def is_writable(self) -> bool:
         """Return if the directory is writable
@@ -83,6 +95,18 @@ class PersistentData:
         """
         if not os.path.exists(self._directory):
             os.makedirs(self._directory) # by default, mode=0o777
+
+    def _safe_create_directory(self) -> bool:
+        """Create the persistent data root directory if it doesn't exist
+        """
+        try:
+            self._create_directory()
+        except OSError as exc:
+            warnings.warn(UserWarning(f"{exc}"))
+            return False
+        if not self.is_writable() or not self.is_readable():
+            return False
+        return True
 
     def get_folder_size(self) -> int:
         """Get the directory data size

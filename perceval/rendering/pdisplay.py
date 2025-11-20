@@ -26,8 +26,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
-
 import copy
 import os
 
@@ -156,7 +154,7 @@ def pdisplay_experiment(processor: Experiment,
         rendering_pass.open()
         for r, c in processor.components:
             shift = r[0]
-            if isinstance(c, Circuit):
+            if isinstance(c, ACircuit):
                 c = Circuit(c.m).add(0, c)
             rendering_pass.render_circuit(
                 c,

@@ -26,15 +26,17 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
 import os
 
 from perceval.utils import FileFormat
-from perceval.utils.logging import channel, get_logger
+from perceval.utils.logging import channel, get_logger, deprecated
 from perceval.utils.persistent_data import PersistentData, _CONFIG_FILE_NAME
+
+QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
 
 REMOTE_KEY = "remote"
 PROXIES_KEY = "proxies"
+URL_KEY = "url"
 TOKEN_KEY = "token"
 
 TOKEN_ENV_VAR = "PCVL_CLOUD_TOKEN"
@@ -50,7 +52,7 @@ class RemoteConfig:
     _token_env_var = TOKEN_ENV_VAR
     _proxies = None
     _token = None
-    _cloud_maximal_job_count = None
+    _url = None
 
     def __init__(self, persistent_data: PersistentData = PersistentData()):
         self._persistent_data = persistent_data
@@ -102,6 +104,28 @@ class RemoteConfig:
         return RemoteConfig._proxies or {}
 
     @staticmethod
+    def set_url(url: str) -> None:
+        """Set a cloud URL in the configuration cache. It is not saved on disk before the `save` method
+        is called.
+
+        :param url: The cloud URL
+        """
+        RemoteConfig._url = url
+
+    def get_url(self) -> str:
+        """Search a valid cloud URL from the environment, put it in cache and return it.
+
+        The priority for the URL search is as follows:
+        * A URL already in cache (e.g. set by the user or already found in a previous call)
+        * The value in Perceval persistent configuration
+
+        :return: The cloud URL
+        """
+        if not RemoteConfig._url:
+            RemoteConfig._url = self._get_remote_config(URL_KEY)
+        return RemoteConfig._url or QUANDELA_CLOUD_URL
+
+    @staticmethod
     def set_token(token: str) -> None:
         """Set a user authentication token in the configuration cache. It is not saved on disk before the `save` method
         is called.
@@ -142,20 +166,20 @@ class RemoteConfig:
         return RemoteConfig._token_env_var
 
     @staticmethod
+    @deprecated(version="v1.1", reason="RemoteConfig maximal job count is no longer used as it is now directly retrieved from the cloud")
     def set_cloud_maximal_job_count(count: int) -> None:
-        RemoteConfig._cloud_maximal_job_count = count
+        pass
 
     @staticmethod
+    @deprecated(version="v1.1", reason="RemoteConfig maximal job count is no longer used as it is now directly retrieved from the cloud")
     def get_cloud_maximal_job_count() -> int:
-        if not RemoteConfig._cloud_maximal_job_count:
-            get_logger().warn("""cloud_maximal_job_count is not set.
-            Please use RemoteConfig.set_cloud_maximal_job_count([see user pricing plan])""", channel.user)
-        return RemoteConfig._cloud_maximal_job_count
+        return 0
 
     @staticmethod
     def clear_cache():
         """Delete the RemoteConfig cache."""
         RemoteConfig._proxies = None
+        RemoteConfig._url = None
         RemoteConfig._token = None
 
     def save(self) -> None:
@@ -167,6 +191,7 @@ class RemoteConfig:
             config[REMOTE_KEY] = {}
 
         config[REMOTE_KEY][PROXIES_KEY] = RemoteConfig._proxies
+        config[REMOTE_KEY][URL_KEY] = RemoteConfig._url
         config[REMOTE_KEY][TOKEN_KEY] = RemoteConfig._token
 
         self._persistent_data.save_config(config)

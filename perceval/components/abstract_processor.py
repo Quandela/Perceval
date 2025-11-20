@@ -26,14 +26,13 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
+from __future__ import annotations  # Python 3.11 : Replace using Self typing
 
 import copy
 from abc import ABC, abstractmethod
 from enum import Enum
 
-from perceval.utils import (BasicState, FockState, AnnotatedFockState, Parameter, PostSelect, LogicalState, NoiseModel,
-                            SVDistribution, StateVector, NoisyFockState)
+from perceval.utils import BasicState, FockState, Parameter, PostSelect, LogicalState, NoiseModel, SVDistribution, StateVector
 from perceval.utils.logging import get_logger, channel
 from .abstract_component import AComponent
 from .detector import DetectionType
@@ -169,6 +168,10 @@ class AProcessor(ABC):
     def clear_postselection(self):
         self.experiment.clear_postselection()
 
+    @abstractmethod
+    def compute_physical_logical_perf(self, value: bool):
+        pass
+
     def _state_selected(self, state: BasicState) -> bool:
         """
         Computes if the state is selected given heralds and post selection function
@@ -180,12 +183,6 @@ class AProcessor(ABC):
         if self.experiment.post_select_fn is not None:
             return self.experiment.post_select_fn(state)
         return True
-
-    def copy(self, subs: dict | list = None):
-        get_logger().debug(f"Copy processor {self.name}", channel.general)
-        new_proc = copy.copy(self)
-        new_proc.experiment = self.experiment.copy()
-        return new_proc
 
     def set_circuit(self, circuit: ACircuit) -> AProcessor:
         r"""

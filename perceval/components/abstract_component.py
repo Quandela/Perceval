@@ -26,8 +26,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
-
 from abc import ABC
 from collections.abc import Iterable
 import sympy as sp
@@ -175,7 +173,7 @@ class AParametrizedComponent(AComponent):
                 if p.max is None or max_v < p.max:
                     p.max = float(max_v)
             if p.name in self._vars:
-                if p.pid != self._vars[p.name].pid:
+                if p is not self._vars[p.name]:
                     raise RuntimeError("two parameters with the same name in the circuit")
             if periodic is not None:
                 p.set_periodic(periodic)
@@ -212,15 +210,5 @@ class AParametrizedComponent(AComponent):
     def get_variables(self):
         return {}
 
-    def copy(self, subs: dict[str, Parameter] | list[Parameter] = None):
-        nc = copy.deepcopy(self)
-
-        if subs is None:
-            subs = {}
-        if isinstance(subs, list):
-            subs = {p.name: p for p in subs}
-        for k, p in nc._params.items():
-            nc._params[k] = p.copy(subs)
-            nc.__setattr__("_" + k, nc._params[k])
-
-        return nc
+    def copy(self):
+        return copy.deepcopy(self)

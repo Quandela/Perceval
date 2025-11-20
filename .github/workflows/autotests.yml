@@ -21,11 +21,11 @@ on:
         default: '3.11'
         type: choice
         options:
-          - '3.9'
           - '3.10'
           - '3.11'
           - '3.12'
           - '3.13'
+          - '3.14'
 
 env:
   PYTHON_V: ${{ github.event.inputs.python_v || '3.11' }}

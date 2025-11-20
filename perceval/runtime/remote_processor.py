@@ -26,10 +26,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
+from requests import HTTPError
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
-from perceval.components import ACircuit, Processor, AComponent,  Experiment, IDetector, Detector
+from perceval.components import ACircuit, Processor, AComponent,  Experiment, Detector
 from perceval.utils import FockState, NoiseModel
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import deserialize
@@ -40,7 +40,6 @@ from .remote_config import RemoteConfig
 from .payload_generator import PayloadGenerator
 
 
-QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
 PERFS_KEY = "perfs"
 TRANSMITTANCE_KEY = "Transmittance (%)"
 DEFAULT_TRANSMITTANCE = 0.06
@@ -52,7 +51,7 @@ class RemoteProcessor(AProcessor):
             processor: Processor,
             name: str = None,
             token: str = None,
-            url: str = QUANDELA_CLOUD_URL,
+            url: str = None,
             proxies: dict[str,str] = None,
             rpc_handler: RPCHandler = None):
         rp = RemoteProcessor(
@@ -71,7 +70,7 @@ class RemoteProcessor(AProcessor):
     def __init__(self,
                  name: str = None,
                  token: str = None,
-                 url: str = QUANDELA_CLOUD_URL,
+                 url: str = None,
                  proxies: dict[str,str] = None,
                  rpc_handler: RPCHandler = None,
                  m: int = None,
@@ -104,6 +103,8 @@ class RemoteProcessor(AProcessor):
                 token = remote.get_token()
             if not token:
                 raise ConnectionError("No token found")
+            if url is None:
+                url = remote.get_url()
             if proxies is None:
                 proxies = remote.get_proxies()
             self.name = name
@@ -144,9 +145,12 @@ class RemoteProcessor(AProcessor):
         return True
 
     def fetch_data(self):
-        platform_details = self._rpc_handler.fetch_platform_details()
+        try:
+            platform_details = self._rpc_handler.fetch_platform_details()
+        except HTTPError as e:
+            raise HTTPError(f"Error while fetching platform details: {e}") from None
         self._status = platform_details.get("status")
-        platform_specs = deserialize(platform_details['specs'])
+        platform_specs = deserialize(platform_details['specs'], strict=False)
         self._specs.update(platform_specs)
         if PERFS_KEY in platform_details:
             self._perfs.update(platform_details[PERFS_KEY])
@@ -246,11 +250,13 @@ class RemoteProcessor(AProcessor):
             return 1
 
         # Simulation with a noisy source (only losses)
-        c = self.linear_circuit(flatten=True).copy()
-        if param_values:
-            for n, v in param_values.items():
-                c.param(n).set_value(v)
-        lp = Processor("SLOS", c, NoiseModel(transmittance=transmittance))
+        exp = self.experiment.copy()
+        if param_values is not None:
+            params = exp.get_circuit_parameters()
+            for param_name, value in param_values.items():
+                if param_name in params:
+                    params[param_name].set_value(value)
+        lp = Processor("SLAP", exp, NoiseModel(transmittance=transmittance))
         lp.min_detected_photons_filter(1)
         if self._thresholded_output:
             for m in range(lp.circuit_size):
@@ -311,3 +317,11 @@ class RemoteProcessor(AProcessor):
         if extra_parameters:
             my_dict.update(extra_parameters)
         get_logger().log_resources(my_dict)
+
+    def compute_physical_logical_perf(self, value: bool):
+        """
+        Split performance into the physical and logical parts - when available
+
+        :param value: True to compute the physical and logical performances, False otherwise.
+        """
+        self.set_parameter("compute_physical_logical_perf", value)

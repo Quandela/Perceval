@@ -27,7 +27,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from __future__ import annotations
 from collections import Counter
 import random
 import numpy as np
@@ -134,7 +133,7 @@ def probs_to_samples(probs: BSDistribution, **kwargs) -> BSSamples:
     :return: the sample list
     """
     count = _deduce_count(**kwargs)
-    return probs.sample(count)
+    return probs.sample(count, non_null=False)
 
 
 def sample_count_to_probs(sample_count: BSCount) -> BSDistribution:
@@ -176,4 +175,4 @@ def sample_count_to_samples(sample_count: BSCount, **kwargs) -> BSSamples:
         count = _deduce_count(**kwargs)
     except RuntimeError:
         count = sum(sample_count.values())
-    return sample_count_to_probs(sample_count).sample(count)
+    return sample_count_to_probs(sample_count).sample(count, non_null=False)

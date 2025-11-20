@@ -26,16 +26,15 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
-
 import os
 import json
 import time
 from datetime import datetime
+
+from requests import HTTPError
 from tqdm import tqdm
 
 from perceval.runtime import Job, RemoteJob, RunningStatus
-from perceval.runtime.remote_config import RemoteConfig
 from perceval.runtime.rpc_handler import RPCHandler
 from perceval.utils import PersistentData, FileFormat
 from perceval.utils.logging import get_logger, channel
@@ -170,7 +169,7 @@ class JobGroup:
         if job_to_add.id and job_to_add.id in [job.id for job in self._jobs]:
             raise ValueError(f"Duplicate job detected : job id {job_to_add.id} exists in the group.")
         if kwargs:
-            job_to_add._create_payload_data(**kwargs)
+            job_to_add._handle_params(**kwargs)
         self._jobs.append(job_to_add)
         self._write_to_file()
 
@@ -352,14 +351,17 @@ class JobGroup:
         """
         return [job for job in self._jobs if not job.was_sent]
 
-    def _launch_jobs(self, concurrent_job_count: int | None, delay: float, rerun: bool, replace_failed_jobs: bool = False) -> None:
+    def _launch_wait_jobs(self, concurrent_job_count: int | None, delay: float, rerun: bool, replace_failed_jobs: bool = False,
+                          sequential = False) -> None:
         """
         Launches or reruns jobs in the group on Cloud in a parallel/sequential manner.
 
-        :concurrent_job_count: maximum number of concurrent jobs
+        :param concurrent_job_count: maximum number of concurrent jobs for each token.
+         If not specified, the maximum number allowed by the cloud for this token is used.
         :param delay: number of seconds to wait between the launch of two consecutive jobs on cloud
         :param rerun: if True rerun failed jobs or run unsent jobs
-        :replace_failed_jobs: replace the rerun jobs in the jobgroup, else keep the failed in addition of the rerun ones
+        :param replace_failed_jobs: replace the rerun jobs in the jobgroup, else keep the failed in addition of the rerun ones
+        :param sequential: if True, only one job is run at a time, including if several tokens have job availability
         """
         jobs_to_run = self.list_unsuccessful_jobs() if rerun else self.list_unsent_jobs()
         awaited_jobs = set()
@@ -369,12 +371,17 @@ class JobGroup:
         bar_format = '{percentage:3.0f}%|{bar}|{n_fmt}/{total_fmt}|{desc}'
         progress_bar = tqdm(total=len(jobs_to_run), bar_format=bar_format, desc="Successful: 0, Failed: 0")
 
-        maximal_concurent_jobs = concurrent_job_count or len(jobs_to_run)
+        availability = self._get_jobs_availability(jobs_to_run, concurrent_job_count)
 
         while jobs_to_run or awaited_jobs:
-            while jobs_to_run and len(awaited_jobs) < maximal_concurent_jobs:
+            while any(availability[(job := j)._rpc_handler.token] for j in jobs_to_run):
                 time.sleep(delay)
-                job = jobs_to_run.pop()
+
+                job.set_job_group_name(self.name)
+                token = job._rpc_handler.token
+                availability[token] -= 1
+                jobs_to_run.remove(job)
+
                 if job.status.failed:
                     index = self._jobs.index(job)
                     job = job.rerun()
@@ -388,7 +395,12 @@ class JobGroup:
                 awaited_jobs.add(job)
                 self._write_to_file()   # save data after each job (rerun/execution) at launch
 
+                if sequential:
+                    break
+
             time.sleep(STATUS_REFRESH_DELAY)
+
+            availability = self._get_jobs_availability(jobs_to_run, concurrent_job_count)
 
             just_finished_jobs = set()
             for job in awaited_jobs:
@@ -414,9 +426,10 @@ class JobGroup:
 
         :param delay: number of seconds to wait between launching jobs on cloud
         """
-        self._launch_jobs(rerun=False,
-                          concurrent_job_count = 1,
-                          delay=delay)
+        self._launch_wait_jobs(rerun=False,
+                               concurrent_job_count=1,
+                               delay=delay,
+                               sequential=True)
 
     def rerun_failed_sequential(self, delay: float, replace_failed_jobs=True) -> None:
         """
@@ -427,41 +440,133 @@ class JobGroup:
         :param replace_failed_jobs: Indicates whether a new job created from a rerun should replace the previously
                                     failed job (defaults to True).
         """
-        self._launch_jobs(rerun=True,
-                          concurrent_job_count = 1,
-                          delay=delay,
-                          replace_failed_jobs=replace_failed_jobs)
+        self._launch_wait_jobs(rerun=True,
+                               concurrent_job_count=1,
+                               delay=delay,
+                               replace_failed_jobs=replace_failed_jobs,
+                               sequential=True)
 
     def run_parallel(self) -> None:
         """
         Launches all the unsent jobs in the group on Cloud, running them in parallel.
-        The number of concurrent jobs is limited by RemoteConfig.get_cloud_maximal_job_count()
-
-        If the user lacks authorization to send multiple jobs to the cloud or exceeds
-        the maximum allowed limit, an exception is raised, terminating the launch process.
-        RemoteConfig.set_cloud_maximal_job_count() should be set in accordance with the user pricing plan.
-        Any remaining jobs in the group will not be sent.
+        The number of concurrent jobs is determined by the user pricing plan.
         """
-        self._launch_jobs(concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count(),
-                          delay=0,
-                          rerun=False)
+        self._launch_wait_jobs(concurrent_job_count=None,
+                               delay=0,
+                               rerun=False)
 
     def rerun_failed_parallel(self, replace_failed_jobs=True) -> None:
         """
         Restart all failed jobs in the group on the Cloud, running them in parallel.
-        The number of concurrent jobs is limited by RemoteConfig.get_cloud_maximal_job_count()
-
-        If the user lacks authorization to send multiple jobs at once or exceeds the maximum allowed limit, an exception
-        is raised, terminating the launch process. Any remaining jobs in the group will not be sent.
-        RemoteConfig.set_cloud_maximal_job_count() should be set in accordance with the user pricing plan.
+        The number of concurrent jobs is determined by the user pricing plan.
 
         :param replace_failed_jobs: Indicates whether a new job created from a rerun should replace the previously
                                     failed job (defaults to True).
         """
-        self._launch_jobs(concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count(),
-                          delay=0,
-                          rerun=True,
-                          replace_failed_jobs=replace_failed_jobs)
+        self._launch_wait_jobs(concurrent_job_count = None,
+                               delay=0,
+                               rerun=True,
+                               replace_failed_jobs=replace_failed_jobs)
+
+    def launch_async_jobs(self, concurrent_job_count = None):
+        """
+        Launches up to concurrent_job_count jobs and returns without waiting for job completion.
+
+        :param concurrent_job_count: maximum number of concurrent jobs for each token.
+         If not specified, the maximum number allowed by the cloud for each token is used.
+        """
+        jobs_to_run = self.list_unsent_jobs()
+
+        launched = 0
+        availability = self._get_jobs_availability(jobs_to_run, concurrent_job_count)
+        for job in jobs_to_run:
+            token = job._rpc_handler.token
+            if availability[token] > 0:
+                availability[token] -= 1
+                launched += 1
+                job.set_job_group_name(self.name)
+                job.execute_async()
+                self._write_to_file()  # save data after each job (rerun/execution) at launch
+
+        if not launched:
+            get_logger().warn(f"{self.name}: no job will be run as there is no slot available")
+
+        get_logger().info(f"{self.name}: {launched} jobs launched"
+                          f" / {len(self.list_unsent_jobs())} unsent jobs remaining")
+
+    def relaunch_async_failed_jobs(self, replace_failed_jobs=True, concurrent_job_count = None):
+        """
+        Relaunches up to concurrent_job_count failed jobs and returns without waiting for job completion.
+
+        :param concurrent_job_count: maximum number of concurrent jobs for each token.
+         If not specified, the maximum number allowed by the cloud for each token is used.
+        :param replace_failed_jobs: replace the rerun jobs in the jobgroup, else keep the failed in addition of the rerun ones
+        """
+        jobs_to_run = self.list_unsuccessful_jobs()
+
+        launched = 0
+        availability = self._get_jobs_availability(jobs_to_run, concurrent_job_count)
+        for job in jobs_to_run:
+            token = job._rpc_handler.token
+            if availability[token] > 0:
+                # This makes a bug: if two tokens point to the same account, their availabilities are the same
+                # The way to fix this is to call the availability at each job for which the registered availability is not 0
+                availability[token] -= 1
+                launched += 1
+
+                job.set_job_group_name(self.name)
+                index = self._jobs.index(job)
+                job = job.rerun()
+                if replace_failed_jobs:
+                    self._jobs[index] = job
+                else:
+                    self._jobs.append(job)
+
+                self._write_to_file()  # save data after each job (rerun/execution) at launch
+
+        if not launched:
+            get_logger().warn(f"{self.name}: no job will be run as there is no slot available")
+
+        get_logger().info(f"{self.name}: {len(jobs_to_run)} jobs launched"
+                          f" / {len(self.list_unsent_jobs())} unsent jobs remaining")
+
+    @staticmethod
+    def _get_jobs_availability(jobs, concurrent_job_count = None):
+        # TODO: This makes a bug: if two tokens point to the same account, their availabilities are the same
+        #  One way to fix this is to call the availability at each job for which the registered availability is not 0
+        availability = {}
+        for job in jobs:
+
+            rpc_handler = job._rpc_handler
+            token = rpc_handler.token
+            if token not in availability:
+                try:
+                    response = rpc_handler.get_job_availability()
+                    nb_launchable = response["max_jobs_in_queue"] - response["num_jobs_in_queue"]
+                except HTTPError:
+                    if not concurrent_job_count:
+                        raise ValueError("Unable to determine number of concurrent jobs;"
+                                         " concurrent_job_count must be set manually")
+                    nb_launchable = concurrent_job_count
+
+                if concurrent_job_count:
+                    nb_launchable = min(concurrent_job_count, nb_launchable)
+
+                availability[token] = nb_launchable
+
+        return availability
+
+    def cancel_all(self):
+        """
+        Cancels all started (already sent) jobs in the group.
+        """
+        for job in self._jobs:
+            if job.was_sent and not job._job_status.completed:
+                try:
+                    job.cancel()
+                except:
+                    pass
+                self._write_to_file()
 
     def get_results(self) -> list[dict]:
         """

@@ -45,52 +45,16 @@ import re
 from pathlib import Path
 from git import Repo
 
+from perceval.utils.versions.version_utils import keep_latest_versions
+
 sys.path.insert(0, os.path.relpath("../"))
-
-
-def version_highter_then(v1, v2):
-    """compare two version"""
-    v1 = list(map(int, re.findall(r"\d+", v1)[0:3]))
-    v2 = list(map(int, re.findall(r"\d+", v2)[0:3]))
-    for i, charac in enumerate(v1):
-        if i < len(v2):
-            if v2[i] > charac:
-                return False
-            elif v2[i] == charac:
-                continue
-            else:
-                return True
-    return True
-
-
-def keep_latest_versions(versions, mini=None):
-    """keep latest version"""
-    version_dict = {}
-
-    for one_version in versions:
-        # major_version = re.match(r"v\d+", one_version).group()
-        try:
-            major_version = re.match(r"v(\d+)\.(\d+)", one_version).groups()
-        except AttributeError:
-            major_version = "0.0.0"
-        if "-" not in one_version:
-            # filter alpha,beta...
-            if (
-                major_version not in version_dict
-                or one_version > version_dict[major_version]
-            ) and (mini is not None and version_highter_then(one_version, mini)):
-                version_dict[major_version] = one_version
-
-    latest_versions = list(version_dict.values())
-    return sorted(latest_versions, key=lambda x: tuple(map(int, re.findall(r"\d+", x))))
-
 
 REPO_PATH = Path(__file__).parent.parent.parent.resolve()
 
 repo = Repo(REPO_PATH)
 tags = [tag.name for tag in repo.tags]
 versions = keep_latest_versions(tags, "v0.6")
-versions_string = "".join([f"({one_version})|" for one_version in versions])[:-1]
+versions_string = "|".join([f"({one_version})" for one_version in versions])
 versions_regex = re.compile(f"^{versions_string}$")
 
 print(f"Building {versions_regex}")
