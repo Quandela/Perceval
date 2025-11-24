@@ -28,7 +28,7 @@ To use Scaleway QaaS as a provider you need a Scaleway account, a Scaleway Proje
 Allocate a QPU session
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Let's see step by step how to instantiate and use a `Scaleway` Session.
+Let's see step by step how to instantiate and use a `Scaleway` session.
 
 Import the library and Scaleway from the providers library:
 
