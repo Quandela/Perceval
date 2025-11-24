@@ -28,7 +28,7 @@ To use Scaleway QaaS as a provider you need a Scaleway account, a Scaleway Proje
 Allocate a QPU session
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Let's see step by step how to instantiate and use a :ref:`Scaleway Session`.
+Let's see step by step how to instantiate and use a `Scaleway` Session.
 
 Import the library and Scaleway from the providers library:
 
@@ -57,9 +57,9 @@ You can now create a Scaleway session:
 You can also create a Scaleway session using a ``with`` block:
 
 >>> with scw.Session(platform_name=PLATFORM_NAME, project_id=PROJECT_ID, token=TOKEN) as session:
-...     /*
-...      * Session scope
-...      */
+...     #
+...     # Session scope
+...     #
 
 Note: using a ``with`` block you do not need to start and stop your session: it starts automatically at the beginning of the block and stops automatically at its end.
 
