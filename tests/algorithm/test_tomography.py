@@ -27,22 +27,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import sys
-from pathlib import Path
-
 import pytest
 import numpy as np
 from scipy.stats import unitary_group
 
 import perceval as pcvl
-from perceval.components import (catalog, Processor, Circuit, PauliType, PauliEigenStateType,
-                                 get_pauli_eigen_state_prep_circ)
+from perceval.components import catalog, Circuit, PauliType, PauliEigenStateType, get_pauli_eigen_state_prep_circ
 from perceval.backends import SLOSBackend
 from perceval.components import Unitary
 from perceval.algorithm import ProcessTomography, StateTomography
 from perceval.algorithm.tomography.tomography_utils import (is_physical, _generate_pauli_index, _vector_to_sq_matrix,
                                                             _matrix_to_vector, _matrix_basis, _coef_linear_decomp,
                                                             process_fidelity)
+from perceval.runtime import Processor
 
 CNOT_TARGET = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype=np.cdouble)
 

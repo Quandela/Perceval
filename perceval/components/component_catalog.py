@@ -29,8 +29,8 @@
 import importlib
 from abc import ABC, abstractmethod
 
-from perceval.utils import Parameter
-from perceval.components import Processor, Circuit, Experiment
+from perceval.utils import Parameter, deprecated
+from perceval.components import Circuit, Experiment
 from perceval.utils.logging import get_logger, channel
 
 
@@ -96,7 +96,8 @@ class CatalogItem(ABC):
         """
         pass
 
-    def build_processor(self, **kwargs) -> Processor:
+    @deprecated(reason="Use build_experiment instead", version="1.2.0")
+    def build_processor(self, **kwargs):
         """Build the component as processor
 
         kwargs:
@@ -104,6 +105,7 @@ class CatalogItem(ABC):
 
         :return: A Perceval processor
         """
+        from perceval import Processor
         return Processor(kwargs.get("backend", self._default_backend), self.build_experiment(**kwargs),
                          name=kwargs.get("name") or self._name.upper())
 

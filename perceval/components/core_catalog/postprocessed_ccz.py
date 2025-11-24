@@ -29,7 +29,7 @@
 
 from math import pi
 
-from perceval.components import Circuit, Port, Unitary, Processor, Experiment
+from perceval.components import Circuit, Port, Unitary, Experiment
 from perceval.components.component_catalog import CatalogItem
 from perceval.components.core_catalog import controlled_rotation_gates
 from perceval.utils import Encoding, PostSelect, Matrix

@@ -32,10 +32,11 @@ from unittest.mock import patch
 
 import perceval as pcvl
 from perceval import BSDistribution, FockState, NoisyFockState, Experiment, FFCircuitProvider
-from perceval.components import Circuit, Processor, BS, PS, catalog, UnavailableModeException, Port, PortLocation, \
+from perceval.components import Circuit, BS, PS, catalog, UnavailableModeException, Port, PortLocation, \
     PERM, Detector
 from perceval.utils import BasicState, StateVector, SVDistribution, Encoding, NoiseModel, P
 from perceval.backends import Clifford2017Backend
+from perceval.runtime import Processor
 
 from .._test_utils import LogChecker, assert_svd_close, assert_bsd_close
 

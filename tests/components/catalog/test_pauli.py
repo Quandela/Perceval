@@ -30,7 +30,7 @@
 import pytest
 import numpy as np
 from perceval.components import (PauliType, PauliEigenStateType, processor_circuit_configurator, catalog, Circuit,
-                                 Processor, get_pauli_eigen_state_prep_circ, get_pauli_gate)
+                                 get_pauli_eigen_state_prep_circ, get_pauli_gate, Experiment)
 
 
 def test_pauli_type():
@@ -60,7 +60,7 @@ def test_processor_circuit_configurator():
                                        [PauliEigenStateType.Zm, PauliEigenStateType.Zm],
                                        [PauliType.I, PauliType.I],)
 
-    cnot = catalog["klm cnot"].build_processor()
+    cnot = catalog["klm cnot"].build_experiment()
     with pytest.raises(TypeError):
         processor_circuit_configurator(cnot, [1, 0],[1, 0])
 
@@ -68,4 +68,4 @@ def test_processor_circuit_configurator():
                                                      [PauliEigenStateType.Zm, PauliEigenStateType.Zm],
                                                      [PauliType.I, PauliType.I],)
 
-    assert isinstance(configured_cnot, Processor)
+    assert isinstance(configured_cnot, Experiment)

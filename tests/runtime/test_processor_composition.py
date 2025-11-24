@@ -31,10 +31,10 @@ import math
 import pytest
 
 from perceval import PortLocation
-from perceval.components import (catalog, Circuit, BS, PS, PERM, Processor, Detector, UnavailableModeException,
+from perceval.components import (catalog, Circuit, BS, PS, PERM, Detector, UnavailableModeException,
                                  FFConfigurator, FFCircuitProvider, Unitary, Barrier)
 from perceval.utils import Matrix, P, LogicalState
-from perceval.runtime import RemoteProcessor
+from perceval.runtime import RemoteProcessor, Processor
 
 from tests.runtime._mock_rpc_handler import get_rpc_handler_for_tests
 

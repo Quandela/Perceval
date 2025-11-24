@@ -29,7 +29,7 @@
 import exqalibur as xq
 
 from perceval.utils import FockState, BSDistribution, StateVector, NoisyFockState, SVDistribution, Matrix
-from perceval.components import (ACircuit, AFFConfigurator, FFCircuitProvider, Experiment, IDetector, Processor,
+from perceval.components import (ACircuit, AFFConfigurator, FFCircuitProvider, Experiment, IDetector,
                                  DetectionType, AComponent, Circuit, Barrier, FFConfigurator)
 
 from ._abstract_backends import AStrongSimulationBackend, IFFBackend
@@ -93,8 +93,6 @@ class SLAPBackend(AStrongSimulationBackend, IFFBackend):
         #   - No NoisyFockState as input (as they require merging)
         # - Configurators don't configure on modes above them, nor do they point to heralded or non-unitary experiments
 
-        from perceval import Processor, Experiment
-
         if isinstance(input_state, NoisyFockState):
             return False
 
@@ -109,8 +107,6 @@ class SLAPBackend(AStrongSimulationBackend, IFFBackend):
                     return False
 
         def accept(p):
-            if isinstance(p, Processor):
-                p = p.experiment
             if isinstance(p, Experiment) and (p.heralds or p.in_heralds or not p.is_unitary):
                 return False
             return True
@@ -179,8 +175,6 @@ class SLAPBackend(AStrongSimulationBackend, IFFBackend):
                 for measure, sub_c in c.circuit_map.items():
                     if isinstance(sub_c, Experiment):
                         sub_c = sub_c.unitary_circuit()
-                    elif isinstance(sub_c, Processor):
-                        sub_c = sub_c.linear_circuit()
 
                     config_map[measure] = sub_c.compute_unitary()
 

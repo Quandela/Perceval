@@ -26,13 +26,13 @@ CNOT gate:
 >>> from perceval.algorithm import Sampler
 >>>
 >>> p_ralph = pcvl.RemoteProcessor("sim:altair")
->>> p_ralph.add(0, pcvl.catalog["postprocessed cnot"].build_processor())
+>>> p_ralph.add(0, pcvl.catalog["postprocessed cnot"].build_experiment())
 >>> p_ralph.min_detected_photons_filter(2)
 >>> p_ralph.with_input(pcvl.BasicState([0, 1, 0, 1]))
 >>> sampler_ralph = Sampler(p_ralph, max_shots_per_call=1_000_000)
 >>>
 >>> p_knill = pcvl.RemoteProcessor("sim:altair")
->>> p_knill.add(0, pcvl.catalog["heralded cnot"].build_processor())
+>>> p_knill.add(0, pcvl.catalog["heralded cnot"].build_experiment())
 >>> p_knill.min_detected_photons_filter(2)
 >>> p_knill.with_input(pcvl.BasicState([0, 1, 0, 1]))
 >>> sampler_knill = Sampler(p_knill, max_shots_per_call=1_000_000)

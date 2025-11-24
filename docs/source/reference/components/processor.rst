@@ -154,7 +154,7 @@ This is not the case when composing with an asymmetric processor.
 
 >>> from perceval import catalog
 >>> p = pcvl.Processor("SLOS", 4)
->>> cnot = catalog["postprocessed cnot"].build_processor()
+>>> cnot = catalog["postprocessed cnot"].build_experiment()
 >>> cnot.m
 4
 >>> cnot.circuit_size

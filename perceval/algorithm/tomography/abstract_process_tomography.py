@@ -30,7 +30,7 @@
 from abc import abstractmethod
 import numpy as np
 from perceval.algorithm.abstract_algorithm import AAlgorithm
-from perceval.components import AProcessor
+from perceval.runtime import AProcessor
 from .tomography_utils import _vector_to_sq_matrix, _krauss_repr_ops, _get_canonical_basis_ops
 
 

@@ -310,7 +310,7 @@ class Experiment:
         elif isinstance(component, AComponent):
             self._add_component(connector.resolve(), component, keep_port)
         else:
-            raise RuntimeError(f"Cannot add {type(component)} object to a Processor")
+            raise RuntimeError(f"Cannot add {type(component)} object to an Experiment")
 
         self._circuit_changed(component)
         return self
@@ -843,7 +843,7 @@ class Experiment:
     @dispatch(SVDistribution)
     def with_input(self, svd: SVDistribution):
         r"""
-        Processor input can be set 100% manually via a state vector distribution, bypassing the source.
+        Experiment input can be set 100% manually via a state vector distribution, bypassing the source.
 
         :param svd: The input SVDistribution which won't be changed in any way by the source.
         Every state vector size has to be equal to `self.circuit_size`
