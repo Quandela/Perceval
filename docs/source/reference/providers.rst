@@ -14,11 +14,7 @@ When using Quandela Cloud, you have the same capabilities with and without using
 Scaleway
 --------
 
-`Scaleway <https://www.scaleway.com/>`_ is a French cloud provider that provides, among a range of offers, binary power to emulate quantum computing compatible with Perceval.
-
-This Scaleway Quantum as a Service (QaaS) leverages from GPUs like Nvidia P100 and H100 to increase mode limit and accelerate simulations.
-
-You can find prices and additional information on the `Scaleway Labs QaaS page <https://labs.scaleway.com/en/qaas/>`_.
+`Scaleway Quantum-as-a-Service <https://www.scaleway.com/en/quantum-as-a-service/>`_ provides access to allocate and program Quantum Processing Units (QPUs), physical or emulated.
 
 Scaleway authentication
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -29,16 +25,10 @@ To use Scaleway QaaS as a provider you need a Scaleway account, a Scaleway Proje
 2. `Create a Scaleway Project <https://www.scaleway.com/en/docs/console/project/how-to/create-a-project/>`_
 3. `Create a Scaleway API key <https://www.scaleway.com/en/docs/identity-and-access-management/iam/how-to/create-api-keys/>`_
 
-ScalewaySession
-^^^^^^^^^^^^^^^
-
-.. autoclass:: perceval.providers.scaleway.Session
-   :members:
-
-Using a Scaleway session
+Allocate a QPU session
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Let's see step by step how to instantiate and use a `Scaleway` session.
+Let's see step by step how to instantiate and use a :ref:`Scaleway Session`.
 
 Import the library and Scaleway from the providers library:
 
@@ -50,13 +40,14 @@ Provide your Scaleway Project ID and API key:
 >>> PROJECT_ID = "your-scaleway-project-id"
 >>> TOKEN = "your-scaleway-api-key"
 
-Choose one of the Perceval compatible platforms `provided by Scaleway <https://labs.scaleway.com/en/qaas/#pricing>`_:
+Choose one of the Perceval compatible platforms `provided by Scaleway <https://www.scaleway.com/en/quantum-as-a-service/>`_:
 
->>> PLATFORM_NAME = "sim:sampling:h100"
+>>> PLATFORM_NAME = "EMU-SAMPLING-L4" # For emulated QPU
+>>> # PLATFORM_NAME = "QPU-BELENOS-12PQ" # For real QPU
 
 You can now create a Scaleway session:
 
->>> session = scw.Session(platform=PLATFORM_NAME, project_id=PROJECT_ID, token=TOKEN)
+>>> session = scw.Session(platform_name=PLATFORM_NAME, project_id=PROJECT_ID, token=TOKEN)
 >>> session.start()
 >>> /*
 ...  * Session scope
@@ -65,14 +56,14 @@ You can now create a Scaleway session:
 
 You can also create a Scaleway session using a ``with`` block:
 
->>> with scw.Session(platform=PLATFORM_NAME, project_id=PROJECT_ID, token=TOKEN) as session:
-...     #
-...     # Session scope
-...     #
+>>> with scw.Session(platform_name=PLATFORM_NAME, project_id=PROJECT_ID, token=TOKEN) as session:
+...     /*
+...      * Session scope
+...      */
 
 Note: using a ``with`` block you do not need to start and stop your session: it starts automatically at the beginning of the block and stops automatically at its end.
 
-.. note:: while using a Jupyter Notebook for convenience python objects are kept alive and we recommend using directly ``start`` and ``stop`` methods.
+Note: while using a Jupyter Notebook for convenience python objects are kept alive and we recommend using directly ``start`` and ``stop`` methods.
 
 Using an existing Scaleway QPU session
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -89,7 +80,7 @@ It is highly convenient if you wish to keep a specific amount of session alive a
 Send a circuit to a Scaleway QPU session
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Now you are handling a session, you can instantiate a :code:`RemoteProcessor` linked to the session:
+Now you are handling a session, you can instantiate a ``RemoteProcessor`` linked to the session:
 
 >>> processor = session.build_remote_processor()
 
@@ -97,9 +88,8 @@ Then, we can attach a toy circuit and send it on our session
 
 >>> processor.set_circuit(pcvl.Circuit(m=2, name="a-toy-circuit") // pcvl.BS.H())
 >>> processor.with_input(pcvl.BasicState("|0,1>"))
->>> processor.min_detected_photons_filter(1)
 >>> sampler = pcvl.algorithm.Sampler(processor, max_shots_per_call=10_000)
 >>> job = sampler.samples(100)
 >>> print(job)
 
-Congratulation you can now design and send jobs to Scaleway QaaS through your processor. You can continue with the documentation of :ref:`algorithm`.
+Congratulation you can now design and send jobs to Scaleway QaaS through your processor. You can continue with the documentation through :ref:`Work with algorithms`.
