@@ -92,4 +92,4 @@ Then, we can attach a toy circuit and send it on our session
 >>> job = sampler.samples(100)
 >>> print(job)
 
-Congratulation you can now design and send jobs to Scaleway QaaS through your processor. You can continue with the documentation through :ref:`algorithm`.
+Congratulation you can now design and send jobs to Scaleway QaaS through your processor. You can continue with the documentation of :ref:`algorithm`.
