@@ -209,6 +209,6 @@ and some performance score corresponding to the probability of getting a selecte
 >>> p.probs()["results"]
 BSDistribution(float, {|1,0>: 0.5, |0,1>: 0.5})
 
-.. autoclass:: perceval.components.processor.Processor
+.. autoclass:: perceval.runtime.processor.Processor
    :members:
    :inherited-members:

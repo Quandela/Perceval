@@ -63,3 +63,5 @@ from .providers import *
 
 get_logger().info(f"=== Starting Perceval session - process ID: {payload_generator.__process_id__} ===",
             logging.channel.general)
+
+comp_retro_compatibility(AProcessor, Processor, ProcessorType)
