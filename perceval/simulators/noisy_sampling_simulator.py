@@ -32,6 +32,8 @@ import sys
 from collections import defaultdict
 from typing import Callable
 
+import exqalibur as xq
+
 from perceval.backends import ASamplingBackend
 from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType, check_heralds_detectors, Source
 from perceval.utils import BasicState, FockState, StateVector, NoisyFockState, BSCount, BSSamples, SVDistribution, PostSelect, \
@@ -534,6 +536,179 @@ class NoisySamplingSimulator:
         """
         result = {'results': results, 'global_perf': physical_perf * logical_perf}
         if self._compute_physical_logical_perf:
+            result['physical_perf'] = physical_perf
+            result['logical_perf'] = logical_perf
+        return result
+
+
+class NoisySamplingSimulator:
+
+    def __init__(self, sampling_backend: ASamplingBackend):
+        self._backend = sampling_backend
+        # TODO: normalize the way to get the c++ backend and to check that we have a c++ sampling backend
+        self._sim = xq.SamplingSimulator(sampling_backend._clifford)
+        self._compute_physical_logical_perf = False  # TODO
+
+    @property
+    def min_detected_photons_filter(self):
+        return self._sim.min_photons_filter + sum(self._sim.heralds.values())
+
+    def set_detectors(self, detector_list: list[IDetector]):
+        """
+        :param detector_list: A list of detectors to simulate
+        """
+        pass
+        # self._sim.set_detectors(detector_list)  # TODO
+
+    def keep_heralds(self, value: bool):
+        """
+        Tells the simulator to keep or discard ancillary modes in output states
+
+        :param value: True to keep ancillaries/heralded modes, False to discard them (default is keep).
+        """
+        self._sim.keep_heralds = value
+
+    def compute_physical_logical_perf(self, value: bool):
+        """
+        Tells the simulator to compute or not the physical and logical performances when possible
+
+        :param value: True to compute the physical and logical performances, False otherwise.
+        """
+        self._compute_physical_logical_perf = value  # TODO
+
+    def set_selection(self,
+                      min_detected_photons_filter: int = None,
+                      postselect: PostSelect = None,
+                      heralds: dict = None):
+        """Set multiple selection filters at once to remove unwanted states from computed output distribution
+
+        :param min_detected_photons_filter: minimum number of detected photons in the output distribution
+        :param postselect: a post-selection function
+        :param heralds: expected detections (heralds). Only corresponding states will be selected, others are filtered
+                        out. Mapping of heralds. For instance `{5: 0, 6: 1}` means 0 photon is expected on mode 5 and 1
+                        on mode 6.
+        """
+        if min_detected_photons_filter is not None:
+            self._sim.min_photons_filter = min_detected_photons_filter
+        if postselect is not None:
+            self._sim.postselect = postselect
+        if heralds is not None:
+            self._sim.heralds = heralds
+
+    def set_circuit(self, circuit: ACircuit):
+        """
+        Set the circuit to simulate the sampling on
+
+        :param circuit: A unitary circuit
+        """
+        self._backend.set_circuit(circuit)
+
+    def set_min_detected_photons_filter(self, value: int):
+        """
+        Set the physical detection filter. Any output state with less than this threshold gets discarded.
+
+        :param value: Minimal photon count in output states of interest.
+        """
+        self._sim.min_photons_filter = value
+
+    def samples(self,
+                svd: SVDistribution | tuple[Source, FockState],
+                max_samples: int,
+                max_shots: int = None,
+                progress_callback: Callable[[float, str], None | dict] = None) -> dict:
+        """
+        Run a noisy sampling simulation and retrieve the results
+
+        :param svd: The noisy input, expressed as a mixed state,
+         or a tuple containing the source and the perfect input state
+        :param max_samples: Max expected samples of interest in the results
+        :param max_shots: Shots limit before the sampling ends (you might get fewer samples than expected)
+        :param progress_callback: A progress callback
+        :return: A dictionary of the form { "results": BSSamples, "physical_perf": float, "logical_perf": float }
+
+        - results is the post-selected output state sample stream
+        - physical_perf is the performance computed from the detected photon filter
+        - logical_perf is the performance computed from the post-selection
+        """
+        # if not check_heralds_detectors(self._sim.heralds, self._sim.detectors):  # TODO
+        #     return self.format_results(BSSamples(), 1, 0)
+
+        if progress_callback is not None:
+            self._sim.set_progress_callback(lambda prog, msg: cancel_requested(progress_callback(prog, msg)))
+        else:
+            self._sim.reset_progress_callback()
+
+        max_shots = max_shots if max_shots is not None else -1
+
+        if isinstance(svd, tuple):
+            n = svd[1].n
+            samples = self._sim.samples(svd[0]._source, svd[1], max_samples, max_shots)
+        else:
+            n = svd.n_max
+            samples = self._sim.samples(svd, max_samples, max_shots)
+
+        res = self.format_results(samples, self._sim.get_physical_perf(), self._sim.get_logical_perf())
+
+        self.log_resources(sys._getframe().f_code.co_name, {
+            'n': n, 'max_samples': max_samples, 'max_shots': max_shots})
+        return res
+
+    def sample_count(self,
+                     svd: SVDistribution | tuple[Source, BasicState],
+                     max_samples: int,
+                     max_shots: int = None,
+                     progress_callback: Callable[[float, str], None | dict] = None) -> dict:
+        """
+        Run a noisy sampling simulation and retrieve the results
+
+        :param svd: The noisy input, expressed as a mixed state,
+         or a tuple containing the source and the perfect input state
+        :param max_samples: Max expected samples of interest in the results
+        :param max_shots: Shots limit before the sampling ends (you might get fewer samples than expected)
+        :param progress_callback: A progress callback
+        :return: A dictionary of the form { "results": BSCount, "physical_perf": float, "logical_perf": float }
+
+        - results is the post-selected output state sample count
+        - physical_perf is the performance computed from the detected photon filter
+        - logical_perf is the performance computed from the post-selection
+        """
+        sampling = self.samples(svd, max_samples, max_shots, progress_callback)
+        sampling['results'] = samples_to_sample_count(sampling['results'])
+        return sampling
+
+    def log_resources(self, method: str, extra_parameters: dict):
+        """Log resources of the noisy sampling simulator
+
+        :param method: name of the method used
+        :param extra_parameters: extra parameters to log
+
+            Extra parameter can be:
+
+                - max_samples
+                - max_shots
+        """
+        extra_parameters = {key: value for key, value in extra_parameters.items() if value is not None}
+        my_dict = {
+            'layer': 'NoisySamplingSimulator',
+            'backend': self._backend.name,
+            'm': self._backend._circuit.m,
+            'method': method
+        }
+        if extra_parameters:
+            my_dict.update(extra_parameters)
+        get_logger().log_resources(my_dict)
+
+    def format_results(self, results, physical_perf, logical_perf):
+        """
+            Format the simulation results by computing the global performance, and returning the physical and
+            logical performances only if needed.
+
+            :param results: the simulation results
+            :param physical_perf: the physical performance
+            :param logical_perf: the logical performance
+        """
+        result = {'results': results, 'global_perf': physical_perf * logical_perf}
+        if self._compute_physical_logical_perf:  # TODO
             result['physical_perf'] = physical_perf
             result['logical_perf'] = logical_perf
         return result
