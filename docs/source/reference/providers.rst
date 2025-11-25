@@ -29,6 +29,7 @@ ScalewaySession
 ^^^^^^^^^^^^^^^
 
 .. autoclass:: perceval.providers.scaleway.Session
+   :members:
 
 Allocate a QPU session
 ^^^^^^^^^^^^^^^^^^^^^^
