@@ -25,8 +25,13 @@ To use Scaleway QaaS as a provider you need a Scaleway account, a Scaleway Proje
 2. `Create a Scaleway Project <https://www.scaleway.com/en/docs/console/project/how-to/create-a-project/>`_
 3. `Create a Scaleway API key <https://www.scaleway.com/en/docs/identity-and-access-management/iam/how-to/create-api-keys/>`_
 
+ScalewaySession
+^^^^^^^^^^^^^^^
+
+.. autoclass:: perceval.providers.scaleway.Session
+
 Allocate a QPU session
-^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^
 
 Let's see step by step how to instantiate and use a `Scaleway` session.
 
@@ -63,7 +68,7 @@ You can also create a Scaleway session using a ``with`` block:
 
 Note: using a ``with`` block you do not need to start and stop your session: it starts automatically at the beginning of the block and stops automatically at its end.
 
-Note: while using a Jupyter Notebook for convenience python objects are kept alive and we recommend using directly ``start`` and ``stop`` methods.
+.. note:: while using a Jupyter Notebook for convenience python objects are kept alive and we recommend using directly ``start`` and ``stop`` methods.
 
 Using an existing Scaleway QPU session
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -88,6 +93,7 @@ Then, we can attach a toy circuit and send it on our session
 
 >>> processor.set_circuit(pcvl.Circuit(m=2, name="a-toy-circuit") // pcvl.BS.H())
 >>> processor.with_input(pcvl.BasicState("|0,1>"))
+>>> processor.min_detected_photons_filter(1)
 >>> sampler = pcvl.algorithm.Sampler(processor, max_shots_per_call=10_000)
 >>> job = sampler.samples(100)
 >>> print(job)
