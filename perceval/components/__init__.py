@@ -47,19 +47,13 @@ from ._mode_connector import ModeConnector, UnavailableModeException
 from .feed_forward_configurator import AFFConfigurator, FFCircuitProvider, FFConfigurator
 catalog = Catalog('perceval.components.core_catalog')
 
-def comp_retro_compatibility(a_proc, proc, p_type):
-    # TODO: remove in perceval 1.4
-    global AProcessor
-    global Processor
-    global ProcessorType
+# TODO: remove in perceval 1.4
+from perceval.runtime import AProcessor, Processor as Proc, ProcessorType
+from perceval.utils import deprecated
 
-    ProcessorType = p_type
-    AProcessor = a_proc
+class Processor(Proc):
 
-    class Processor(proc, AProcessor):
-
-        def __new__(cls, *args, **kwargs):
-            from perceval import get_logger
-            get_logger().warn("Getting Processor from perceval.components is deprecated since version 1.2.\n"
-                              "Import it from perceval or from perceval.runtime instead.")
-            return proc(*args, **kwargs)
+    @deprecated(reason="Getting Processor from perceval.components is deprecated.\n"
+                       "Import it from perceval or from perceval.runtime instead.", version="1.2")
+    def __new__(cls, *args, **kwargs):
+        return Proc(*args, **kwargs)
