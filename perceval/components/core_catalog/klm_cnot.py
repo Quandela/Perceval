@@ -29,7 +29,7 @@
 
 from math import sqrt
 
-from perceval.components import Circuit, BS, PERM, Port, Processor, Experiment
+from perceval.components import Circuit, BS, PERM, Port, Experiment
 from perceval.components.component_catalog import CatalogItem
 from perceval.utils import Encoding
 

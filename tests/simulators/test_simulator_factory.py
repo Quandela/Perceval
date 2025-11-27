@@ -28,7 +28,8 @@
 # SOFTWARE.
 
 from perceval.simulators import SimulatorFactory, Simulator, DelaySimulator, LossSimulator, PolarizationSimulator
-from perceval.components import BS, PBS, Unitary, PS, TD, LC, Processor
+from perceval.components import BS, PBS, Unitary, PS, TD, LC
+from perceval.runtime import Processor
 from perceval.backends._slos import SLOSBackend
 from perceval.backends._naive import NaiveBackend
 from perceval.utils import BasicState

@@ -154,7 +154,7 @@ This is not the case when composing with an asymmetric processor.
 
 >>> from perceval import catalog
 >>> p = pcvl.Processor("SLOS", 4)
->>> cnot = catalog["postprocessed cnot"].build_processor()
+>>> cnot = catalog["postprocessed cnot"].build_experiment()
 >>> cnot.m
 4
 >>> cnot.circuit_size
@@ -209,6 +209,6 @@ and some performance score corresponding to the probability of getting a selecte
 >>> p.probs()["results"]
 BSDistribution(float, {|1,0>: 0.5, |0,1>: 0.5})
 
-.. autoclass:: perceval.components.processor.Processor
+.. autoclass:: perceval.runtime.processor.Processor
    :members:
    :inherited-members:

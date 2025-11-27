@@ -36,7 +36,8 @@ from perceval import P, Experiment
 from perceval.components.compiled_circuit import CompiledCircuit
 from perceval.utils import Matrix, BasicState, Parameter, InterferometerShape
 from perceval.components import (BS, PS, PBS, WP, HWP, PERM, QWP, PR, Unitary, TD, Detector, catalog, FFConfigurator,
-                                 FFCircuitProvider, Circuit, GenericInterferometer, Processor)
+                                 FFCircuitProvider, Circuit, GenericInterferometer)
+from perceval.runtime import Processor
 from perceval.rendering.circuit import SymbSkin
 
 from .._test_utils import _save_or_check, save_figs

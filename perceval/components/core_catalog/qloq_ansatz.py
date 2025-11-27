@@ -29,7 +29,7 @@
 
 from perceval.components.component_catalog import CatalogItem
 from ._helpers import generate_chained_controlled_ops, generalized_cz, apply_rotations_to_qubits
-from perceval.components import Circuit, Processor, Port, Experiment
+from perceval.components import Circuit, Port, Experiment
 from perceval.utils import Encoding, PostSelect
 
 
@@ -76,7 +76,7 @@ class QLOQAnsatz(CatalogItem):
         self._apply_layer_operations(offset, size)
 
     def _build_qubit_circuit(self, qubit_group_sizes: list[int], lp: list[float], layers: list[str],
-                             ctype="cx") -> Processor:
+                             ctype="cx"):
         """
         Builds a quantum circuit based on specified parameters. The circuit is generated
         for multiple groups of qubits with custom operations and entanglement.
@@ -86,14 +86,11 @@ class QLOQAnsatz(CatalogItem):
             lp (list of float): List of angles for the parameterized gates.
             layers (list of str): Types of rotation layers to apply ('X', 'Y', 'Z').
             ctype (str, optional): The type of controlled operation to use ("cz" or "cx"). Defaults to "cx".
-
-        Returns:
-            Processor: The constructed quantum circuit as a Processor.
         """
         ctype = ctype.upper()
 
         total_modes = sum((2 ** n for n in qubit_group_sizes))
-        self._circ = Processor("SLOS", total_modes, name="Machine Learning")
+        self._circ = Experiment(total_modes, name="Machine Learning")
         self._layers = layers
         self._angle_offset = 0
         self._lp = lp
@@ -122,7 +119,6 @@ class QLOQAnsatz(CatalogItem):
         for size in qubit_group_sizes:
             self._add_single_layer(offset, size, ctype)
             offset += 2 ** size
-        return self._circ
 
     @staticmethod
     def get_parameter_nb(qubit_group_sizes: list[Encoding], nb_layers: int) -> int:
@@ -181,7 +177,7 @@ class QLOQAnsatz(CatalogItem):
         group_sizes = [size.logical_length for size in group_sizes]
 
         self._build_qubit_circuit(group_sizes, phases, layers, ctype)
-        return self._circ.linear_circuit()
+        return self._circ.unitary_circuit()
 
     def build_experiment(self, **kwargs) -> Experiment:
         e = Experiment(self.build_circuit(**kwargs))

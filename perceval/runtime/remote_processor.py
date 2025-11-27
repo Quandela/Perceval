@@ -28,8 +28,7 @@
 # SOFTWARE.
 from requests import HTTPError
 
-from perceval.components.abstract_processor import AProcessor, ProcessorType
-from perceval.components import ACircuit, Processor, AComponent,  Experiment, Detector
+from perceval.components import ACircuit, AComponent, Experiment, Detector
 from perceval.utils import FockState, NoiseModel
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import deserialize
@@ -38,7 +37,8 @@ from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
 from .remote_config import RemoteConfig
 from .payload_generator import PayloadGenerator
-
+from .abstract_processor import AProcessor, ProcessorType
+from .processor import Processor
 
 PERFS_KEY = "perfs"
 TRANSMITTANCE_KEY = "Transmittance (%)"

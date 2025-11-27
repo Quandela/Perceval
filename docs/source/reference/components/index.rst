@@ -8,7 +8,6 @@ components
    circuit
    generic_interferometer
    experiment
-   processor
    source
    non_unitary_components
    port

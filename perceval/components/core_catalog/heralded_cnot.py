@@ -31,7 +31,6 @@ from perceval.components import Circuit, BS, Port
 from perceval.components.component_catalog import CatalogItem
 from perceval.components.core_catalog.heralded_cz import HeraldedCzItem
 from perceval.components.experiment import Experiment
-from perceval.components.processor import Processor
 from perceval.utils import Encoding
 
 

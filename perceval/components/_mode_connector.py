@@ -61,7 +61,7 @@ class ModeConnector:
         :param right_obj: the component or processor to plug on the right of `left_experiment`
         :param mapping: the user mapping defining the plugging rules (see resolve method doc for more info)
         """
-        from .abstract_processor import AProcessor
+        from perceval.runtime.abstract_processor import AProcessor
         if isinstance(left_experiment, AProcessor):
             left_experiment = left_experiment.experiment
         self._le = left_experiment

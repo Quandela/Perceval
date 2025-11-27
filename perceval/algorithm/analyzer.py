@@ -31,7 +31,7 @@ import numpy as np
 from .abstract_algorithm import AAlgorithm
 from .sampler import Sampler
 from perceval.utils import BasicState, allstate_iterator, Matrix
-from perceval.components import AProcessor
+from perceval.runtime import AProcessor
 
 
 class Analyzer(AAlgorithm):

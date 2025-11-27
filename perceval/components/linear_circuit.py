@@ -448,7 +448,7 @@ class Circuit(ACircuit):
         :raise: ``AssertionError`` if parameters are not valid
         """
         assert isinstance(component, ACircuit), \
-            "Only unitary components can compose a linear optics circuit, use Processor for non-unitary"
+            "Only unitary components can compose a linear optics circuit, use Experiment for non-unitary"
         if isinstance(port_range, int):
             port_range = tuple([i for i in range(port_range, port_range+component.m)])
         if isinstance(port_range, list):

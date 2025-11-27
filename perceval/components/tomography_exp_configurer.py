@@ -27,8 +27,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .processor import AProcessor, Processor
 from ._pauli import PauliType, PauliEigenStateType, get_pauli_eigen_state_prep_circ, get_pauli_basis_measurement_circuit
+from .experiment import Experiment
 
 
 def _prep_state_circuit_preparer(prep_state_indices: list):
@@ -51,18 +51,19 @@ def _meas_state_circuit_preparer(pauli_indices: list):
         yield i*2, get_pauli_basis_measurement_circuit(pauli_type)
 
 
-def processor_circuit_configurator(processor, prep_state_indices: list, meas_pauli_basis_indices: list):
+def experiment_circuit_configurator(experiment: Experiment, prep_state_indices: list, meas_pauli_basis_indices: list)\
+        -> Experiment:
     """
-    Adds preparation and measurement circuit to input processor (with the gate operation under study) to configure
-    it for the tomography experiment
-    :param processor: Processor with input circuit on which Tomography is to be performed
+    Adds preparation and measurement circuit to input experiment (with the gate operation under study) to configure
+    it for the tomography process.
+    :param experiment: Experiment with input circuit on which Tomography is to be performed
     :param prep_state_indices: List of "nqubit" indices selecting the circuit at each qubit for a preparation state
     :param meas_pauli_basis_indices: List of "nqubit" indices selecting the circuit at each qubit for a measurement
      circuit
-    :return: the configured processor to perform state tomography experiment
+    :return: the configured experiment to perform state tomography
     """
-    if not isinstance(processor, AProcessor):
-        raise TypeError(f"{processor} is not a Processor and hence cannot be configured")
+    if not isinstance(experiment, Experiment):
+        raise TypeError(f"{experiment} is not an Experiment and hence cannot be configured")
 
     if not all(isinstance(p_index, PauliEigenStateType) for p_index in prep_state_indices):
         raise TypeError(
@@ -72,7 +73,6 @@ def processor_circuit_configurator(processor, prep_state_indices: list, meas_pau
         raise TypeError(
             "Indices for the measurement circuits should be a PauliType")
 
-    experiment = processor.experiment
     e = experiment.copy()
     e.clear_input_and_circuit(experiment.m)  # Clear experiment content but keep its size
 
@@ -86,4 +86,4 @@ def processor_circuit_configurator(processor, prep_state_indices: list, meas_pau
 
     e.min_detected_photons_filter(0)  # QPU would have a problem with this
 
-    return Processor(processor.backend, e)
+    return e
