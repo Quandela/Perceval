@@ -51,15 +51,16 @@ def _meas_state_circuit_preparer(pauli_indices: list):
         yield i*2, get_pauli_basis_measurement_circuit(pauli_type)
 
 
-def processor_circuit_configurator(experiment, prep_state_indices: list, meas_pauli_basis_indices: list):
+def experiment_circuit_configurator(experiment: Experiment, prep_state_indices: list, meas_pauli_basis_indices: list)\
+        -> Experiment:
     """
-    Adds preparation and measurement circuit to input processor (with the gate operation under study) to configure
-    it for the tomography experiment
+    Adds preparation and measurement circuit to input experiment (with the gate operation under study) to configure
+    it for the tomography process.
     :param experiment: Experiment with input circuit on which Tomography is to be performed
     :param prep_state_indices: List of "nqubit" indices selecting the circuit at each qubit for a preparation state
     :param meas_pauli_basis_indices: List of "nqubit" indices selecting the circuit at each qubit for a measurement
      circuit
-    :return: the configured processor to perform state tomography experiment
+    :return: the configured experiment to perform state tomography
     """
     if not isinstance(experiment, Experiment):
         raise TypeError(f"{experiment} is not an Experiment and hence cannot be configured")

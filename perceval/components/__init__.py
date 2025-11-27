@@ -36,7 +36,7 @@ from .source import Source
 from ._pauli import (PauliType, PauliEigenStateType, get_pauli_eigen_state_prep_circ,
                      get_pauli_basis_measurement_circuit, get_pauli_gate, get_pauli_eigenvector_matrix,
                      get_pauli_eigenvectors)
-from .tomography_exp_configurer import processor_circuit_configurator
+from .tomography_exp_configurer import experiment_circuit_configurator
 from ._decompose_perms import decompose_perms
 from .port import APort, Port, Herald, PortLocation, get_basic_state_from_ports
 from .detector import IDetector, DetectionType, Detector, BSLayeredPPNR, get_detection_type, check_heralds_detectors

@@ -31,7 +31,7 @@ import numpy as np
 import math
 from itertools import product, combinations
 from perceval.components import (PauliType, PauliEigenStateType, get_pauli_gate, get_pauli_eigen_state_prep_circ,
-                                 processor_circuit_configurator)
+                                 experiment_circuit_configurator)
 from ..sampler import Sampler
 from perceval.utils import BasicState
 from perceval.runtime import Processor
@@ -46,7 +46,8 @@ def _compute_probs(tomography_experiment, prep_state_indices: list, meas_pauli_b
      circuit
     :return: Output state probability distribution
     """
-    e = processor_circuit_configurator(tomography_experiment._processor.experiment, prep_state_indices, meas_pauli_basis_indices)
+    e = experiment_circuit_configurator(tomography_experiment._processor.experiment, prep_state_indices,
+                                        meas_pauli_basis_indices)
 
     p = Processor(tomography_experiment._processor.backend, e)  # TODO: allow RemoteProcessor
     input_state = BasicState([1, 0] * tomography_experiment._nqubit)
