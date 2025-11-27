@@ -46,3 +46,17 @@ Using a NoisySamplingSimulator
 .. autoclass:: perceval.simulators.NoisySamplingSimulator
    :members:
    :inherited-members:
+
+
+ExqaliburNoisySamplingSimulator
+===============================
+
+The :code:`ExqaliburNoisySamplingSimulator` does the same things as the :code:`NoisySamplingSimulator`, but its methods
+are implemented in exqalibur so it runs faster.
+
+Also, this simulator requires the backend to be a wrapper around a pure exqalibur sampling backend.
+The :ref:`CliffordClifford2017` backend is an example of such a backend.
+
+.. autoclass:: perceval.simulators.ExqaliburNoisySamplingSimulator
+   :members:
+   :inherited-members:

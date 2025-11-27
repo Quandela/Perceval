@@ -32,10 +32,10 @@ from perceval.utils import FockState, BSDistribution, StateVector, NoisyFockStat
 from perceval.components import (ACircuit, AFFConfigurator, FFCircuitProvider, Experiment, IDetector, Processor,
                                  DetectionType, AComponent, Circuit, Barrier, FFConfigurator)
 
-from ._abstract_backends import AStrongSimulationBackend, IFFBackend
+from ._abstract_backends import AStrongSimulationBackend, IFFBackend, ExqaliburBackendWrapper
 
 
-class SLAPBackend(AStrongSimulationBackend, IFFBackend):
+class SLAPBackend(AStrongSimulationBackend, IFFBackend, ExqaliburBackendWrapper):
 
     def __init__(self, mask=None):
         super().__init__()
@@ -192,3 +192,6 @@ class SLAPBackend(AStrongSimulationBackend, IFFBackend):
         self.set_circuit(main_unitary)
         for mp in maps:
             self._slap.add_feed_forward_config(mp)
+
+    def get_exqalibur_backend(self):
+        return self._slap

@@ -33,5 +33,5 @@ from .polarization_simulator import PolarizationSimulator
 from .simulator import Simulator
 from .simulator_factory import SimulatorFactory
 from .stepper import Stepper
-from .noisy_sampling_simulator import NoisySamplingSimulator
+from .noisy_sampling_simulator import NoisySamplingSimulator, ExqaliburNoisySamplingSimulator
 from .feed_forward_simulator import FFSimulator

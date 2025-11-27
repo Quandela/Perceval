@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from abc import ABC, abstractmethod
-from typing import Iterable
+from typing import Iterable, Protocol, runtime_checkable
 
 import exqalibur as xq
 from exqalibur import SVDistribution
@@ -232,4 +232,11 @@ class IFFBackend(ABC):
         :param components: The list of components in the circuit, containing at least one FFConfigurator.
         :param m: The number of modes in the circuit.
         """
+        pass
+
+
+class ExqaliburBackendWrapper(ABC):
+
+    @abstractmethod
+    def get_exqalibur_backend(self):
         pass
