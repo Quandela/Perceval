@@ -39,6 +39,7 @@ from perceval.backends import ASamplingBackend, ExqaliburBackendWrapper
 from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType, check_heralds_detectors, Source
 from perceval.utils import BasicState, FockState, StateVector, NoisyFockState, BSCount, BSSamples, SVDistribution, PostSelect, \
     samples_to_sample_count
+from perceval.serialization.serialize_binary import serialize_binary
 from perceval.utils.logging import get_logger, channel
 from perceval.runtime import cancel_requested
 from ._simulate_detectors import simulate_detectors_sample
@@ -596,9 +597,15 @@ class ExqaliburNoisySamplingSimulator(ASamplingSimulator):
         super().__init__(sampling_backend)
         self._sim = xq.SamplingSimulator(sampling_backend.get_exqalibur_backend())
 
-    def set_detectors(self, detector_list: list[IDetector]):
+    def set_detectors(self, detector_list: list[IDetector | None] | None):
         super().set_detectors(detector_list)
-        # self._sim.set_detectors(detector_list)  # TODO
+        if detector_list is None:
+            self._sim.set_detectors([])
+        else:
+            l = []
+            for d in detector_list:
+                l.append(serialize_binary(d) if d is not None else "")
+            self._sim.set_detectors(l)
 
     def keep_heralds(self, value: bool):
         super().keep_heralds(value)
@@ -606,7 +613,7 @@ class ExqaliburNoisySamplingSimulator(ASamplingSimulator):
 
     def compute_physical_logical_perf(self, value: bool):
         super().compute_physical_logical_perf(value)
-        # self._sim.compute_physical_logical_perf = value  # TODO
+        self._sim.differentiate_perf = value
 
     def set_min_detected_photons_filter(self, value: int):
         super().set_min_detected_photons_filter(value)
@@ -639,8 +646,8 @@ class ExqaliburNoisySamplingSimulator(ASamplingSimulator):
         - physical_perf is the performance computed from the detected photon filter
         - logical_perf is the performance computed from the post-selection
         """
-        # if not check_heralds_detectors(self._sim.heralds, self._sim.detectors):  # TODO
-        #     return self.format_results(BSSamples(), 1, 0)
+        if not check_heralds_detectors(self._heralds, self._detectors):
+            return self.format_results(BSSamples(), 1, 0)
 
         if progress_callback is not None:
             self._sim.set_progress_callback(lambda prog, msg: cancel_requested(progress_callback(prog, msg)))

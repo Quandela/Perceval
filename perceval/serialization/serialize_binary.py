@@ -36,16 +36,28 @@ specialized deserialize functions (e.g. deserialize_circuit)
 from multipledispatch import dispatch
 
 from ._circuit_serialization import serialize_circuit
+from ._detector_serialization import serialize_idetector
 from ._matrix_serialization import serialize_matrix
 from perceval.components.linear_circuit import ACircuit
+from perceval.components.detector import IDetector
 from perceval.utils.matrix import Matrix
 
 
 @dispatch(ACircuit)
-def serialize_binary(circuit: ACircuit):
+def serialize_binary(circuit: ACircuit) -> bytes:
     return serialize_circuit(circuit).SerializeToString()
 
 
 @dispatch(Matrix)
-def serialize_binary(matrix: Matrix):
+def serialize_binary(matrix: Matrix) -> bytes:
     return serialize_matrix(matrix).SerializeToString()
+
+
+@dispatch(IDetector)
+def serialize_binary(detector: IDetector) -> bytes:
+    return serialize_idetector(detector).SerializeToString()
+
+
+@dispatch(list)
+def serialize_binary(l: list) -> list[bytes]:
+    return [serialize_binary(o) for o in l]
