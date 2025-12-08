@@ -29,7 +29,7 @@
 
 from .postprocessed_cz import PostProcessedCzItem
 
-from perceval.components import Circuit, BS, Port, Processor, Experiment
+from perceval.components import Circuit, BS, Port, Experiment
 from perceval.components.component_catalog import CatalogItem
 from perceval.utils import Encoding, PostSelect
 

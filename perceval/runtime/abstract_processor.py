@@ -28,17 +28,15 @@
 # SOFTWARE.
 from __future__ import annotations  # Python 3.11 : Replace using Self typing
 
-import copy
 from abc import ABC, abstractmethod
 from enum import Enum
 
 from perceval.utils import BasicState, FockState, Parameter, PostSelect, LogicalState, NoiseModel, SVDistribution, StateVector
-from perceval.utils.logging import get_logger, channel
-from .abstract_component import AComponent
-from .detector import DetectionType
-from .experiment import Experiment
-from .linear_circuit import Circuit, ACircuit
-from .port import PortLocation, APort
+from perceval.components.abstract_component import AComponent
+from perceval.components.detector import DetectionType
+from perceval.components.experiment import Experiment
+from perceval.components.linear_circuit import Circuit, ACircuit
+from perceval.components.port import PortLocation, APort
 
 
 class ProcessorType(Enum):

@@ -30,8 +30,9 @@
 import numpy as np
 from collections import defaultdict
 
-from perceval.components import AProcessor, PauliType
+from perceval.components import PauliType
 from perceval.utils import BasicState
+from perceval.runtime import AProcessor
 
 from .abstract_process_tomography import AProcessTomography
 from .tomography_utils import (_matrix_basis, _matrix_to_vector, _vector_to_sq_matrix, _coef_linear_decomp,

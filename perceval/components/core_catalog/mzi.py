@@ -31,7 +31,7 @@ import math
 from abc import ABC
 
 
-from perceval.components import Processor, Circuit, BS, PS, Experiment
+from perceval.components import Circuit, BS, PS, Experiment
 from perceval.components.component_catalog import CatalogItem
 
 

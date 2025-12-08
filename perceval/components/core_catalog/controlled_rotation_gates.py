@@ -34,7 +34,7 @@ import numpy as np
 import cmath as cm
 from scipy.linalg import block_diag
 
-from perceval.components import Circuit, Port, Unitary, Processor, Experiment
+from perceval.components import Circuit, Port, Unitary, Experiment
 from perceval.components.component_catalog import CatalogItem
 from perceval.utils import Encoding, PostSelect, Matrix
 

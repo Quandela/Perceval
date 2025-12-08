@@ -51,7 +51,6 @@ from .utils import PMetadata
 
 __version__ = PMetadata.version()
 
-from .providers import *
 from .components import *
 from .backends import *
 from .utils import *
@@ -59,6 +58,7 @@ from .rendering import *
 from .runtime import *
 from .error_mitigation import photon_recycling
 from .simulators import Simulator, SimulatorFactory, FFSimulator, NoisySamplingSimulator, Stepper
+from .providers import *
 
 
 get_logger().info(f"=== Starting Perceval session - process ID: {payload_generator.__process_id__} ===",

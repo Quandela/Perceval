@@ -28,17 +28,15 @@
 # SOFTWARE.
 
 from .abstract_component import AComponent
-from .abstract_processor import AProcessor, ProcessorType
 from .experiment import Experiment
 from .compiled_circuit import CompiledCircuit
 from .linear_circuit import Circuit, ACircuit
 from .generic_interferometer import GenericInterferometer
-from .processor import Processor
 from .source import Source
 from ._pauli import (PauliType, PauliEigenStateType, get_pauli_eigen_state_prep_circ,
                      get_pauli_basis_measurement_circuit, get_pauli_gate, get_pauli_eigenvector_matrix,
                      get_pauli_eigenvectors)
-from .tomography_exp_configurer import processor_circuit_configurator
+from .tomography_exp_configurer import experiment_circuit_configurator
 from ._decompose_perms import decompose_perms
 from .port import APort, Port, Herald, PortLocation, get_basic_state_from_ports
 from .detector import IDetector, DetectionType, Detector, BSLayeredPPNR, get_detection_type, check_heralds_detectors
@@ -48,3 +46,14 @@ from .component_catalog import Catalog
 from ._mode_connector import ModeConnector, UnavailableModeException
 from .feed_forward_configurator import AFFConfigurator, FFCircuitProvider, FFConfigurator
 catalog = Catalog('perceval.components.core_catalog')
+
+# TODO: remove in perceval 1.4
+from perceval.runtime import AProcessor, Processor as Proc, ProcessorType
+from perceval.utils import deprecated
+
+class Processor(Proc):
+
+    @deprecated(reason="Getting Processor from perceval.components is deprecated.\n"
+                       "Import it from perceval or from perceval.runtime instead.", version="1.2")
+    def __new__(cls, *args, **kwargs):
+        return Proc(*args, **kwargs)

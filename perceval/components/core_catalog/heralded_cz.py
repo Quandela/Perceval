@@ -29,7 +29,7 @@
 
 import math
 
-from perceval.components import Processor, Circuit, PERM, BS, PS, Barrier, Experiment
+from perceval.components import Circuit, PERM, BS, PS, Barrier, Experiment
 from perceval.components.component_catalog import CatalogItem
 from perceval.components.port import Port, Encoding
 
