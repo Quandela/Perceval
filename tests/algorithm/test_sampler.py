@@ -144,7 +144,7 @@ def test_sampler_iterator(backend_name):
         {"circuit_params": {"phi1": 0.9}, "input_state": pcvl.BasicState([1, 1]), "max_samples": 20},
         {"circuit_params": {"phi1": 1.57}, "input_state": pcvl.BasicState([1, 0]), "min_detected_photons": 1, "max_shots": 30},
         {"circuit_params": {"phi1": 1.57}, "input_state": pcvl.BasicState([1, 0]), "min_detected_photons": 1, "noise": pcvl.NoiseModel()},
-        {"circuit_params": {"phi1": 1.57}, "input_state": pcvl.BasicState([1, 0]), "min_detected_photons": 1, "post_select": PostSelect("[0] == 1")},
+        {"circuit_params": {"phi1": 1.57}, "input_state": pcvl.BasicState([1, 0]), "min_detected_photons": 1, "postselect": PostSelect("[0] == 1")},
         {}  # Test default parameters
     ]
     sampler.add_iteration_list(iteration_list)

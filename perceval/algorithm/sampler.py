@@ -70,7 +70,7 @@ class Sampler(AAlgorithm):
                                              'max_samples': int,
                                              'max_shots': int,
                                              'noise': NoiseModel,
-                                             'post_select': PostSelect}
+                                             'postselect': PostSelect}
 
     def __init__(self, processor: AProcessor, **kwargs):
         super().__init__(processor, **kwargs)
@@ -210,7 +210,7 @@ class Sampler(AAlgorithm):
            - max_samples: int
            - max_shots: int
            - noise: NoiseModel
-           - post_select: PostSelect
+           - postselect: PostSelect
         """
         get_logger().info("Add 1 iteration to Sampler", channel.general)
         self._add_iteration(kwargs)
@@ -312,7 +312,7 @@ class Sampler(AAlgorithm):
     def _set_noise(self, noise: NoiseModel):
         self._processor.noise = noise
 
-    def _set_post_select(self, post_select: PostSelect | None):
+    def _set_postselect(self, post_select: PostSelect | None):
         if post_select is not None:
             self._processor.set_postselection(post_select)
         else:
@@ -331,5 +331,5 @@ class Sampler(AAlgorithm):
                 "max_samples": self._max_samples,
                 "max_shots": self._max_shots,
                 "noise": self._processor.noise,
-                "post_select": self._processor.post_select_fn
+                "postselect": self._processor.post_select_fn
                 }
