@@ -28,7 +28,7 @@
 # SOFTWARE.
 import pytest
 
-from perceval import NoiseModel, Detector
+from perceval import NoiseModel, Detector, PostSelect
 from perceval.algorithm.sampler import Sampler
 import perceval as pcvl
 from perceval.components import BS, PS, catalog
@@ -144,6 +144,7 @@ def test_sampler_iterator(backend_name):
         {"circuit_params": {"phi1": 0.9}, "input_state": pcvl.BasicState([1, 1]), "max_samples": 20},
         {"circuit_params": {"phi1": 1.57}, "input_state": pcvl.BasicState([1, 0]), "min_detected_photons": 1, "max_shots": 30},
         {"circuit_params": {"phi1": 1.57}, "input_state": pcvl.BasicState([1, 0]), "min_detected_photons": 1, "noise": pcvl.NoiseModel()},
+        {"circuit_params": {"phi1": 1.57}, "input_state": pcvl.BasicState([1, 0]), "min_detected_photons": 1, "post_select": PostSelect("[0] == 1")},
         {}  # Test default parameters
     ]
     sampler.add_iteration_list(iteration_list)
@@ -159,9 +160,11 @@ def test_sampler_iterator(backend_name):
         assert rl[1]["results"][pcvl.BasicState([1, 1])] == pytest.approx(0.38639895265345636)
         assert len(rl[2]["results"]) == 2  # |0, 1> and |1, 0>
         assert rl[2]["physical_perf"] == pytest.approx(.5)
-        assert rl[4]["physical_perf"] == pytest.approx(.25)
+        assert rl[5]["physical_perf"] == pytest.approx(.25)
     assert rl[3]["physical_perf"] == pytest.approx(1.)
-    assert rl[4]["results"][pcvl.BasicState([1, 1])] == pytest.approx(1.)
+    assert rl[4]["logical_perf"] < 1
+    assert rl[4]["results"][pcvl.BasicState([1, 0])] == pytest.approx(1.)
+    assert rl[5]["results"][pcvl.BasicState([1, 1])] == pytest.approx(1.)
 
     res = sampler.samples(max_samples=10)
     assert len(res['results_list']) == len(iteration_list)
@@ -170,6 +173,7 @@ def test_sampler_iterator(backend_name):
     assert len(res['results_list'][2]["results"]) == 10
     assert rl[3]["physical_perf"] == pytest.approx(1.)
     assert len(res['results_list'][4]["results"]) == 10
+    assert len(res['results_list'][5]["results"]) == 10
 
     res = sampler.sample_count(max_samples=100)
     assert len(res['results_list']) == len(iteration_list)
@@ -178,6 +182,7 @@ def test_sampler_iterator(backend_name):
     assert sum(res['results_list'][2]["results"].values()) == 30
     assert rl[3]["physical_perf"] == pytest.approx(1.)
     assert sum(res['results_list'][4]["results"].values()) == 100
+    assert sum(res['results_list'][5]["results"].values()) == 100
 
     # Test wrong parameters
     if backend_name == "SLOS":  # No need to do it twice
