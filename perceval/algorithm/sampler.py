@@ -247,7 +247,10 @@ class Sampler(AAlgorithm):
 
     # Local iteration methods mimic remote iterations for interchangeability purpose
     def _probs_iterate_locally(self, max_shots: int = None, progress_callback: callable = None):
-        self._max_shots = max_shots
+        old_shots = self._max_shots
+        if max_shots is not None:
+            self._max_shots = max_shots
+
         default_it = self._it_default_parameters()
         results = {'results_list': []}
         for idx, it in enumerate(self._iterator):
@@ -257,19 +260,23 @@ class Sampler(AAlgorithm):
             results['results_list'][-1]['iteration'] = it
             if progress_callback is not None:
                 progress_callback((idx + 1) / len(self._iterator))
+
         self._apply_iteration(default_it)
+        self._max_shots = old_shots
         return results
 
     def _samples_iterate_locally(self, max_shots: int = None, max_samples: int = None,
                                  progress_callback: callable = None):
-        if max_samples is None and max_shots is None:
-            if not self._check_sample_shot_iterator():
-                raise RuntimeError("Local sampling simulation requires max_samples and/or max_shots parameters")
+        if max_samples is None and max_shots is None and not self._check_sample_shot_iterator():
+            raise RuntimeError("Local sampling simulation requires max_samples and/or max_shots parameters")
 
+        old_samples = self._max_samples
+        old_shots = self._max_shots
         if max_samples is None:
             max_samples = self.SAMPLES_MAX_COUNT
         self._max_samples = max_samples
         self._max_shots = max_shots
+
         default_it = self._it_default_parameters()
         results = {'results_list': []}
         for idx, it in enumerate(self._iterator):
@@ -278,7 +285,10 @@ class Sampler(AAlgorithm):
             results['results_list'][-1]['iteration'] = it
             if progress_callback is not None:
                 progress_callback((idx + 1) / len(self._iterator))
+
         self._apply_iteration(default_it)  # restore default parameters
+        self._max_samples = old_samples
+        self._max_shots = old_shots
         return results
 
     def _apply_iteration(self, it):
