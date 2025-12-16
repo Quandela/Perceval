@@ -650,11 +650,9 @@ class ExqaliburNoisySamplingSimulator(ASamplingSimulator):
             return self.format_results(BSSamples(), 1, 0)
 
         if progress_callback is not None:
-            self._sim.set_progress_callback(lambda prog, msg: cancel_requested(progress_callback(prog, msg)))
+            self._sim.progress_callback = lambda prog, msg: cancel_requested(progress_callback(prog, msg))
         else:
-            self._sim.reset_progress_callback()
-
-        max_shots = max_shots if max_shots is not None else -1
+            self._sim.progress_callback = None
 
         if isinstance(svd, tuple):
             n = svd[1].n
