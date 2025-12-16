@@ -45,41 +45,41 @@ class SLAPBackend(AStrongSimulationBackend, IFFBackend):
 
     def set_circuit(self, circuit: ACircuit):
         super().set_circuit(circuit)  # Computes circuit unitary as _umat
-        self._slap.reset_feed_forward()
+        # self._slap.reset_feed_forward()
         self._slap.set_unitary(self._umat)
 
     def _init_mask(self):
         super()._init_mask()
-        if self._mask:
-            self._slap.set_mask(self._mask)
-        else:
-            self._slap.reset_mask()
+        self._slap.set_mask(self._mask)
 
     def prob_amplitude(self, output_state: FockState) -> complex:
         istate = self._input_state
-        all_pa = self._slap.all_prob_ampli(istate)
+        self._slap.set_input_state(self._input_state)
+        all_pa = self._slap.all_amplitudes()
         if self._mask:
             return all_pa[xq.FSArray(self._input_state.m, self._input_state.n, self._mask).find(output_state)]
         else:
             return all_pa[xq.FSArray(self._input_state.m, self._input_state.n).find(output_state)]
 
     def prob_distribution(self) -> BSDistribution:
-        return self._slap.prob_distribution(self._input_state)
+        self._slap.set_input_state(self._input_state)
+        return self._slap.distribution()
+
+    def all_prob_ampli(self):
+        self._slap.set_input_state(self._input_state)
+        return self._slap.all_amplitudes()
 
     @property
     def name(self) -> str:
         return "SLAP"
 
     def all_prob(self, input_state: FockState = None):
-        if input_state is not None:
-            self.set_input_state(input_state)
-        else:
-            input_state = self._input_state
-        return self._slap.all_prob(input_state)
+        self._slap.set_input_state(input_state or self._input_state)
+        return self._slap.all_probabilities()
 
     def evolve(self) -> StateVector:
-        istate = self._input_state
-        all_pa = self._slap.all_prob_ampli(istate)
+        self._slap.set_input_state(self._input_state)
+        all_pa = self._slap.all_amplitudes()
         res = StateVector()
         for output_state, pa in zip(self._get_iterator(self._input_state), all_pa):
             res += output_state * pa

@@ -34,6 +34,8 @@ from ._naive import NaiveBackend
 from ._naive_approx import NaiveApproxBackend
 from ._slos import SLOSBackend
 from ._slap import SLAPBackend
+from ._slos_v2 import SLOSV2Backend
+from ._slos_cpp import SLOSCPPBackend
 
 
 BACKEND_LIST = {
@@ -42,7 +44,9 @@ BACKEND_LIST = {
     "Naive": NaiveBackend,
     "NaiveApprox": NaiveApproxBackend,
     "SLAP": SLAPBackend,
-    "SLOS": SLOSBackend
+    "SLOS": SLOSBackend,
+    "SLOS_CPP": SLOSCPPBackend,
+    "SLOS_V2": SLOSV2Backend
 }
 
 
