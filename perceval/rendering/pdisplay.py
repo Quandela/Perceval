@@ -36,7 +36,7 @@ import sympy as sp
 from tabulate import tabulate
 
 from perceval.algorithm import Analyzer, AProcessTomography
-from perceval.components import (ACircuit, Circuit, AProcessor, Port, Herald, AFFConfigurator, Experiment,
+from perceval.components import (ACircuit, Circuit, Port, Herald, AFFConfigurator, Experiment,
                                  non_unitary_components as nl)
 from .drawsvg_wrapper import DrawsvgWrapper
 from .circuit.create_renderer import RendererFactory
@@ -44,7 +44,7 @@ from .circuit import DisplayConfig, ASkin
 from perceval.utils import BasicState, Matrix, simple_float, simple_complex, DensityMatrix, mlstr, ModeType, Encoding
 from perceval.utils.logging import get_logger, channel
 from perceval.utils.states import StateVector, BSCount, BSDistribution, SVDistribution
-from perceval.runtime import JobGroup
+from perceval.runtime import JobGroup, AProcessor
 
 from .format import Format
 from ._processor_utils import collect_herald_info

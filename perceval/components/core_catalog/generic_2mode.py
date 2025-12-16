@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import Circuit, BS, Processor, Experiment
+from perceval.components import Circuit, BS, Experiment
 from perceval.components.component_catalog import CatalogItem
 
 

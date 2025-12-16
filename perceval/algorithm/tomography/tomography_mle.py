@@ -36,8 +36,9 @@ from .tomography_utils import _state_to_dens_matrix, _matrix_to_vector, _get_fix
     _generate_pauli_prep_index, _generate_pauli_index, _index_num_to_basis
 from perceval.utils import BasicState
 from perceval.utils.algorithms.norm import frobenius_inner_product
-from perceval.components import (AProcessor, PauliType, PauliEigenStateType, get_pauli_eigenvector_matrix,
+from perceval.components import (PauliType, PauliEigenStateType, get_pauli_eigenvector_matrix,
     get_pauli_eigenvectors)
+from perceval.runtime import AProcessor
 from ..abstract_algorithm import AAlgorithm
 
 

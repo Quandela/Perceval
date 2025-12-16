@@ -22,7 +22,7 @@ You can after either get it as a circuit or a processor:
 .. code-block:: Python
 
    from perceval import catalog
-   processor = catalog['heralded cz'].build_processor() # Will return a processor
+   processor = catalog['heralded cz'].build_experiment() # Will return an experiment
    circuit = catalog['heralded cz'].build_circuit() # Will return a circuit
 
 If a gate have parameters, like for instance a Mach-Zehnder interferometer phase first you can set those parameters as followed:

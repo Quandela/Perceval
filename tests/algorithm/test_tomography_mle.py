@@ -27,14 +27,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import sys
-from pathlib import Path
-
 import pytest
 import numpy as np
-from perceval.components import catalog, Processor, BS
+from perceval.components import catalog, BS
 from perceval.algorithm import ProcessTomographyMLE, StateTomographyMLE
 from perceval.algorithm.tomography.tomography_utils import process_fidelity, is_physical
+from perceval.runtime import Processor
 
 
 CNOT_TARGET = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype=np.cdouble)

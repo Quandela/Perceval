@@ -38,13 +38,14 @@ from unittest.mock import MagicMock
 
 from perceval import BasicState, Parameter, Expression, CompiledCircuit
 from perceval.components import ACircuit, PS, IDetector, AFFConfigurator, FFConfigurator, FFCircuitProvider, \
-    BSLayeredPPNR, Detector, Experiment, Circuit, AProcessor, AComponent
+    BSLayeredPPNR, Detector, Experiment, Circuit, AComponent
 from perceval.components.abstract_component import AParametrizedComponent
 from perceval.utils import StateVector, SVDistribution
 from perceval.utils.logging import channel
 from perceval.rendering import Format, pdisplay_to_file
 from perceval.rendering.circuit import ASkin, PhysSkin
 from perceval.algorithm import AProcessTomography
+from perceval.runtime import AProcessor
 
 
 TEST_IMG_DIR = Path(__file__).resolve().parent / 'rendering' / 'imgs'

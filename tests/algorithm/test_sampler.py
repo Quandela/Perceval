@@ -31,7 +31,8 @@ import pytest
 from perceval import NoiseModel, Detector
 from perceval.algorithm.sampler import Sampler
 import perceval as pcvl
-from perceval.components import BS, PS, Processor, catalog
+from perceval.components import BS, PS, catalog
+from perceval.runtime import Processor
 
 
 # To speed up the tests, lower the sample count required to compute a probability distribution

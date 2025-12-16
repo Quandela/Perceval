@@ -27,12 +27,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import Circuit, Processor, PERM
+from perceval.components import Circuit, Experiment, PERM
 from perceval.components.core_catalog.postprocessed_cz import PostProcessedCzItem
 from .rotations_qloq import G_RHk
 
 
-def generalized_cz(n: int, m: int) -> Processor:
+def generalized_cz(n: int, m: int) -> Experiment:
     """
     Generates a generalized CZ gate for `n` control and `m` target qubits.
 
@@ -41,7 +41,7 @@ def generalized_cz(n: int, m: int) -> Processor:
         m: Number of target qubits.
 
     Returns:
-        Processor: Generalized CZ gate as a Perceval processor object.
+        Experiment: Generalized CZ gate as a Perceval experiment object.
     """
     n_modes = 2 ** n
     m_modes = 2 ** m
@@ -53,7 +53,7 @@ def generalized_cz(n: int, m: int) -> Processor:
     target1, target2 = control1 + m_modes, control2 + m_modes
 
     mapping = {control1: 0, control2: 1, target1: 2, target2: 3}
-    circ = Processor("SLOS", total_modes, name="GeneralizedCZ")
+    circ = Experiment(total_modes, name="GeneralizedCZ")
     cz = PostProcessedCzItem().build_processor()
     cz.clear_postselection()
     cz.remove_port(0)

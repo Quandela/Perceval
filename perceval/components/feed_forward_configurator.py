@@ -108,9 +108,9 @@ class FFCircuitProvider(AFFConfigurator):
     DEFAULT_NAME = "FFC"
 
     """
-    For any measurement, FFCircuitProvider will return a circuit or a processor, picked from known mapping of configurations.
-    Each configuration links a measurement to a circuit or processor.
-    If a measurement is received and was not set in the mapping, a mandatory default circuit or processor is returned.
+    For any measurement, FFCircuitProvider will return a circuit or an experiment, picked from known mapping of configurations.
+    Each configuration links a measurement to a circuit or an experiment.
+    If a measurement is received and was not set in the mapping, a mandatory default circuit or experiment is returned.
 
     :param m: The number of classical modes that are detected (after a detector)
     :param offset: The distance between the configurator and the first mode of the implemented circuits.
@@ -124,7 +124,10 @@ class FFCircuitProvider(AFFConfigurator):
 
     def __init__(self, m: int, offset: int, default_circuit: ACircuit, name: str = None):
         assert not isinstance(default_circuit, AFFConfigurator), \
-            "Can't add directly a Feed-forward configurator to a configurator (use a Processor)"
+            "Can't add directly a Feed-forward configurator to a configurator (use an Experiment)"
+        from perceval.runtime.abstract_processor import AProcessor
+        if isinstance(default_circuit, AProcessor):
+            default_circuit = default_circuit.experiment
         super().__init__(m, offset, default_circuit, name)
         self._params = self._get_parameters(default_circuit, True, True)
         self._map: dict[BasicState, ACircuit] = {}
@@ -133,7 +136,7 @@ class FFCircuitProvider(AFFConfigurator):
     def _get_parameters(circ, all_params: bool, expressions: bool) -> dict:
         if isinstance(circ, ACircuit):
             res = {p.name: p for p in circ.get_parameters(all_params, expressions)}
-        else:  # This is a Processor or an Experiment
+        else:  # This is an Experiment
             res = {}
             for _, c in circ.components:
                 if isinstance(c, AParametrizedComponent):
@@ -167,7 +170,7 @@ class FFCircuitProvider(AFFConfigurator):
             if circuit.m != self._max_circuit_size:
                 raise RuntimeError(f"Circuit size mismatch (got {circuit.m}, expected {self._max_circuit_size} modes)")
 
-        from .abstract_processor import AProcessor
+        from perceval.runtime.abstract_processor import AProcessor
         if isinstance(circuit, AProcessor):
             circuit = circuit.experiment
 

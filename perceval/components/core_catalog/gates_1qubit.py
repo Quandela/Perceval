@@ -31,7 +31,7 @@ import math
 from abc import ABC, abstractmethod
 from numbers import Number
 
-from perceval.components import Processor, Circuit, BS, PS, PERM, Port, Experiment
+from perceval.components import Circuit, BS, PS, PERM, Port, Experiment
 from perceval.utils import Encoding, P
 from perceval.components.component_catalog import CatalogItem
 

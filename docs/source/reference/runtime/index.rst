@@ -2,6 +2,7 @@ runtime
 ^^^^^^^
 
 .. toctree::
+   processor
    remote_processor
    remote_config
    job

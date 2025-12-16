@@ -5,6 +5,20 @@ While, with its latest versions, Perceval tends to stabilise its public API, som
 
 This section lists the major breaking changes.
 
+Breaking changes in Perceval 1.2
+--------------------------------
+
+Processor place in the package
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The :code:`AProcessor` and :code:`Processor` classes have been moved from :code:`perceval.components` to :code:`perceval.runtime`,
+so they are at the same place as the :code:`RemoteProcessor`.
+While importing from :code:`perceval.components` should still work, it is expected to be completely removed in a few versions, and now produces a warning.
+Any code importing these classes directly from the root of perceval should continue to work fine.
+
+Also, the :code:`build_processor()` method from the catalog items is now deprecated.
+The method :code:`build_experiment()` should now be used instead.
+
 Breaking changes in Perceval 1.1
 --------------------------------
 
