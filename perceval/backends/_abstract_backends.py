@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from abc import ABC, abstractmethod
-from typing import Iterable, Protocol, runtime_checkable
+from typing import Iterable
 
 import exqalibur as xq
 from exqalibur import SVDistribution
