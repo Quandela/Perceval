@@ -627,6 +627,14 @@ class ExqaliburNoisySamplingSimulator(ASamplingSimulator):
         super().set_postselect(postselect)
         self._sim.postselect = postselect
 
+    @property
+    def sleep_between_batches(self):
+        return self._sim.callback_interval
+
+    @sleep_between_batches.setter
+    def sleep_between_batches(self, value):
+        self._sim.callback_interval = value
+
     def samples(self,
                 svd: SVDistribution | tuple[Source, FockState],
                 max_samples: int,
