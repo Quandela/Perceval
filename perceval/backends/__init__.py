@@ -29,6 +29,7 @@
 
 from ._abstract_backends import ABackend, ASamplingBackend, AStrongSimulationBackend, IFFBackend
 from ._clifford2017 import Clifford2017Backend
+from ._mis import MISBackend
 from ._mps import MPSBackend
 from ._naive import NaiveBackend
 from ._naive_approx import NaiveApproxBackend
@@ -38,6 +39,7 @@ from ._slap import SLAPBackend
 
 BACKEND_LIST = {
     "CliffordClifford2017": Clifford2017Backend,
+    "MIS": MISBackend,
     "MPS": MPSBackend,
     "Naive": NaiveBackend,
     "NaiveApprox": NaiveApproxBackend,
