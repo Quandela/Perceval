@@ -462,7 +462,7 @@ class Unitary(ACircuit):
         return f"Unitary({', '.join(params)})"
 
     @staticmethod
-    def random(m: int) -> Unitary:
+    def random(m: int) -> "Unitary":
         r"""Static method generating a random unitary component.
 
         :param m: Number of modes in random unitary.
