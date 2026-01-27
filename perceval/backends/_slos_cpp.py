@@ -50,11 +50,11 @@ class SLOSCPPBackend(AStrongSimulationBackend):
     def set_input_state(self, input_state: BasicState):
         super().set_input_state(input_state)
         if self._fock_space is None or self._fock_space.m != input_state.m or self._fock_space.n != input_state.n:
-            self._fock_space = xq.FSArray(input_state.m, input_state.n)
+            self._fock_space = xq.FSArray(input_state.m, input_state.n, self._mask)
 
     def _init_mask(self):
         super()._init_mask()
-        # self._slos.set_mask(self._mask)
+        self._slos.set_mask(self._mask)
 
     def prob_amplitude(self, output_state: FockState) -> complex:
         self._slos.set_input_state(self._input_state)
@@ -67,17 +67,17 @@ class SLOSCPPBackend(AStrongSimulationBackend):
 
     def prob_distribution(self) -> BSDistribution:
         self._slos.set_input_state(self._input_state)
-        if self._mask is None:
-            return self._slos.distribution()
+        # if self._mask is None:
+        #     return self._slos.distribution()
 
-        res = BSDistribution()
-        all_probs = self._slos.all_probabilities()
-        for p, fs in zip(all_probs, self._fock_space):
-            if self._mask.match(fs):
-                res.add(fs, p)
-        return res
+        # res = BSDistribution()
+        # all_probs = self._slos.all_probabilities()
+        # for p, fs in zip(all_probs, self._fock_space):
+        #     if self._mask.match(fs):
+        #         res.add(fs, p)
+        # return res
 
-        # return self._slos.distribution()
+        return self._slos.distribution()
 
     def all_prob_ampli(self):
         self._slos.set_input_state(self._input_state)

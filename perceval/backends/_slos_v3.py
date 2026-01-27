@@ -35,11 +35,11 @@ from perceval.utils.states import BasicState
 from ._abstract_backends import AStrongSimulationBackend
 
 
-class SLOSV2Backend(AStrongSimulationBackend):
+class SLOSV3Backend(AStrongSimulationBackend):
 
     def __init__(self, mask=None):
         super().__init__()
-        self._slos = xq.SLOS_V2()
+        self._slos = xq.SLOS_V3()
         self._fock_space = None
         if mask:
             self.set_mask(mask)
@@ -66,23 +66,10 @@ class SLOSV2Backend(AStrongSimulationBackend):
         self._slos.set_input_state(self._input_state)
         all_pa = self._slos.all_amplitudes()
         return all_pa[self._fock_space.find(output_state)]
-        # if self._mask:
-        #     return all_pa[xq.FSArray(self._input_state.m, self._input_state.n, self._mask).find(output_state)]
-        # else:
-        #     return all_pa[xq.FSArray(self._input_state.m, self._input_state.n).find(output_state)]
 
     def prob_distribution(self) -> BSDistribution:
         self._slos.set_post_select(self._post_select)
         self._slos.set_input_state(self._input_state)
-        # if self._mask is None:
-        #     return self._slos.distribution()
-
-        # res = BSDistribution()
-        # all_probs = self._slos.all_probabilities()
-        # for p, fs in zip(all_probs, self._fock_space):
-        #     if self._mask.match(fs):
-        #         res.add(fs, p)
-        # return res
 
         return self._slos.distribution()
 
@@ -93,7 +80,7 @@ class SLOSV2Backend(AStrongSimulationBackend):
 
     @property
     def name(self) -> str:
-        return "SLOS_V2"
+        return "SLOS_V3"
 
     def all_prob(self, input_state: FockState = None):
         self._slos.set_input_state(input_state or self._input_state)

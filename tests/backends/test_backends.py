@@ -88,13 +88,13 @@ def test_backend_factory_default():
                               {BasicState("|1,0>"): 0.5, BasicState("|0,1>"): 0.5})
 
 
-@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "NaiveApprox", "SLAP", "SLOS_CPP", "SLOS_V2"])
+@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "NaiveApprox", "SLAP", "SLOS_CPP", "SLOS_V2", "SLOS_V3"])
 def test_backend_wiring(backend_name):
     backend: AStrongSimulationBackend = BackendFactory.get_backend(backend_name)
     backend.set_circuit(Circuit(1))  # Identity circuit, 1 mode
     check_output_distribution(backend, BasicState([1]), {BasicState("|1>"): 1})
 
-@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS", "SLAP", "SLOS_CPP", "SLOS_V2"])
+@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS", "SLAP", "SLOS_CPP", "SLOS_V2", "SLOS_V3"])
 def test_backend_identity(backend_name):
     backend: AStrongSimulationBackend = BackendFactory.get_backend(backend_name)
     backend.set_circuit(Circuit(2))  # Identity circuit, 2 modes
@@ -103,7 +103,7 @@ def test_backend_identity(backend_name):
     check_output_distribution(backend, BasicState([1, 1]), {BasicState("|1,1>"): 1})
 
 
-@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS", "CliffordClifford2017", "SLAP", "SLOS_CPP", "SLOS_V2"])
+@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS", "CliffordClifford2017", "SLAP", "SLOS_CPP", "SLOS_V2", "SLOS_V3"])
 def test_backend_wrong_size(backend_name):
     circuit = Circuit(2)
     state = BasicState([1, 1, 1])
@@ -113,7 +113,7 @@ def test_backend_wrong_size(backend_name):
         backend.set_input_state(state)
 
 
-@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS", "SLAP", "SLOS_CPP", "SLOS_V2"])
+@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS", "SLAP", "SLOS_CPP", "SLOS_V2", "SLOS_V3"])
 def test_backend_sym_bs(backend_name):
     backend: AStrongSimulationBackend = BackendFactory.get_backend(backend_name)
     backend.set_circuit(BS.H())
@@ -129,7 +129,7 @@ def test_backend_sym_bs(backend_name):
                                BasicState("|0,2>"): 0.5})
 
 
-@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS", "SLAP", "SLOS_CPP", "SLOS_V2"])
+@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS", "SLAP", "SLOS_CPP", "SLOS_V2", "SLOS_V3"])
 def test_backend_asym_bs(backend_name):
     backend: AStrongSimulationBackend = BackendFactory.get_backend(backend_name)
     backend.set_circuit(BS.H(theta=2*math.pi/3))
@@ -167,7 +167,7 @@ def test_slos_symbolic():
     assert str(slos.probability(BasicState([0, 1]))) == "1.0*sin(theta/2)**2"
 
 
-@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS", "SLAP", "SLOS_CPP", "SLOS_V2"])
+@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS", "SLAP", "SLOS_CPP", "SLOS_V2", "SLOS_V3"])
 def test_backend_cnot(backend_name):
     if backend_name == "MPS":
         # For MPS to be accurate enough, we need to increase the cutoff
@@ -185,13 +185,13 @@ def test_backend_cnot(backend_name):
     assert pytest.approx(non_post_selected_probability) == 7/9
 
 
-@pytest.mark.parametrize("backend_name", ["SLOS", "SLAP", "SLOS_CPP", "SLOS_V2"])
+@pytest.mark.parametrize("backend_name", ["SLOS", "SLAP", "SLOS_CPP", "SLOS_V2", "SLOS_V3"])
 def test_cnot_with_mask(backend_name):
     backend = BackendFactory.get_backend(backend_name)
     backend.set_mask(["    00"])
     cnot = catalog["postprocessed cnot"].build_circuit()
     backend.set_circuit(cnot)
-    _assert_cnot(backend)
+    _assert_cnot(backend, backend_name)
     non_post_selected_probability = 0
     backend.set_input_state(BasicState([0, 1, 0, 1, 0, 0]))
     for output_state, prob in backend.prob_distribution().items():
@@ -200,7 +200,7 @@ def test_cnot_with_mask(backend_name):
     assert pytest.approx(non_post_selected_probability) == 0
 
 
-@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS", "SLAP", "SLOS_CPP", "SLOS_V2"])
+@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS", "SLAP", "SLOS_CPP", "SLOS_V2", "SLOS_V3"])
 def test_strong_sim_with_mask(backend_name):
     if backend_name == "MPS":
         # For MPS to be accurate enough, we need to increase the cutoff
@@ -218,7 +218,7 @@ def test_strong_sim_with_mask(backend_name):
     assert bsd[BasicState([1, 1, 0, 0, 0, 0])] == pytest.approx(1 / 9)
 
 
-@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS", "SLAP", "SLOS_CPP", "SLOS_V2"])
+@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS", "SLAP", "SLOS_CPP", "SLOS_V2", "SLOS_V3"])
 def test_probampli_backends(backend_name):
     backend: AStrongSimulationBackend = BackendFactory.get_backend(backend_name)
     circuit = Circuit(3) // BS.H() // (1, PS(math.pi/4)) // (1, BS.H())
@@ -277,7 +277,7 @@ def test_slos_refresh_coefs():
         })
 
 
-@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS", "SLAP", "SLOS_CPP", "SLOS_V2"])
+@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS", "SLAP", "SLOS_CPP", "SLOS_V2", "SLOS_V3"])
 def test_evolve_indistinguishable(backend_name):
     backend: AStrongSimulationBackend = BackendFactory.get_backend(backend_name)
     backend.set_circuit(BS.H())
