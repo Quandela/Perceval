@@ -32,15 +32,14 @@ from perceval.components import ACircuit
 from perceval.utils.postselect import PostSelect
 from perceval.utils.states import BasicState
 
-from ._abstract_backends import AStrongSimulationBackend
+from ._abstract_backends import ABackend
 
 
-class SLOSV2Backend(AStrongSimulationBackend):
+class SLOSV2Backend(ABackend):
 
     def __init__(self, mask=None):
         super().__init__()
         self._slos = xq.SLOS_V2()
-        self._fock_space = None
         if mask:
             self.set_mask(mask)
         self._post_select = None
@@ -48,47 +47,49 @@ class SLOSV2Backend(AStrongSimulationBackend):
     def set_circuit(self, circuit: ACircuit):
         super().set_circuit(circuit)  # Computes circuit unitary as _umat
         self._slos.set_unitary(self._umat)
+        if self._circuit and self._input_state:
+            assert self._circuit.m == self._input_state.m, f'Circuit({self._circuit.m}) and state({self._input_state}) size mismatch'
 
     def set_input_state(self, input_state: BasicState):
-        super().set_input_state(input_state)
-        if self._fock_space is None or self._fock_space.m != input_state.m or self._fock_space.n != input_state.n:
-            self._fock_space = xq.FSArray(input_state.m, input_state.n, self._mask)
+        self._input_state = input_state
+        self._slos.set_input_state(input_state)
+        if self._circuit and self._input_state:
+            assert self._circuit.m == self._input_state.m, f'Circuit({self._circuit.m}) and state({self._input_state}) size mismatch'
 
     def _init_mask(self):
         super()._init_mask()
         self._slos.set_mask(self._mask)
 
+    def set_mask(self, masks: str | list[str], n = None, at_least_modes = None):
+        if isinstance(masks, str):
+            masks = [masks]
+        mask_length = len(masks[0])
+        for mask in masks:
+            mask = mask.replace("*", " ")
+            assert len(mask) == mask_length, "Inconsistent mask lengths"
+        fsmask = None
+        if masks is not None:
+            if at_least_modes:
+                fsmask = xq.FSMask(mask_length, n or self._input_state.n, masks, at_least_modes)
+            else:
+                fsmask = xq.FSMask(mask_length, n or self._input_state.n, masks)
+        self._slos.set_mask(fsmask)
+
     def set_post_select(self, post_selection: PostSelect):
-        self._post_select = post_selection
+        self._slos.set_post_select(post_selection)
 
     def prob_amplitude(self, output_state: FockState) -> complex:
-        self._slos.set_post_select(self._post_select)
-        self._slos.set_input_state(self._input_state)
         all_pa = self._slos.all_amplitudes()
-        return all_pa[self._fock_space.find(output_state)]
-        # if self._mask:
-        #     return all_pa[xq.FSArray(self._input_state.m, self._input_state.n, self._mask).find(output_state)]
-        # else:
-        #     return all_pa[xq.FSArray(self._input_state.m, self._input_state.n).find(output_state)]
+        idx = self._slos.get_index(output_state)
+        return all_pa[idx]
+
+    def probability(self, output_state: FockState) -> float:
+        return abs(self.prob_amplitude(output_state)) ** 2
 
     def prob_distribution(self) -> BSDistribution:
-        self._slos.set_post_select(self._post_select)
-        self._slos.set_input_state(self._input_state)
-        # if self._mask is None:
-        #     return self._slos.distribution()
-
-        # res = BSDistribution()
-        # all_probs = self._slos.all_probabilities()
-        # for p, fs in zip(all_probs, self._fock_space):
-        #     if self._mask.match(fs):
-        #         res.add(fs, p)
-        # return res
-
         return self._slos.distribution()
 
     def all_prob_ampli(self):
-        self._slos.set_post_select(self._post_select)
-        self._slos.set_input_state(self._input_state)
         return self._slos.all_amplitudes()
 
     @property
@@ -96,20 +97,12 @@ class SLOSV2Backend(AStrongSimulationBackend):
         return "SLOS_V2"
 
     def all_prob(self, input_state: FockState = None):
-        self._slos.set_input_state(input_state or self._input_state)
         return self._slos.all_probabilities()
 
     def evolve(self) -> StateVector:
         self._slos.set_input_state(self._input_state)
         all_pa = self._slos.all_amplitudes()
         res = StateVector()
-        for output_state, pa in zip(self._fock_space, all_pa):
-            # Utterly non-optimized. Mask management should be added in the computation
-            if self._mask is None or self._mask.match(output_state):
-                res += output_state * pa
-        # for output_state, pa in zip(self._get_iterator(self._input_state), all_pa):
-        #     res += output_state * pa
+        for output_state, pa in zip(self._slos.get_fockspace(), all_pa):
+            res += output_state * pa
         return res
-
-    def reset(self):
-        self._slos.reset()

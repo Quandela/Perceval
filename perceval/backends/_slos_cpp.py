@@ -60,22 +60,9 @@ class SLOSCPPBackend(AStrongSimulationBackend):
         self._slos.set_input_state(self._input_state)
         all_pa = self._slos.all_amplitudes()
         return all_pa[self._fock_space.find(output_state)]
-        # if self._mask:
-        #     return all_pa[xq.FSArray(self._input_state.m, self._input_state.n, self._mask).find(output_state)]
-        # else:
-        #     return all_pa[xq.FSArray(self._input_state.m, self._input_state.n).find(output_state)]
 
     def prob_distribution(self) -> BSDistribution:
         self._slos.set_input_state(self._input_state)
-        # if self._mask is None:
-        #     return self._slos.distribution()
-
-        # res = BSDistribution()
-        # all_probs = self._slos.all_probabilities()
-        # for p, fs in zip(all_probs, self._fock_space):
-        #     if self._mask.match(fs):
-        #         res.add(fs, p)
-        # return res
 
         return self._slos.distribution()
 
@@ -99,6 +86,4 @@ class SLOSCPPBackend(AStrongSimulationBackend):
             # Utterly non-optimized. Mask management should be added in the computation
             if self._mask is None or self._mask.match(output_state):
                 res += output_state * pa
-        # for output_state, pa in zip(self._get_iterator(self._input_state), all_pa):
-        #     res += output_state * pa
         return res

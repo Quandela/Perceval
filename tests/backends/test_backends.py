@@ -188,10 +188,10 @@ def test_backend_cnot(backend_name):
 @pytest.mark.parametrize("backend_name", ["SLOS", "SLAP", "SLOS_CPP", "SLOS_V2", "SLOS_V3"])
 def test_cnot_with_mask(backend_name):
     backend = BackendFactory.get_backend(backend_name)
-    backend.set_mask(["    00"])
+    backend.set_mask(["    00"], 2)
     cnot = catalog["postprocessed cnot"].build_circuit()
     backend.set_circuit(cnot)
-    _assert_cnot(backend, backend_name)
+    _assert_cnot(backend)
     non_post_selected_probability = 0
     backend.set_input_state(BasicState([0, 1, 0, 1, 0, 0]))
     for output_state, prob in backend.prob_distribution().items():
@@ -207,7 +207,7 @@ def test_strong_sim_with_mask(backend_name):
         backend: AStrongSimulationBackend = BackendFactory.get_backend(backend_name, cutoff=4)
     else:
         backend: AStrongSimulationBackend = BackendFactory.get_backend(backend_name)
-    backend.set_mask("****00")
+    backend.set_mask("****00", 2)
     cnot = catalog["postprocessed cnot"].build_circuit()
     backend.set_circuit(cnot)
     logical00 = BasicState([1, 0, 1, 0, 0, 0])
