@@ -642,7 +642,7 @@ class UFT(Unitary):
 
     @staticmethod
     def _construct_matrix(m: int) -> Matrix:
-        factor = -2j * np.pi / m
+        factor = 2j * np.pi / m
         indices = np.arange(m)
         matrix = np.exp(factor * np.outer(indices, indices))
         matrix /= np.sqrt(m)
