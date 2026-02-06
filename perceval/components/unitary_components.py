@@ -618,3 +618,32 @@ class Barrier(ACircuit):
 
     def inverse(self, v=False, h=False):
         pass
+
+
+class UFT(Unitary):
+    """Fourier interferometer
+
+    :param m: Size of Fourier interferometer.
+    """
+    DEFAULT_NAME = "UFT"
+
+    def __init__(self, m: int):
+        if not isinstance(m, int) or m <= 0:
+            raise ValueError("UFT requires a positive integer as argument.")
+
+        u = self._construct_matrix(m)
+        super().__init__(U=u, name="UFT")
+
+    def describe(self):
+        return f"UFT({self.m})"
+
+    def definition(self):
+        return self.U
+
+    @staticmethod
+    def _construct_matrix(m: int) -> Matrix:
+        factor = -2j * np.pi / m
+        indices = np.arange(m)
+        matrix = np.exp(factor * np.outer(indices, indices))
+        matrix /= np.sqrt(m)
+        return Matrix(matrix)
