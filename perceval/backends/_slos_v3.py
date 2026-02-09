@@ -103,6 +103,6 @@ class SLOSV3Backend(ABackend):
         self._slos.set_input_state(self._input_state)
         all_pa = self._slos.all_amplitudes()
         res = StateVector()
-        for output_state, pa in zip(self._slos.get_fockspace(), all_pa):
+        for output_state, pa in zip(self._slos.get_states(), all_pa):
             res += output_state * pa
         return res
