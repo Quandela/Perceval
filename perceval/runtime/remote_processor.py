@@ -128,6 +128,7 @@ class RemoteProcessor(AProcessor):
     @name.setter
     def name(self, name: str):
         self._name = name
+        self._experiment.name = name
 
     def _circuit_change_observer(self, new_component: Experiment | AComponent = None):
         pass
