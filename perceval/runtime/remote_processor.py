@@ -121,6 +121,15 @@ class RemoteProcessor(AProcessor):
 
         self._thresholded_output = "detector" in self._specs and self._specs["detector"] == "threshold"
 
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, name: str):
+        self._name = name
+        self._experiment.name = name
+
     def _circuit_change_observer(self, new_component: Experiment | AComponent = None):
         pass
         # TODO: Check that the component matches what the platform can do
