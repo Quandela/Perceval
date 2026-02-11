@@ -33,7 +33,7 @@ def do_compute(backend, method):
         return backend.prob_distribution()
 
 def set_mask(backend, mask_str, m, n):
-    backend.set_mask((mask_str + "*" * (m-4))[:m], n)
+    backend.set_mask((mask_str + "*" * m)[:m], n)
     # if backend.name == "SLOS_V2_PS" or backend.name == "SLOS_V3_PS":
     #     backend.set_post_select(ps)
 
