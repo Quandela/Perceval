@@ -87,28 +87,27 @@ def bench(m, n, backends, mask_str, method):
     return result
 
 
-def bench_mem(m, n, backends, mask_str, method):
+def bench_mem(m, n, backend_name, mask_str, method):
     u1 = pcvl.Matrix.random_unitary(m)
     photons = [ 0 ] * m
     photons[0] = n
     bs = pcvl.BasicState(photons)
     circuit = pcvl.Circuit(m) // pcvl.components.Unitary(u1)
 
-    for backend_name in backends:
-        # if backend_name == "SLOS" and n > 12:
-        #     break
-        gc.collect()
-        mem_1 = psutil.Process().memory_info().rss
-        backend = pcvl.backends.BackendFactory.get_backend(backend_name)
-        set_mask(backend, mask_str, m, n)
-        backend.set_circuit(circuit)
-        backend.set_input_state(bs)
-        bsd = do_compute(backend, method)
-        mem_2 = psutil.Process().memory_info().rss
-        backend = None
-        bsd = None
-        gc.collect()
-        print(f"{backend_name:12}\t{human_readable_size(mem_2-mem_1)}")
+    # if backend_name == "SLOS" and n > 12:
+    #     break
+    gc.collect()
+    mem_1 = psutil.Process().memory_info().rss
+    backend = pcvl.backends.BackendFactory.get_backend(backend_name)
+    set_mask(backend, mask_str, m, n)
+    backend.set_circuit(circuit)
+    backend.set_input_state(bs)
+    bsd = do_compute(backend, method)
+    mem_2 = psutil.Process().memory_info().rss
+    backend = None
+    bsd = None
+    gc.collect()
+    print(f"{backend_name:12}\t{human_readable_size(mem_2-mem_1)}")
 
 if __name__ == "__main__":
     import argparse
@@ -123,8 +122,8 @@ if __name__ == "__main__":
                         type=int, action='store', default=4,
                         help='number of modes')
     parser.add_argument('--memusage', '-u', action='store_true', default=False)
-    parser.add_argument('--backend', '-b',
-                        type=str, action='store', default='SLOS',
+    parser.add_argument('--backends', '-b',
+                        type=str, action='store', default='SLOS SLAP SLOS_CPP SLOS_V2 SLOS_V3',
                         help='backend used')
     parser.add_argument('--mask', '-k',
                         type=str, action='store', default='',
@@ -133,24 +132,16 @@ if __name__ == "__main__":
                         type=int, action='store', default='3',
                         help='Computations: 0 -> all_prob_ampli / 1 -> all_prob / 2 -> prob_distribution')
     args = parser.parse_args()
-    backends = [
-            "SLOS",
-            "SLAP",
-            "SLOS_CPP",
-            "SLOS_V2",
-            # "SLOS_V2_PS",
-            "SLOS_V3",
-            # "SLOS_V3_PS",
-        ]
 
+    backend_list = args.backends.split(" ")
     if args.memusage:
-        bench_mem(args.modes, args.nphotons, [args.backend], args.mask, args.compute)
+        bench_mem(args.modes, args.nphotons, backend_list[0], args.mask, args.compute)
     else:
         print('\t', end = '', flush=False)
-        for b in backends:
+        for b in backend_list:
             print(f"{b:<16}", end = '', flush=False)
         print('', flush=True)
         for n in range(args.minphotons, args.nphotons + 1):
             print(f"{n}", end='')
-            bench(args.modes, n, backends, args.mask, args.compute)
+            bench(args.modes, n, backend_list, args.mask, args.compute)
             print("")
