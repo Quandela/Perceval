@@ -31,6 +31,7 @@ def do_compute(backend, method):
         return backend.all_prob()
     if method == 3:
         return backend.prob_distribution()
+    raise ValueError(f"Invalid compute method index {method}")
 
 def set_mask(backend, mask_str, m, n):
     if mask_str:

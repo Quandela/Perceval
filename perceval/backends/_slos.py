@@ -193,7 +193,7 @@ class SLOSBackend(AStrongSimulationBackend):
         return result if self._symb else complex(result)
 
     def all_prob_ampli(self):
-        return self._state_mapping[self._input_state].coefs.reshape(self._fsas[self._input_state.n].count())
+        return [ v * math.sqrt(fs.prodnfact() / self._input_state.prodnfact()) for (v, fs) in zip(self._state_mapping[self._input_state].coefs, self._get_iterator(self._input_state))]
 
     def prob_distribution(self) -> BSDistribution:
         istate = self._input_state
