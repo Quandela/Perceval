@@ -31,33 +31,29 @@ from perceval.backends import SLOSBackend, ASamplingBackend
 from perceval.components import Circuit, ACircuit
 from perceval.utils import FockState
 
-
-class StepperSampler(ASamplingBackend):
+class StepperBackend(ASamplingBackend):
     def __init__(self):
         super().__init__()
         self._backend = SLOSBackend()
-        # ABackend:BACKEND_LIST['SLOS']()
-        # self._clifford = xq.Clifford2017()
 
     def set_circuit(self, circuit: ACircuit):
         if isinstance(circuit, Circuit):
             self._circuit = circuit
         else:
             self._circuit = Circuit(circuit.m).add(0, circuit)
-        # super().set_circuit(circuit)  # Computes circuit unitary as _umat
 
     def set_input_state(self, input_state: FockState):
         super().set_input_state(input_state)
 
     def sample(self):
-    # def truc(self, input_states: BasicState):
-        current_circuit = Circuit(self._C.m)
+        m = self._circuit.m
+        current_circuit = Circuit(m)
         current_state = self._input_state
-        for r, c in self._C._components:
+        for r, c in self._circuit:
             current_circuit.add(r, c)
             self._backend.set_circuit(current_circuit)
-            self._backend.set_input_state(current_state)
-            self._backend.set_mask(self.get_mask(self._C.m, r, c, current_state))
+            self._backend.set_mask(''.join([ ' ' if i in r else chr(ord('0') + current_state[i]) for i in range(0, m) ]))
+            self._backend.set_input_state(self._input_state)
             current_state = self._backend.prob_distribution().sample(1)[0]
 
         return current_state
@@ -67,16 +63,6 @@ class StepperSampler(ASamplingBackend):
         Request `count` samples from the circuit given an input state.
         """
         return [self.sample() for _ in range(count)]
-
-    def get_mask(m: int, r: int, c, fs: FockState):
-        mask = ""
-        for i in range(0, r):
-            mask += chr(ord('0') + fs[i])
-        for i in range(r, r + c.m):
-            mask += ' '
-        for i in range(r + c.m, m):
-            mask += chr(ord('0') + fs[i])
-        return mask
 
     @property
     def name(self) -> str:
