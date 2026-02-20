@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.backends import SLOSBackend, ASamplingBackend
+from perceval.backends import SLAPBackend, ASamplingBackend
 from perceval.components import Circuit, ACircuit
 from perceval.components.unitary_components import Unitary
 from perceval.utils import FockState
@@ -35,7 +35,7 @@ from perceval.utils import FockState
 class StepperBackend(ASamplingBackend):
     def __init__(self):
         super().__init__()
-        self._backend = SLOSBackend()
+        self._backend = SLAPBackend()
 
     def set_circuit(self, circuit: ACircuit):
         if isinstance(circuit, Circuit):
