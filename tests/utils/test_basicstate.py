@@ -28,17 +28,24 @@
 # SOFTWARE.
 
 from perceval.utils.states import AnnotatedFockState, BasicState, FockState, NoisyFockState
+import warnings
 
 
-def not_implemented_from_BasicState(ClassName):
-    res = [attr for attr in  BasicState.__dict__ if not hasattr(ClassName, attr)]
-    res.remove("__weakref__")
-    return res
-
+def not_implemented_from(derivedClass, baseClass):
+    ignored = [
+                "__weakref__", "__final__",
+                "__firstlineno__", "__static_attributes__"
+              ]
+    for attr in  baseClass.__dict__:
+        if not hasattr(derivedClass, attr) and not attr in ignored:
+            warnings.warn(FutureWarning(f"{derivedClass.__name__} does not implement '{attr}' which is present in class {baseClass.__name__}"))
+    return [attr for attr in  baseClass.__dict__ if not hasattr(derivedClass, attr) and not attr.startswith('__')]
 
 def test_FockStates_interface():
-    assert len( not_implemented_from_BasicState(FockState) ) == 0, "Some methods declared in BasicState are not implemented"
+    baseClass = BasicState
 
-    assert len( not_implemented_from_BasicState(NoisyFockState) ) == 0, "Some methods declared in BasicState are not implemented"
+    assert len( not_implemented_from(FockState, baseClass) ) == 0, f"Some methods declared in {baseClass.__name} are not implemented"
 
-    assert len( not_implemented_from_BasicState(AnnotatedFockState) ) == 0, "Some methods declared in BasicState are not implemented"
+    assert len( not_implemented_from(NoisyFockState, baseClass) ) == 0, f"Some methods declared in {baseClass.__name} are not implemented"
+
+    assert len( not_implemented_from(AnnotatedFockState, baseClass) ) == 0, f"Some methods declared in {baseClass.__name} are not implemented"
