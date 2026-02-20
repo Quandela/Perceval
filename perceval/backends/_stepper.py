@@ -29,6 +29,7 @@
 
 from perceval.backends import SLOSBackend, ASamplingBackend
 from perceval.components import Circuit, ACircuit
+from perceval.components.unitary_components import Unitary
 from perceval.utils import FockState
 
 class StepperBackend(ASamplingBackend):
@@ -50,7 +51,7 @@ class StepperBackend(ASamplingBackend):
         current_circuit = Circuit(m)
         current_state = self._input_state
         for r, c in self._circuit:
-            current_circuit.add(r, c)
+            current_circuit = Unitary(current_circuit.add(r, c).compute_unitary())
             self._backend.set_circuit(current_circuit)
             self._backend.set_mask(''.join([ ' ' if i in r else chr(ord('0') + current_state[i]) for i in range(0, m) ]))
             self._backend.set_input_state(self._input_state)
