@@ -44,8 +44,8 @@ def not_implemented_from(derivedClass, baseClass):
 def test_FockStates_interface():
     baseClass = BasicState
 
-    assert len( not_implemented_from(FockState, baseClass) ) == 0, f"Some methods declared in {baseClass.__name} are not implemented"
+    assert len( not_implemented_from(FockState, baseClass) ) == 0, f"Some methods declared in {baseClass.__name__} are not implemented"
 
-    assert len( not_implemented_from(NoisyFockState, baseClass) ) == 0, f"Some methods declared in {baseClass.__name} are not implemented"
+    assert len( not_implemented_from(NoisyFockState, baseClass) ) == 0, f"Some methods declared in {baseClass.__name__} are not implemented"
 
-    assert len( not_implemented_from(AnnotatedFockState, baseClass) ) == 0, f"Some methods declared in {baseClass.__name} are not implemented"
+    assert len( not_implemented_from(AnnotatedFockState, baseClass) ) == 0, f"Some methods declared in {baseClass.__name__} are not implemented"
