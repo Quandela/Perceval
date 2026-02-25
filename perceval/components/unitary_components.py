@@ -628,8 +628,11 @@ class UFT(Unitary):
     DEFAULT_NAME = "UFT"
 
     def __init__(self, m: int):
-        if not isinstance(m, int) or m <= 0:
-            raise ValueError("UFT requires a positive integer as argument.")
+        assert isinstance(m, int), (
+            f"Fourier interferometer parameter must be of type `int`. "
+            f"Received {type(m)}."
+        )
+        assert m > 0, f"UFT parameter must be positive. Received m = {m}."
 
         u = self._construct_matrix(m)
         super().__init__(U=u, name="UFT")
