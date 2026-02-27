@@ -36,7 +36,7 @@ from typing import Callable
 from multipledispatch import dispatch
 
 from perceval.utils import FockState, AnnotatedFockState, Parameter, PostSelect, LogicalState, NoiseModel, ModeType, StateVector, \
-    SVDistribution, NoisyFockState
+    SVDistribution, NoisyFockState, BasicState
 from perceval.utils.logging import get_logger, channel
 from perceval.utils.algorithms.simplification import perm_compose, simplify
 from ._mode_connector import ModeConnector, UnavailableModeException
@@ -822,6 +822,14 @@ class Experiment:
 
         self._input_state = FockState(input_list)
         self._input_changed()
+
+    @dispatch((list, tuple))
+    def with_input(self, input_state: list | tuple):
+        assert not any((self._in_ports, self._out_ports)), (
+            f"Input state of type `{type(input_state).__name__}` on an experiment "
+            "with ports is ambiguous. Please use input of type `LogicalState`."
+        )
+        self.with_input(BasicState(input_state))
 
     @dispatch(AnnotatedFockState)
     def with_input(self, input_state: AnnotatedFockState) -> None:
