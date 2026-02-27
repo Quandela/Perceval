@@ -460,6 +460,16 @@ class Unitary(ACircuit):
             params.append("use_polarization=True")
         return f"Unitary({', '.join(params)})"
 
+    @staticmethod
+    def random(m: int) -> "Unitary": # Python 3.11 : Replace using Self typing
+        r"""Static method generating a random unitary component.
+
+        :param m: Number of modes in random unitary.
+        :return: a Unitary circuit component
+        """
+        matrix = Matrix.random_unitary(m)
+        return Unitary(matrix)
+
 
 class PERM(Unitary):
     """Permutation

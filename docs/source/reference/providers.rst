@@ -14,11 +14,7 @@ When using Quandela Cloud, you have the same capabilities with and without using
 Scaleway
 --------
 
-`Scaleway <https://www.scaleway.com/>`_ is a French cloud provider that provides, among a range of offers, binary power to emulate quantum computing compatible with Perceval.
-
-This Scaleway Quantum as a Service (QaaS) leverages from GPUs like Nvidia P100 and H100 to increase mode limit and accelerate simulations.
-
-You can find prices and additional information on the `Scaleway Labs QaaS page <https://labs.scaleway.com/en/qaas/>`_.
+`Scaleway Quantum-as-a-Service <https://www.scaleway.com/en/quantum-as-a-service/>`_ provides access to allocate and program Quantum Processing Units (QPUs), physical or emulated.
 
 Scaleway authentication
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -35,8 +31,8 @@ ScalewaySession
 .. autoclass:: perceval.providers.scaleway.Session
    :members:
 
-Using a Scaleway session
-^^^^^^^^^^^^^^^^^^^^^^^^
+Allocate a QPU session
+^^^^^^^^^^^^^^^^^^^^^^
 
 Let's see step by step how to instantiate and use a `Scaleway` session.
 
@@ -50,13 +46,14 @@ Provide your Scaleway Project ID and API key:
 >>> PROJECT_ID = "your-scaleway-project-id"
 >>> TOKEN = "your-scaleway-api-key"
 
-Choose one of the Perceval compatible platforms `provided by Scaleway <https://labs.scaleway.com/en/qaas/#pricing>`_:
+Choose one of the Perceval compatible platforms `provided by Scaleway <https://www.scaleway.com/en/quantum-as-a-service/>`_:
 
->>> PLATFORM_NAME = "sim:sampling:h100"
+>>> PLATFORM_NAME = "EMU-SAMPLING-L4" # For emulated QPU
+>>> # PLATFORM_NAME = "QPU-BELENOS-12PQ" # For real QPU
 
 You can now create a Scaleway session:
 
->>> session = scw.Session(platform=PLATFORM_NAME, project_id=PROJECT_ID, token=TOKEN)
+>>> session = scw.Session(platform_name=PLATFORM_NAME, project_id=PROJECT_ID, token=TOKEN)
 >>> session.start()
 >>> /*
 ...  * Session scope
@@ -65,7 +62,7 @@ You can now create a Scaleway session:
 
 You can also create a Scaleway session using a ``with`` block:
 
->>> with scw.Session(platform=PLATFORM_NAME, project_id=PROJECT_ID, token=TOKEN) as session:
+>>> with scw.Session(platform_name=PLATFORM_NAME, project_id=PROJECT_ID, token=TOKEN) as session:
 ...     #
 ...     # Session scope
 ...     #

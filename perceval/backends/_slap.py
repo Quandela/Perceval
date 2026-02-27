@@ -53,7 +53,6 @@ class SLAPBackend(AStrongSimulationBackend, IFFBackend):
         self._slap.set_mask(self._mask)
 
     def prob_amplitude(self, output_state: FockState) -> complex:
-        istate = self._input_state
         self._slap.set_input_state(self._input_state)
         all_pa = self._slap.all_amplitudes()
         if self._mask:
