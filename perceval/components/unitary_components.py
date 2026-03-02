@@ -620,8 +620,8 @@ class Barrier(ACircuit):
         pass
 
 
-class UFT(Unitary):
-    """Fourier interferometer
+class FourierUnitary(Unitary):
+    """Fourier interferometer unitary
 
     :param m: Size of Fourier interferometer.
     """
@@ -632,13 +632,13 @@ class UFT(Unitary):
             f"Fourier interferometer parameter must be of type `int`. "
             f"Received {type(m)}."
         )
-        assert m > 0, f"UFT parameter must be positive. Received m = {m}."
+        assert m > 0, f"FourierUnitary parameter must be positive. Received m = {m}."
 
         u = self._construct_matrix(m)
         super().__init__(U=u, name="UFT")
 
     def describe(self):
-        return f"UFT({self.m})"
+        return f"FourierUnitary({self.m})"
 
     def definition(self):
         return self.U
