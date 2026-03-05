@@ -27,31 +27,22 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import packaging, uuid
+import dataclasses, packaging, uuid
 
 from perceval.components.linear_circuit import ACircuit
 from perceval.utils.matrix import Matrix
 
-class CompiledCircuit(ACircuit):
-    class Version:
-        def __init__(self):
-            self.hardware_version = packaging.version.Version('0')
-            self.carac_version = packaging.version.Version('0')
-            self.phase_at_output = True
-            self.empty_mode_list = []
-            self.matrix_uuid = uuid.UUID(int=0)
-        def __repr__(self):
-            return f"[{self.hardware_version}, {self.carac_version}, {self.phase_at_output}, {self.matrix_uuid}]"
-        def __str__(self):
-            return self.__repr__()
-        def __eq__(self, other):
-            return self.hardware_version == other.hardware_version \
-               and self.carac_version == other.carac_version \
-               and self.phase_at_output == other.phase_at_output \
-               and self.empty_mode_list == other.empty_mode_list \
-               and self.matrix_uuid == other.matrix_uuid
+@dataclasses.dataclass
+class CompiledCircuitVersion:
+    def __init__(self):
+        self.hardware_version = packaging.version.Version('0')
+        self.carac_version = packaging.version.Version('0')
+        self.phase_at_output = True
+        self.empty_mode_list = []
+        self.matrix_uuid = uuid.UUID(int=0)
 
-    def __init__(self, name: str, template_or_size: ACircuit | int, parameters: list[float], version: Version | None = None):
+class CompiledCircuit(ACircuit):
+    def __init__(self, name: str, template_or_size: ACircuit | int, parameters: list[float], version: CompiledCircuitVersion | None = None):
         m = template_or_size if isinstance(template_or_size, int) else template_or_size.m
         template = template_or_size if isinstance(template_or_size, ACircuit) else None
         super().__init__(m, name)
