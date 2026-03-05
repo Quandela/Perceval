@@ -27,38 +27,44 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from ._abstract_backends import ABackend, ASamplingBackend, AStrongSimulationBackend, IFFBackend
-from ._clifford2017 import Clifford2017Backend
-from ._mps import MPSBackend
-from ._naive import NaiveBackend
-from ._naive_approx import NaiveApproxBackend
-from ._slos import SLOSBackend
-from ._slap import SLAPBackend
-from ._stepper import StepperBackend
+from perceval.backends import SLAPBackend, ASamplingBackend
+from perceval.components import Circuit, ACircuit
+from perceval.components.unitary_components import Unitary
+from perceval.utils import FockState
 
+class StepperBackend(ASamplingBackend):
+    def __init__(self):
+        super().__init__()
+        self._backend = SLAPBackend()
 
-BACKEND_LIST = {
-    "CliffordClifford2017": Clifford2017Backend,
-    "Stepper": StepperBackend,
-    "MPS": MPSBackend,
-    "Naive": NaiveBackend,
-    "NaiveApprox": NaiveApproxBackend,
-    "SLAP": SLAPBackend,
-    "SLOS": SLOSBackend,
-}
+    def set_circuit(self, circuit: ACircuit):
+        if isinstance(circuit, Circuit):
+            self._circuit = circuit
+        else:
+            self._circuit = Circuit(circuit.m).add(0, circuit)
 
+    def set_input_state(self, input_state: FockState):
+        super().set_input_state(input_state)
 
-class BackendFactory:
-    @staticmethod
-    def get_backend(backend_name: str = "SLOS", **kwargs) -> ABackend:
-        name = backend_name
-        if name in BACKEND_LIST:
-            return BACKEND_LIST[name](**kwargs)
-        # Do not import from top level or you'll expose what's imported
-        from perceval.utils.logging import get_logger, channel
-        get_logger().warn(f'Backend "{name}" not found. Falling back on SLOS', channel.user)
-        return BACKEND_LIST['SLOS'](**kwargs)
+    def sample(self):
+        m = self._circuit.m
+        current_circuit = Circuit(m)
+        current_state = self._input_state
+        for r, c in self._circuit:
+            current_circuit = Unitary(current_circuit.add(r, c).compute_unitary())
+            self._backend.set_circuit(current_circuit)
+            self._backend.set_mask(''.join([ ' ' if i in r else chr(ord('0') + current_state[i]) for i in range(0, m) ]))
+            self._backend.set_input_state(self._input_state)
+            current_state = self._backend.prob_distribution().sample(1)[0]
 
-    @staticmethod
-    def list():
-        return list(BACKEND_LIST.keys())
+        return current_state
+
+    def samples(self, count: int):
+        """
+        Request `count` samples from the circuit given an input state.
+        """
+        return [self.sample() for _ in range(count)]
+
+    @property
+    def name(self) -> str:
+        return "StepperSampler"
