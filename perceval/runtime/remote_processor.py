@@ -33,6 +33,7 @@ from perceval.utils import FockState, NoiseModel
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import deserialize
 
+from .platform_specs import PlatformSpecs
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
 from .remote_config import RemoteConfig
@@ -111,7 +112,7 @@ class RemoteProcessor(AProcessor):
             self.proxies = proxies
             self._rpc_handler = RPCHandler(self.name, url, token, proxies)
 
-        self._specs = {}
+        self._specs = PlatformSpecs()
         self._perfs = {}
         self._status = None
         self._type = ProcessorType.SIMULATOR
@@ -119,6 +120,7 @@ class RemoteProcessor(AProcessor):
         self.fetch_data()
         get_logger().info(f"Connected to Cloud platform {self.name}", channel.general)
 
+        # TODO: use the architecture instead
         self._thresholded_output = "detector" in self._specs and self._specs["detector"] == "threshold"
 
     @property
@@ -160,14 +162,14 @@ class RemoteProcessor(AProcessor):
             raise HTTPError(f"Error while fetching platform details: {e}") from None
         self._status = platform_details.get("status")
         platform_specs = deserialize(platform_details['specs'], strict=False)
-        self._specs.update(platform_specs)
+        self._specs.update(platform_specs)  # No verification here, we suppose every check was made by the platform
         if PERFS_KEY in platform_details:
             self._perfs.update(platform_details[PERFS_KEY])
         if platform_details['type'] != 'simulator':
             self._type = ProcessorType.PHYSICAL
 
     @property
-    def specs(self):
+    def specs(self) -> PlatformSpecs:
         return self._specs
 
     @property
@@ -176,9 +178,7 @@ class RemoteProcessor(AProcessor):
 
     @property
     def constraints(self) -> dict:
-        if 'constraints' in self._specs:
-            return self._specs['constraints']
-        return {}
+        return self._specs.constraints
 
     @property
     def status(self):
@@ -226,7 +226,7 @@ class RemoteProcessor(AProcessor):
 
     @property
     def available_commands(self) -> list[str]:
-        return self._specs.get("available_commands", [])
+        return self._specs.available_commands
 
     def prepare_job_payload(self, command: str, **kwargs) -> dict[str, any]:
         self.check_min_detected_photons_filter()
