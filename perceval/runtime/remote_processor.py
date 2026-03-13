@@ -209,7 +209,7 @@ class RemoteProcessor(AProcessor):
 
     def check_input(self, input_state: FockState) -> None:
         super().check_input(input_state)
-        n_heralds = sum(self.heralds.values())
+        n_heralds = sum(self.in_heralds.values())
         n_photons = input_state.n + n_heralds
         if 'max_photon_count' in self.constraints and n_photons > self.constraints['max_photon_count']:
             raise RuntimeError(
@@ -221,8 +221,8 @@ class RemoteProcessor(AProcessor):
                 and not all(mode_photon_cnt <= 1 for mode_photon_cnt in input_state)):
             raise RuntimeError(f"Input state ({input_state}) is not permitted. QPU/QPU simulators accept more than "
                                f"1 photon per mode:{self.constraints['support_multi_photon']})")
-        if self.m is not None and input_state.m != self.m:
-            raise RuntimeError(f"Input state and circuit size do not match ({input_state.m} != {self.m})")
+        if self.m_in is not None and input_state.m != self.m_in:
+            raise RuntimeError(f"Input state and circuit size do not match ({input_state.m} != {self.m_in})")
 
     @property
     def available_commands(self) -> list[str]:
@@ -232,7 +232,7 @@ class RemoteProcessor(AProcessor):
         self.check_min_detected_photons_filter()
         self.check_circuit_size(self.circuit_size)
         if self.input_state:
-            self.check_input(self.remove_heralded_modes(self.input_state))
+            self.check_input(self.remove_in_heralded_modes(self.input_state))
 
         payload = PayloadGenerator.generate_payload(command, self.experiment, self._parameters, self.name, **kwargs)
 
