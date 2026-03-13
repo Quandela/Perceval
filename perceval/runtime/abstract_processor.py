@@ -31,7 +31,7 @@ from __future__ import annotations  # Python 3.11 : Replace using Self typing
 from abc import ABC, abstractmethod
 
 from .platform_specs import PlatformSpecs
-from perceval.utils import BasicState, FockState, Parameter, PostSelect, LogicalState, NoiseModel, SVDistribution, StateVector
+from perceval.utils import BasicState, FockState, Parameter, PostSelect, LogicalState, NoiseModel, SVDistribution, StateVector, ProcessorType
 from perceval.components.abstract_component import AComponent
 from perceval.components.detector import DetectionType
 from perceval.components.experiment import Experiment
