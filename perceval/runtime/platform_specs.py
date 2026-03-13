@@ -29,6 +29,7 @@
 
 from typing import Any
 
+from .abstract_processor import ProcessorType
 from ..utils import FockState, deprecated
 from ..utils.logging import channel, get_logger
 from ..components import Experiment, ACircuit, Detector
@@ -203,7 +204,11 @@ class PlatformSpecs(dict):
         """
         :return: The version of perceval on the platform
         """
-        return self.get("pcvl_version", "0.10.0")
+        if "pcvl_version" in self:
+            return self._getitem("pcvl_version")
+        if "software_versions" in self:
+            return self.software_versions.get("perceval-quandela", "0.10.0")
+        return "0.10.0"
 
     @pcvl_version.setter
     def pcvl_version(self, value: str):
@@ -263,3 +268,18 @@ class PlatformSpecs(dict):
         assert all(isinstance(val, str) for val in value)
         assert all(isinstance(val, str) for val in value.values())
         self["software_versions"] = value
+
+    @property
+    def type(self) -> ProcessorType:
+        if "type" in self:
+            self_type = self._getitem("type")
+            if isinstance(self_type, ProcessorType):
+                return self_type
+            return ProcessorType.SIMULATOR if self_type == "simulator" else ProcessorType.PHYSICAL
+        return ProcessorType.SIMULATOR
+
+    @type.setter
+    def type(self, value: ProcessorType):
+        assert isinstance(value, ProcessorType)
+        # Store as a str so we can serialize it easily
+        self["type"] = "simulator" if value == ProcessorType.SIMULATOR else "qpu"

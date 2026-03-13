@@ -115,13 +115,9 @@ class RemoteProcessor(AProcessor):
         self._specs = PlatformSpecs()
         self._perfs = {}
         self._status = None
-        self._type = ProcessorType.SIMULATOR
         self._available_circuit_parameters = {}
         self.fetch_data()
         get_logger().info(f"Connected to Cloud platform {self.name}", channel.general)
-
-        # TODO: use the architecture instead
-        self._thresholded_output = "detector" in self._specs and self._specs["detector"] == "threshold"
 
     @property
     def name(self) -> str:
@@ -146,7 +142,7 @@ class RemoteProcessor(AProcessor):
         #         raise NotImplementedError("Non linear components not implemented for RemoteProcessors")
 
     def _noise_changed_observer(self):
-        if self.noise and self._type == ProcessorType.PHYSICAL:  # Injecting a noise model to an actual QPU makes no sense
+        if self.noise and self.type == ProcessorType.PHYSICAL:  # Injecting a noise model to an actual QPU makes no sense
             get_logger().warn(
                 f"{self.name} is not a simulator but an actual QPU: user defined noise parameters will be ignored",
                 channel.user)
@@ -163,17 +159,16 @@ class RemoteProcessor(AProcessor):
         self._status = platform_details.get("status")
         platform_specs = deserialize(platform_details['specs'], strict=False)
         self._specs.update(platform_specs)  # No verification here, we suppose every check was made by the platform
+        self._specs["type"] = platform_details.get('type', "simulator")
         if PERFS_KEY in platform_details:
             self._perfs.update(platform_details[PERFS_KEY])
-        if platform_details['type'] != 'simulator':
-            self._type = ProcessorType.PHYSICAL
 
     @property
     def specs(self) -> PlatformSpecs:
         return self._specs
 
     @property
-    def performance(self):
+    def performance(self) -> dict:
         return self._perfs
 
     @property
@@ -181,7 +176,7 @@ class RemoteProcessor(AProcessor):
         return self._specs.constraints
 
     @property
-    def status(self):
+    def status(self) -> str:
         return self._status
 
     def check_circuit_size(self, m: int):
@@ -205,7 +200,7 @@ class RemoteProcessor(AProcessor):
 
     @property
     def type(self) -> ProcessorType:
-        return self._type
+        return self._specs.type
 
     def check_input(self, input_state: FockState) -> None:
         super().check_input(input_state)
@@ -267,9 +262,10 @@ class RemoteProcessor(AProcessor):
                     params[param_name].set_value(value)
         lp = Processor("SLAP", exp, NoiseModel(transmittance=transmittance))
         lp.min_detected_photons_filter(1)
-        if self._thresholded_output:
+        archi = self.specs.architecture
+        if archi is not None:
             for m in range(lp.circuit_size):
-                lp.add(m, Detector.threshold())
+                lp.add(m, archi.detectors[m])
         lp.with_input(self.input_state)
         probs = lp.probs()
         p_above_filter_ns = 0
