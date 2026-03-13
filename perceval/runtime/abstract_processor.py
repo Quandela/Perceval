@@ -29,20 +29,14 @@
 from __future__ import annotations  # Python 3.11 : Replace using Self typing
 
 from abc import ABC, abstractmethod
-from enum import Enum
 
+from .platform_specs import PlatformSpecs
 from perceval.utils import BasicState, FockState, Parameter, PostSelect, LogicalState, NoiseModel, SVDistribution, StateVector
 from perceval.components.abstract_component import AComponent
 from perceval.components.detector import DetectionType
 from perceval.components.experiment import Experiment
 from perceval.components.linear_circuit import Circuit, ACircuit
 from perceval.components.port import PortLocation, APort
-
-
-class ProcessorType(Enum):
-    SIMULATOR = 1
-    PHYSICAL = 2
-
 
 class AProcessor(ABC):
     def __init__(self, experiment = None):
@@ -90,8 +84,8 @@ class AProcessor(ABC):
         pass
 
     @property
-    def specs(self):
-        return dict()
+    def specs(self) -> PlatformSpecs:
+        return PlatformSpecs()
 
     def set_parameters(self, params: dict[str, any]):
         for key, value in params.items():

@@ -97,3 +97,7 @@ ModeType.PHOTONIC.__doc__ = "Photonic mode. Additional linear optics components 
 ModeType.HERALD.__doc__ = "Ancillary mode: defines a special photonic mode used for heralding. Nothing can be added."
 ModeType.CLASSICAL.__doc__ = ("A classical register represents a measured mode. A `Detector` turns a photonic mode into "
                               "a classical bit. Only classical components can be added.")
+
+class ProcessorType(Enum):
+    SIMULATOR = 1
+    PHYSICAL = 2

@@ -29,8 +29,7 @@
 
 from typing import Any
 
-from .abstract_processor import ProcessorType
-from ..utils import FockState, deprecated
+from ..utils import FockState, deprecated, ProcessorType
 from ..utils.logging import channel, get_logger
 from ..components import Experiment, ACircuit, Detector
 
@@ -41,24 +40,31 @@ class PlatformSpecs(dict):
     It guarantees that some common fields exist by giving some default values.
 
     Common fields are accessible through properties, and should be accessed through them.
-    If a given common field is not filled by the processor, it will return None.
+    If a given common field is not filled by the processor, it will return None or a default value of the correct type.
     If a given RemoteProcessor specs contain a field unknown to this class, it can still be accessed through the dict item syntax
 
-    :code:
     >>> rp = RemoteProcessor(...)
     >>> rs = rp.specs  # This is a PlatformSpecs object
     >>> pdisplay(rs.architecture)
     >>> print(rs["this_platform_specific_spec"])
+
+    List of included fields (not extensive):
+        - architecture
+        - available_commands
+        - constraints
+        - min_client_version
+        - pcvl_version
+        - software_versions
+        - parameters
+        - type
     """
 
     def __getitem__(self, item):
         if hasattr(self, item):
             get_logger().warn(f"Getting {item} from a RemoteProcessor specs should be done using `specs.{item}`"
                               "as it is a common spec key", channel.user)
-
-        if not item.startswith("_") and item in self:
-            return self._getitem(item)
-        return getattr(self, item)
+            return getattr(self, item)
+        return self._getitem(item)
 
     def _getitem(self, item):
         # Avoids the custom __getitem__, and writing super() everywhere
@@ -67,11 +73,14 @@ class PlatformSpecs(dict):
     @property
     def architecture(self) -> Experiment | None:
         """
-        :return: The experiment representing the physical hardware of the RemoteProcessor
-            - input state with maximum number of photons for each mode
-            - circuit
-            - detectors
-         or None if the RemoteProcessor isn't linked to a hardware chip
+        The architecture is an Experiment representing the hardware implementation of the platform, including
+
+            * input state with maximum number of photons for each mode
+            * optical components
+            * detectors if they are imperfect
+
+        :return: The experiment representing the physical hardware of the RemoteProcessor,
+            or None if the RemoteProcessor isn't linked to a hardware chip,
         """
         if "architecture" in self:
             return self._getitem("architecture")
