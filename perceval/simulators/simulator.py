@@ -29,6 +29,7 @@
 import sys
 from collections import defaultdict
 
+import numpy as np
 from exqalibur import SimpleSourceIterator
 from multipledispatch import dispatch
 from numbers import Number
@@ -46,6 +47,7 @@ from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_sta
     _list_merge, _separate_state
 from ._simulate_detectors import simulate_detectors
 from .simulator_interface import ISimulator
+from .. import CoherentState
 
 
 class Simulator(ISimulator):
@@ -750,6 +752,7 @@ class Simulator(ISimulator):
 
         return decomposed_input
 
+    @dispatch((BasicState, StateVector))
     def evolve(self, input_state: BasicState | StateVector) -> StateVector:
         """
         Evolve a state through the circuit.
@@ -763,6 +766,12 @@ class Simulator(ISimulator):
 
         result_sv = self._evolve_no_compute(decomposed_input, input_state.n)
         return result_sv
+
+    @dispatch(CoherentState)
+    def evolve(self, input_state: CoherentState) -> CoherentState:
+        unitary = self._backend._circuit.compute_unitary()
+        input_np = np.array(input_state)
+        return CoherentState(unitary @ input_np)
 
     def evolve_svd(self,
                    svd: SVDistribution | StateVector | BasicState,

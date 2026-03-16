@@ -28,7 +28,7 @@
 # SOFTWARE.
 import sys
 
-from perceval.utils import SVDistribution, BasicState, FockState, AnnotatedFockState, StateVector, NoiseModel
+from perceval.utils import SVDistribution, BasicState, FockState, AnnotatedFockState, StateVector, NoiseModel, CoherentState
 from perceval.utils.logging import get_logger, channel
 
 from perceval.runtime.abstract_processor import AProcessor, ProcessorType
@@ -136,13 +136,12 @@ class Processor(AProcessor):
         return SVDistribution()
 
     def _input_changed_observer(self):
-        if isinstance(self.input_state, BasicState):
-            if isinstance(self.input_state, AnnotatedFockState):
-                self._inputs_map = SVDistribution(StateVector(self.input_state))
-            else:
-                self._inputs_map = None
+        if isinstance(self.input_state, AnnotatedFockState):
+            self._inputs_map = SVDistribution(StateVector(self.input_state))
         elif isinstance(self.input_state, SVDistribution):
             self._inputs_map = self.input_state
+        else:
+            self._inputs_map = None
 
     def clear_input_and_circuit(self, new_m=None):
         super().clear_input_and_circuit(new_m)
@@ -164,6 +163,7 @@ class Processor(AProcessor):
         from perceval.simulators import NoisySamplingSimulator
         from perceval.backends import ASamplingBackend
         assert isinstance(self.backend, ASamplingBackend), "A sampling backend is required to call samples method"
+        assert not isinstance(self.input_state, CoherentState), "A CoherentState can't be used for sampling"
         sampling_simulator = NoisySamplingSimulator(self.backend)
         sampling_simulator.sleep_between_batches = 0  # Remove sleep time between batches of samples in local simulation
         sampling_simulator.set_circuit(self.linear_circuit())
@@ -192,6 +192,9 @@ class Processor(AProcessor):
         else:
             self._simulator.set_circuit(self.linear_circuit() if self.experiment.is_unitary else self.components, self.circuit_size)
             self._simulator.set_min_detected_photons_filter(self._min_detected_photons_filter)
+
+        if isinstance(self.input_state, CoherentState):
+            return {"results": self._simulator.evolve(self.input_state)}
 
         if precision is not None:
             self._simulator.set_precision(precision)

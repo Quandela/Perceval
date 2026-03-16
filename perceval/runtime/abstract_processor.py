@@ -31,7 +31,8 @@ from __future__ import annotations  # Python 3.11 : Replace using Self typing
 from abc import ABC, abstractmethod
 from enum import Enum
 
-from perceval.utils import BasicState, FockState, Parameter, PostSelect, LogicalState, NoiseModel, SVDistribution, StateVector
+from perceval.utils import (BasicState, FockState, Parameter, PostSelect, LogicalState, NoiseModel, SVDistribution,
+                            StateVector, CoherentState)
 from perceval.components.abstract_component import AComponent
 from perceval.components.detector import DetectionType
 from perceval.components.experiment import Experiment
@@ -335,14 +336,14 @@ class AProcessor(ABC):
     def check_min_detected_photons_filter(self):
         if self._min_detected_photons_filter is None:
             if (not self.is_remote and self._source is not None and self._source.is_perfect()
-                    and isinstance(self.input_state, BasicState)):
+                    and isinstance(self.input_state, (BasicState, CoherentState))):
                 # Automatically set the min_detected_photons_filter for perfect sources of local processors if not set
                 self.min_detected_photons_filter(self.input_state.n - sum(self.heralds.values()))
             else:
                 raise ValueError("The value of min_detected_photons is not set."
                                  " Use the method processor.min_detected_photons_filter(value).")
 
-    def with_input(self, input_state: BasicState | LogicalState | StateVector | SVDistribution):
+    def with_input(self, input_state: BasicState | LogicalState | StateVector | SVDistribution | CoherentState):
         """
         Simulates plugging the photonic source on certain modes and turning it on.
         Computes the input probability distribution
