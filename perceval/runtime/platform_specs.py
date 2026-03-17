@@ -33,6 +33,8 @@ from ..utils import FockState, deprecated, ProcessorType
 from ..utils.logging import channel, get_logger
 from ..components import Experiment, ACircuit, Detector
 
+DEFAULT_MIN_VERSION = "0.10.0"
+
 
 class PlatformSpecs(dict):
     """
@@ -201,7 +203,7 @@ class PlatformSpecs(dict):
         """
         :return: The minimum version of perceval that the user must have for the call to this platform to resolve correctly
         """
-        return self.get("min_client_version", "0.10.0")
+        return self.get("min_client_version", DEFAULT_MIN_VERSION)
 
     @min_client_version.setter
     def min_client_version(self, value: str):
@@ -216,8 +218,8 @@ class PlatformSpecs(dict):
         if "pcvl_version" in self:
             return self._getitem("pcvl_version")
         if "software_versions" in self:
-            return self.software_versions.get("perceval-quandela", "0.10.0")
-        return "0.10.0"
+            return self.software_versions.get("perceval-quandela", DEFAULT_MIN_VERSION)
+        return DEFAULT_MIN_VERSION
 
     @pcvl_version.setter
     def pcvl_version(self, value: str):
