@@ -29,8 +29,8 @@
 from requests import HTTPError
 from copy import copy
 
-from perceval.components import ACircuit, AComponent, Experiment, Detector
-from perceval.utils import FockState, NoiseModel
+from perceval.components import ACircuit, AComponent, Experiment, Detector, PortLocation
+from perceval.utils import FockState, NoiseModel, PostSelect
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import deserialize
 
@@ -198,7 +198,7 @@ class RemoteProcessor(AProcessor):
         if TRANSMITTANCE_KEY not in self._perfs:
             perfs[TRANSMITTANCE_KEY] = DEFAULT_TRANSMITTANCE * 100
             get_logger().warn(f"No transmittance was found for {self.name}, using default {DEFAULT_TRANSMITTANCE}", channel.user)
-        return perf_dict_to_noise(self._perfs)
+        return perf_dict_to_noise(perfs)
 
     @property
     def constraints(self) -> dict:
@@ -269,12 +269,11 @@ class RemoteProcessor(AProcessor):
         return RemoteJob.from_id(job_id, self._rpc_handler)
 
     def _compute_sample_of_interest_probability(self, param_values: dict = None) -> float:
-        if TRANSMITTANCE_KEY in self._perfs:
-            transmittance = self._perfs[TRANSMITTANCE_KEY] / 100
-        else:
-            transmittance = DEFAULT_TRANSMITTANCE
-            get_logger().warn(
-                f"No transmittance was found for {self.name}, using default {DEFAULT_TRANSMITTANCE}", channel.user)
+        # Simulation with a noisy source (only losses)
+        nm = self.get_current_noise()
+        nm.g2 = 0
+        nm.indistinguishability = 1
+
         n = self.input_state.n
         photon_filter = n
         if self._min_detected_photons_filter is not None:
@@ -284,19 +283,27 @@ class RemoteProcessor(AProcessor):
         if photon_filter < 2:
             return 1
 
-        # Simulation with a noisy source (only losses)
         exp = self.experiment.copy()
         if param_values is not None:
             params = exp.get_circuit_parameters()
             for param_name, value in param_values.items():
                 if param_name in params:
                     params[param_name].set_value(value)
-        lp = Processor("SLAP", exp, NoiseModel(transmittance=transmittance))
+        lp = Processor("SLAP", exp, nm)
+
+        # Remove all selection
         lp.min_detected_photons_filter(1)
+        lp.set_postselection(PostSelect())
+        while len(lp.in_heralds):
+            m = next(iter(lp.in_heralds))
+            lp.remove_port(m, PortLocation.INPUT)
+        while len(lp.heralds):
+            m = next(iter(lp.heralds))
+            lp.remove_port(m, PortLocation.OUTPUT)
+
         if self._thresholded_output:
             for m in range(lp.circuit_size):
                 lp.add(m, Detector.threshold())
-        lp.with_input(self.input_state)
         probs = lp.probs()
         p_above_filter_ns = 0
         for state, prob in probs['results'].items():
