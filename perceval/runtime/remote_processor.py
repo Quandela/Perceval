@@ -27,6 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from requests import HTTPError
+from copy import copy
 
 from perceval.components import ACircuit, AComponent, Experiment, Detector
 from perceval.utils import FockState, NoiseModel
@@ -47,15 +48,14 @@ G2_KEY = "g2 (%)"
 DEFAULT_TRANSMITTANCE = 0.06
 
 
-def perf_dict_to_noise(perfs: dict):
+def perf_dict_to_noise(perfs: dict[str, float]) -> NoiseModel:
     nm = NoiseModel()
-    if TRANSMITTANCE_KEY in self._perfs:
-        nm.transmittance = self._perfs[TRANSMITTANCE_KEY] / 100
-    # else set DEFAULT_TRANSMITTANCE ?
-    if INDISTINGUISHABILITY_KEY in self._perfs:
-        nm.indistinguishability = self._perfs[INDISTINGUISHABILITY_KEY] / 100
-    if G2_KEY in self._perfs:
-        nm.g2 = self._perfs[G2_KEY] / 100
+    if TRANSMITTANCE_KEY in perfs:
+        nm.transmittance = perfs[TRANSMITTANCE_KEY] / 100
+    if INDISTINGUISHABILITY_KEY in perfs:
+        nm.indistinguishability = perfs[INDISTINGUISHABILITY_KEY] / 100
+    if G2_KEY in perfs:
+        nm.g2 = perfs[G2_KEY] / 100
     return nm
 
 
@@ -191,9 +191,13 @@ class RemoteProcessor(AProcessor):
     def get_current_noise(self) -> NoiseModel:
         """
         :return: The NoiseModel associated to the last performance characterization of the remote platform.
-            Simulators without hardware return a perfect NoiseModel.
+            Simulators without hardware return a NoiseModel with a default transmittance value.
             Note that, depending on the platform, the performance dictionary may have more information that can't be translated into NoiseModel
         """
+        perfs = copy(self._perfs)
+        if TRANSMITTANCE_KEY not in self._perfs:
+            perfs[TRANSMITTANCE_KEY] = DEFAULT_TRANSMITTANCE * 100
+            get_logger().warn(f"No transmittance was found for {self.name}, using default {DEFAULT_TRANSMITTANCE}", channel.user)
         return perf_dict_to_noise(self._perfs)
 
     @property
