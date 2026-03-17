@@ -47,6 +47,18 @@ G2_KEY = "g2 (%)"
 DEFAULT_TRANSMITTANCE = 0.06
 
 
+def perf_dict_to_noise(perfs: dict):
+    nm = NoiseModel()
+    if TRANSMITTANCE_KEY in self._perfs:
+        nm.transmittance = self._perfs[TRANSMITTANCE_KEY] / 100
+    # else set DEFAULT_TRANSMITTANCE ?
+    if INDISTINGUISHABILITY_KEY in self._perfs:
+        nm.indistinguishability = self._perfs[INDISTINGUISHABILITY_KEY] / 100
+    if G2_KEY in self._perfs:
+        nm.g2 = self._perfs[G2_KEY] / 100
+    return nm
+
+
 class RemoteProcessor(AProcessor):
     @staticmethod
     def from_local_processor(
@@ -179,18 +191,10 @@ class RemoteProcessor(AProcessor):
     def get_current_noise(self) -> NoiseModel:
         """
         :return: The NoiseModel associated to the last performance characterization of the remote platform.
-            Simulators return a perfect NoiseModel.
+            Simulators without hardware return a perfect NoiseModel.
             Note that, depending on the platform, the performance dictionary may have more information that can't be translated into NoiseModel
         """
-        nm = NoiseModel()
-        if TRANSMITTANCE_KEY in self._perfs:
-            nm.transmittance = self._perfs[TRANSMITTANCE_KEY] / 100
-        # else set DEFAULT_TRANSMITTANCE ?
-        if INDISTINGUISHABILITY_KEY in self._perfs:
-            nm.indistinguishability = self._perfs[INDISTINGUISHABILITY_KEY] / 100
-        if G2_KEY in self._perfs:
-            nm.g2 = self._perfs[G2_KEY] / 100
-        return nm
+        return perf_dict_to_noise(self._perfs)
 
     @property
     def constraints(self) -> dict:
