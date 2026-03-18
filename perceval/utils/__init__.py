@@ -34,6 +34,7 @@ from .mlstr import mlstr
 from .states import BasicState, FockState, NoisyFockState, AnnotatedFockState, Annotation, StateVector, SVDistribution,\
     BSDistribution, BSCount, BSSamples, allstate_array, allstate_iterator, anonymize_annotations,\
     max_photon_state_iterator, filter_distribution_photon_count
+from .coherent_state import CoherentState
 from .logical_state import LogicalState, generate_all_logical_states
 from .polarization import Polarization, convert_polarized_state, build_spatial_output_states
 from .postselect import PostSelect, post_select_distribution, post_select_statevector

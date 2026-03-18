@@ -36,7 +36,7 @@ from typing import Callable
 from multipledispatch import dispatch
 
 from perceval.utils import FockState, AnnotatedFockState, Parameter, PostSelect, LogicalState, NoiseModel, ModeType, StateVector, \
-    SVDistribution, NoisyFockState
+    SVDistribution, NoisyFockState, CoherentState
 from perceval.utils.logging import get_logger, channel
 from perceval.utils.algorithms.simplification import perm_compose, simplify
 from ._mode_connector import ModeConnector, UnavailableModeException
@@ -799,6 +799,19 @@ class Experiment:
             observer_fn = observer()
             if observer_fn is not None:
                 observer_fn()
+
+    @dispatch(CoherentState)
+    def with_input(self, input_state: CoherentState):
+        self.check_input(input_state)
+        assert not self.in_heralds, "Can't mix CoherentState and logical selection"
+        assert not self.heralds, "Can't mix CoherentState and logical selection"
+        assert self.detection_type == DetectionType.PNR, "Can't mix CoherentState and imperfect detectors"
+        assert self._postselect is None or not self._postselect.has_condition,\
+            "Can't mix CoherentState and logical selection"
+        assert self.is_unitary, "Can't mix CoherentState non-unitary circuits"
+        assert self.noise is None or self.noise == NoiseModel(), "Can't use CoherentState with noise"
+        self._input_state = input_state
+        self._input_changed()
 
     @dispatch(LogicalState)
     def with_input(self, input_state: LogicalState):
