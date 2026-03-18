@@ -625,7 +625,7 @@ class FourierUnitary(Unitary):
 
     :param m: Size of Fourier interferometer.
     """
-    DEFAULT_NAME = "UFT"
+    DEFAULT_NAME = "FourierUnitary"
 
     def __init__(self, m: int):
         assert isinstance(m, int), (
@@ -635,7 +635,7 @@ class FourierUnitary(Unitary):
         assert m > 0, f"FourierUnitary parameter must be positive. Received m = {m}."
 
         u = self._construct_matrix(m)
-        super().__init__(U=u, name="UFT")
+        super().__init__(U=u, name="FourierUnitary")
 
     def describe(self):
         return f"FourierUnitary({self.m})"

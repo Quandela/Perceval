@@ -310,7 +310,7 @@ class PhysSkin(ASkin):
         for i in range(m):
             canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*m, 0], **self.style[ModeType.PHOTONIC])
 
-        fill = "lightblue" if isinstance(circuit, cp.FourierUnitary) else "lightyellow"
+        fill = "thistle" if isinstance(circuit, cp.FourierUnitary) else "lightyellow"
 
         canvas.add_rect((5, 5), 50*m-10, 50*m-10, fill=fill)
         canvas.add_text((25*m, 25*m), size=10, ta="middle", text=circuit.name, max_size=50*m)
