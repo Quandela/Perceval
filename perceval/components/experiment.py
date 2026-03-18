@@ -199,7 +199,7 @@ class Experiment:
     def post_select_fn(self):
         return self._postselect
 
-    def set_postselection(self, postselect: PostSelect | str):
+    def set_postselection(self, postselect: PostSelect | str | None):
         r"""
         Set a logical post-selection function. Along with the heralded modes, this function has an impact
         on the logical performance of the processor holding this experiment
@@ -210,7 +210,7 @@ class Experiment:
         if isinstance(postselect, str):
             postselect = PostSelect(postselect)
 
-        if not isinstance(postselect, PostSelect):
+        if postselect is not None and not isinstance(postselect, PostSelect):
             raise TypeError("Parameter must be a PostSelect object")
         self._circuit_changed()
         self._postselect = postselect
