@@ -432,7 +432,7 @@ class Unitary(ACircuit):
     def __init__(self, U: Matrix | np.ndarray, name: str = None, use_polarization: bool = False):
         assert U is not None, "A unitary matrix is required"
 
-        if isinstance(U, np.ndarray):
+        if not isinstance(U, Matrix):
             U = Matrix(U)
 
         assert U.is_unitary(), "U parameter must be a unitary matrix"
