@@ -429,8 +429,12 @@ class Unitary(ACircuit):
     """
     DEFAULT_NAME = "Unitary"
 
-    def __init__(self, U: Matrix, name: str = None, use_polarization: bool = False):
+    def __init__(self, U: Matrix | np.ndarray, name: str = None, use_polarization: bool = False):
         assert U is not None, "A unitary matrix is required"
+
+        if not isinstance(U, Matrix):
+            U = Matrix(U)
+
         assert U.is_unitary(), "U parameter must be a unitary matrix"
         # A symbolic matrix is not a use case for this component
         assert not U.is_symbolic(), "U parameter must not be symbolic"
