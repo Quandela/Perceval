@@ -29,16 +29,17 @@
 from requests import HTTPError
 from copy import copy
 
-from perceval.components import ACircuit, AComponent, Experiment, Detector, PortLocation
-from perceval.utils import FockState, NoiseModel, PostSelect
+from perceval.components import ACircuit, AComponent, Experiment, PortLocation
+from perceval.utils import FockState, NoiseModel, PostSelect, ProcessorType
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import deserialize
 
+from .platform_specs import PlatformSpecs
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
 from .remote_config import RemoteConfig
 from .payload_generator import PayloadGenerator
-from .abstract_processor import AProcessor, ProcessorType
+from .abstract_processor import AProcessor
 from .processor import Processor
 
 PERFS_KEY = "perfs"
@@ -125,15 +126,12 @@ class RemoteProcessor(AProcessor):
             self.proxies = proxies
             self._rpc_handler = RPCHandler(self.name, url, token, proxies)
 
-        self._specs = {}
+        self._specs = PlatformSpecs()
         self._perfs = {}
         self._status = None
-        self._type = ProcessorType.SIMULATOR
         self._available_circuit_parameters = {}
         self.fetch_data()
         get_logger().info(f"Connected to Cloud platform {self.name}", channel.general)
-
-        self._thresholded_output = "detector" in self._specs and self._specs["detector"] == "threshold"
 
     @property
     def name(self) -> str:
@@ -158,7 +156,7 @@ class RemoteProcessor(AProcessor):
         #         raise NotImplementedError("Non linear components not implemented for RemoteProcessors")
 
     def _noise_changed_observer(self):
-        if self.noise and self._type == ProcessorType.PHYSICAL:  # Injecting a noise model to an actual QPU makes no sense
+        if self.noise and self.type == ProcessorType.PHYSICAL:  # Injecting a noise model to an actual QPU makes no sense
             get_logger().warn(
                 f"{self.name} is not a simulator but an actual QPU: user defined noise parameters will be ignored",
                 channel.user)
@@ -174,18 +172,17 @@ class RemoteProcessor(AProcessor):
             raise HTTPError(f"Error while fetching platform details: {e}") from None
         self._status = platform_details.get("status")
         platform_specs = deserialize(platform_details['specs'], strict=False)
-        self._specs.update(platform_specs)
+        self._specs.update(platform_specs)  # No verification here, we suppose every check was made by the platform
+        self._specs["type"] = platform_details.get('type', "simulator")
         if PERFS_KEY in platform_details:
             self._perfs.update(platform_details[PERFS_KEY])
-        if platform_details['type'] != 'simulator':
-            self._type = ProcessorType.PHYSICAL
 
     @property
-    def specs(self):
+    def specs(self) -> PlatformSpecs:
         return self._specs
 
     @property
-    def performance(self):
+    def performance(self) -> dict:
         return self._perfs
 
     def get_current_noise(self) -> NoiseModel:
@@ -202,12 +199,10 @@ class RemoteProcessor(AProcessor):
 
     @property
     def constraints(self) -> dict:
-        if 'constraints' in self._specs:
-            return self._specs['constraints']
-        return {}
+        return self._specs.constraints
 
     @property
-    def status(self):
+    def status(self) -> str:
         return self._status
 
     def check_circuit_size(self, m: int):
@@ -231,7 +226,7 @@ class RemoteProcessor(AProcessor):
 
     @property
     def type(self) -> ProcessorType:
-        return self._type
+        return self._specs.type
 
     def check_input(self, input_state: FockState) -> None:
         super().check_input(input_state)
@@ -252,7 +247,7 @@ class RemoteProcessor(AProcessor):
 
     @property
     def available_commands(self) -> list[str]:
-        return self._specs.get("available_commands", [])
+        return self._specs.available_commands
 
     def prepare_job_payload(self, command: str, **kwargs) -> dict[str, any]:
         self.check_min_detected_photons_filter()
@@ -301,9 +296,12 @@ class RemoteProcessor(AProcessor):
             m = next(iter(lp.heralds))
             lp.remove_port(m, PortLocation.OUTPUT)
 
-        if self._thresholded_output:
+        archi = self.specs.architecture
+        if archi is not None:
             for m in range(lp.circuit_size):
-                lp.add(m, Detector.threshold())
+                lp.add(m, archi.detectors[m])
+
+        lp.with_input(self.input_state)
         probs = lp.probs()
         p_above_filter_ns = 0
         for state, prob in probs['results'].items():
