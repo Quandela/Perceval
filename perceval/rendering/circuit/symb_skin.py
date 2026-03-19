@@ -251,7 +251,10 @@ class SymbSkin(ASkin):
         for i in range(w):
             canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*w, 0], **self.style[ModeType.PHOTONIC])
         shape = ShapeFactory.rounded_corner_square(6.25*w, 6)
-        canvas.add_mpath(shape, **self.style[ModeType.PHOTONIC], fill="lightyellow")
+
+        fill = "thistle" if isinstance(circuit, cp.FourierUnitary) else "lightyellow"
+
+        canvas.add_mpath(shape, **self.style[ModeType.PHOTONIC], fill=fill)
         canvas.add_text((25*w, 25*w), size=10, ta="middle", text=circuit.name, max_size=50*w)
 
     def barrier_shape(self, barrier: cp.Barrier, canvas, mode_style):
