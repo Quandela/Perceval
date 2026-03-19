@@ -45,7 +45,7 @@ class SLAPBackend(AStrongSimulationBackend, IFFBackend):
 
     def set_circuit(self, circuit: ACircuit):
         super().set_circuit(circuit)  # Computes circuit unitary as _umat
-        self._slap.reset_feed_forward()
+        # self._slap.reset_feed_forward()
         self._slap.set_unitary(self._umat)
 
     def _init_mask(self):
@@ -63,6 +63,10 @@ class SLAPBackend(AStrongSimulationBackend, IFFBackend):
     def prob_distribution(self) -> BSDistribution:
         self._slap.set_input_state(self._input_state)
         return self._slap.distribution()
+
+    def all_prob_ampli(self):
+        self._slap.set_input_state(self._input_state)
+        return self._slap.all_amplitudes()
 
     @property
     def name(self) -> str:
