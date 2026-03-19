@@ -286,6 +286,7 @@ class CircuitBuilder:
         'phase_shifter': _cd.deserialize_ps,
         'permutation': _cd.deserialize_perm,
         'unitary': _cd.deserialize_unitary,
+        'fourier_unitary': _cd.deserialize_fourier_unitary,
         'wave_plate': _cd.deserialize_wp,
         'quarter_wave_plate': _cd.deserialize_qwp,
         'half_wave_plate': _cd.deserialize_hwp,

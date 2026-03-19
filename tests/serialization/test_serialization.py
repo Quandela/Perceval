@@ -88,6 +88,7 @@ def _build_test_circuit():
     c1.add(1, c2, merge=False).add(0, comp.HWP(xsi=0.23)).add(1, comp.QWP(xsi=0.17)).add(2, comp.WP(0.4, 0.5))
     c1.add(0, comp.Barrier(2, visible=True))
     c1.add(0, comp.PR(delta=0.89))
+    c1.add(0, comp.FourierUnitary(2))
     return c1
 
 
