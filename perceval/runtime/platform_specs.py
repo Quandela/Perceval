@@ -97,14 +97,14 @@ class PlatformSpecs(dict):
         self["architecture"] = value
 
     def _make_architecture(self):
-        m = self.specific_circuit.m
+        m = self._getitem("specific_circuit").m  # Avoid deprecation warnings
         e = Experiment(m)
-        for r, c in self.specific_circuit:
+        for r, c in self._getitem("specific_circuit"):
             e.add(r, c)
         if self.get("detector", None) == "threshold":
             threshold = Detector.threshold()
-            for m in range(m):
-                e.add(m, threshold)
+            for i in range(m):
+                e.add(i, threshold)
         connected_modes = self.get("connected_input_modes", None)
         if connected_modes:
             input_state = [0] * m

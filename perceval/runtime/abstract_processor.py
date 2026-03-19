@@ -143,6 +143,11 @@ class AProcessor(ABC):
             s = s.remove_modes(list(self.heralds.keys()))
         return s
 
+    def remove_in_heralded_modes(self, s: FockState) -> FockState:
+        if self.in_heralds:
+            s = s.remove_modes(list(self.in_heralds.keys()))
+        return s
+
     @property
     def post_select_fn(self):
         return self.experiment.post_select_fn
