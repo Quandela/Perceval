@@ -27,12 +27,22 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from packaging.version import Version
+import dataclasses, packaging, uuid
+
 from perceval.components.linear_circuit import ACircuit
 from perceval.utils.matrix import Matrix
 
+@dataclasses.dataclass
+class CompiledCircuitVersion:
+    def __init__(self):
+        self.hardware_version = packaging.version.Version('0')
+        self.carac_version = packaging.version.Version('0')
+        self.phase_at_output = True
+        self.empty_mode_list = []
+        self.matrix_uuid = uuid.UUID(int=0)
+
 class CompiledCircuit(ACircuit):
-    def __init__(self, name: str, template_or_size: ACircuit | int, parameters: list[float], version: Version | None = None):
+    def __init__(self, name: str, template_or_size: ACircuit | int, parameters: list[float], version: CompiledCircuitVersion | None = None):
         m = template_or_size if isinstance(template_or_size, int) else template_or_size.m
         template = template_or_size if isinstance(template_or_size, ACircuit) else None
         super().__init__(m, name)
