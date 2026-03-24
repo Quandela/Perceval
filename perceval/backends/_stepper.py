@@ -53,6 +53,8 @@ class StepperBackend(ASamplingBackend):
         for r, c in self._circuit:
             current_circuit = Unitary(current_circuit.add(r, c).compute_unitary())
             self._backend.set_circuit(current_circuit)
+            if any(k >= 32 for k in current_state):
+                raise ValueError(f"Cannot simulate state {current_state} which has more than 31 photon in a single mode")
             self._backend.set_mask(''.join([ ' ' if i in r else chr(ord('0') + current_state[i]) for i in range(0, m) ]))
             self._backend.set_input_state(self._input_state)
             current_state = self._backend.prob_distribution().sample(1)[0]

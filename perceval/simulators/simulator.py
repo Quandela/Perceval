@@ -653,8 +653,8 @@ class Simulator(ISimulator):
         for i in range(self._backend._circuit.m):
             if i in self._heralds and i not in self._no_mask_heralded_modes:
                 herald_expectation = self._heralds[i]
-                if herald_expectation > 32:  # FsMask limitation
-                    raise ValueError("Cannot simulate an herald expecting more than 32 detected photons")
+                if herald_expectation >= 32:  # FsMask limitation
+                    raise ValueError("Cannot simulate an herald expecting more than 31 detected photons")
                 # Encodes expected photon count from 0x30 to 0x4F ASCII characters
                 mask_str += f"{chr(0x30 + herald_expectation)}"
             else:
