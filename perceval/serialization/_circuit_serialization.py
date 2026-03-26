@@ -92,6 +92,15 @@ class ComponentSerializer:
         pb_unitary.use_polarization = unitary.requires_polarization
         self._pb.unitary.CopyFrom(pb_unitary)
 
+    @dispatch(comp.FourierUnitary)
+    def _serialize(self, fourier_unitary: comp.FourierUnitary):
+        pb_umat = serialize_matrix(fourier_unitary.compute_unitary())
+        pb_unitary = pb.FourierUnitary()
+        pb_unitary.mat.CopyFrom(pb_umat)
+        if fourier_unitary.name != comp.FourierUnitary.DEFAULT_NAME:
+            pb_unitary.name = fourier_unitary.name
+        self._pb.fourier_unitary.CopyFrom(pb_unitary)
+
     @dispatch(comp.PBS)
     def _serialize(self, _):
         pb_pbs = pb.PolarizedBeamSplitter()

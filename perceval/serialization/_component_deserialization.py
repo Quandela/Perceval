@@ -71,6 +71,9 @@ def deserialize_unitary(serial_unitary, _) -> comp.Unitary:
     m = deserialize_pb_matrix(serial_unitary.mat)
     return comp.Unitary(U=m)
 
+def deserialize_fourier_unitary(serial_fourier_unitary, _) -> comp.FourierUnitary:
+    m = deserialize_pb_matrix(serial_fourier_unitary.mat)
+    return comp.FourierUnitary(m.shape[0])
 
 def deserialize_wp(serial_wp, known_params: dict = None) -> comp.WP:
     return comp.WP(deserialize_parameter(serial_wp.delta, known_params),
