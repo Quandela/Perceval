@@ -474,6 +474,18 @@ class Unitary(ACircuit):
         matrix = Matrix.random_unitary(m)
         return Unitary(matrix)
 
+    @staticmethod
+    def fourier(m: int) -> "Unitary": # Python 3.11 : Replace using Self typing
+        r"""Static method generating a Fourier interferometer unitary.
+
+        :param m: Number of modes in random unitary.
+        :return: a Unitary circuit component
+        """
+        factor = 2j * np.pi / m
+        indices = np.arange(m)
+        matrix = np.exp(factor * np.outer(indices, indices))
+        matrix /= np.sqrt(m)
+        return Unitary(matrix, name="FourierUnitary")
 
 class PERM(Unitary):
     """Permutation
@@ -623,34 +635,3 @@ class Barrier(ACircuit):
     def inverse(self, v=False, h=False):
         pass
 
-
-class FourierUnitary(Unitary):
-    """Fourier interferometer unitary
-
-    :param m: Size of Fourier interferometer.
-    """
-    DEFAULT_NAME = "FourierUnitary"
-
-    def __init__(self, m: int):
-        assert isinstance(m, int), (
-            f"Fourier interferometer parameter must be of type `int`. "
-            f"Received {type(m)}."
-        )
-        assert m > 0, f"FourierUnitary parameter must be positive. Received m = {m}."
-
-        u = self._construct_matrix(m)
-        super().__init__(U=u, name="FourierUnitary")
-
-    def describe(self):
-        return f"FourierUnitary({self.m})"
-
-    def definition(self):
-        return self.U
-
-    @staticmethod
-    def _construct_matrix(m: int) -> Matrix:
-        factor = 2j * np.pi / m
-        indices = np.arange(m)
-        matrix = np.exp(factor * np.outer(indices, indices))
-        matrix /= np.sqrt(m)
-        return Matrix(matrix)
