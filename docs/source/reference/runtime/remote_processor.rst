@@ -69,9 +69,11 @@ The only way to compute with a RemoteProcessor is to use it in a Quantum Algorit
 Misceallenous
 -------------
 
-Some platforms expose specs that must be fulfilled in order for a Job to be able to be completed.
+Some platforms expose specs (see :ref:`PlatformSpecs`) that give information about what the platform is, and what it can and can't do.
+They can be retrieved using the property :code:`rp.specs`.
+
+Some constraints, available through :code:`rp.constraints`, must be fulfilled in order for a Job to be able to be completed.
 These include (but are not limited to) the number of photons, the number of modes, the number of photons per mode...
-They can be retrieved using the property :code:`rp.specs` or :code:`rp.constraints`
 
 The performances of the source can also be retrieved using the property :code:`rp.performance`.
 
