@@ -176,7 +176,7 @@ class NoisySamplingSimulator:
 
     def set_selection(self,
                       min_detected_photons_filter: int = None,
-                      postselect: PostSelect = None,
+                      postselect: PostSelect = PostSelect(),
                       heralds: dict = None):
         """Set multiple selection filters at once to remove unwanted states from computed output distribution
 
@@ -188,8 +188,7 @@ class NoisySamplingSimulator:
         """
         if min_detected_photons_filter is not None:
             self._min_detected_photons_filter = min_detected_photons_filter
-        if postselect is not None:
-            self._postselect = postselect
+        self._postselect = postselect
         if heralds is not None:
             self._heralds = heralds
 
@@ -200,9 +199,7 @@ class NoisySamplingSimulator:
         for m, v in self._heralds.items():
             if state[m] != v:
                 return False
-        if self._postselect is not None:
-            return self._postselect(state)
-        return True
+        return self._postselect(state)
 
     def set_circuit(self, circuit: ACircuit):
         """

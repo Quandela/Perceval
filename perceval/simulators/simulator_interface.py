@@ -81,7 +81,7 @@ class ISimulator(ABC):
 
     def set_selection(self,
                       min_detected_photons_filter: int = None,
-                      postselect: PostSelect = None,
+                      postselect: PostSelect = PostSelect(),
                       heralds: dict[int, int] = None):
         """
         Set the min_detected_photons_filter, postselect, and heralds, if defined.
@@ -93,8 +93,7 @@ class ISimulator(ABC):
         """
         if min_detected_photons_filter is not None:
             self.set_min_detected_photons_filter(min_detected_photons_filter)
-        if postselect is not None:
-            self._postselect = postselect
+        self._postselect = postselect
         if heralds is not None:
             self.set_heralds(heralds)
 
