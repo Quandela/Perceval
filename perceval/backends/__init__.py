@@ -39,7 +39,7 @@ from ._stepper import StepperBackend
 
 BACKEND_LIST = {
     "CliffordClifford2017": Clifford2017Backend,
-    "Stepper": StepperBackend,
+    "SamplingStepper": StepperBackend,
     "MPS": MPSBackend,
     "Naive": NaiveBackend,
     "NaiveApprox": NaiveApproxBackend,

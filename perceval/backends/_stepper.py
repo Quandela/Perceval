@@ -31,6 +31,7 @@ from perceval.backends import SLAPBackend, ASamplingBackend
 from perceval.components import Circuit, ACircuit
 from perceval.components.unitary_components import Unitary
 from perceval.utils import FockState
+from perceval.utils.matrix import Matrix
 
 class StepperBackend(ASamplingBackend):
     def __init__(self):
@@ -48,11 +49,13 @@ class StepperBackend(ASamplingBackend):
 
     def sample(self):
         m = self._circuit.m
-        current_circuit = Circuit(m)
+        current_unitary = Matrix.eye(m)
         current_state = self._input_state
         for r, c in self._circuit:
-            current_circuit = Unitary(current_circuit.add(r, c).compute_unitary())
-            self._backend.set_circuit(current_circuit)
+            circuit_unitary = Matrix.eye(m)
+            circuit_unitary[r[0]:(r[-1]+1), r[0]:(r[-1]+1)] = c.compute_unitary()
+            current_unitary = circuit_unitary @ current_unitary
+            self._backend.set_circuit(Unitary(current_unitary))
             if any(k >= 32 for k in current_state):
                 raise ValueError(f"Cannot simulate state {current_state} which has more than 31 photon in a single mode")
             self._backend.set_mask(''.join([ ' ' if i in r else chr(ord('0') + current_state[i]) for i in range(0, m) ]))

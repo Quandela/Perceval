@@ -35,7 +35,7 @@ from perceval.components import catalog
 from perceval.utils import BasicState
 
 @pytest.mark.long_test
-@pytest.mark.parametrize("backend_name", ["CliffordClifford2017", "Stepper"])
+@pytest.mark.parametrize("backend_name", ["CliffordClifford2017", "SamplingStepper"])
 def test_backend_cnot(backend_name):
     # Two last modes are ancillaries
     s00 = BasicState([1, 0, 1, 0, 0, 0])
