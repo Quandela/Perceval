@@ -34,7 +34,7 @@ from perceval.utils import samples_to_sample_count, samples_to_probs, sample_cou
 from perceval.utils.logging import get_logger, channel
 from perceval.runtime.abstract_processor import AProcessor
 from perceval.runtime import Job, RemoteJob, LocalJob
-from perceval.utils import BasicState, NoiseModel
+from perceval.utils import BasicState, NoiseModel, PostSelect
 
 
 class Sampler(AAlgorithm):
@@ -64,12 +64,13 @@ class Sampler(AAlgorithm):
         'samples': {'probs': probs_to_samples, 'sample_count': sample_count_to_samples}
     }
 
-    _iterator_type_check: dict[str, type] = {'circuit_params': dict,
+    _ITERATOR_TYPE_CHECK: dict[str, type] = {'circuit_params': dict,
                                              'input_state': BasicState,
                                              'min_detected_photons': int,
                                              'max_samples': int,
                                              'max_shots': int,
-                                             'noise': NoiseModel}
+                                             'noise': NoiseModel,
+                                             'postselect': PostSelect}
 
     def __init__(self, processor: AProcessor, **kwargs):
         super().__init__(processor, **kwargs)
@@ -177,8 +178,8 @@ class Sampler(AAlgorithm):
     def _check_iteration(self, iter_params):
         assert isinstance(iter_params, dict), "Iteration parameters must be a valid dictionary"
         for key, val in iter_params.items():
-            if key in self._iterator_type_check:
-                correct_type = self._iterator_type_check[key]
+            if key in self._ITERATOR_TYPE_CHECK:
+                correct_type = self._ITERATOR_TYPE_CHECK[key]
                 assert isinstance(val, correct_type), \
                     (f"Iteration: unexpected type for {key}, expected {correct_type.__name__},"
                      f" received {type(val).__name__}")
@@ -209,6 +210,7 @@ class Sampler(AAlgorithm):
            - max_samples: int
            - max_shots: int
            - noise: NoiseModel
+           - postselect: PostSelect
         """
         get_logger().info("Add 1 iteration to Sampler", channel.general)
         self._add_iteration(kwargs)
@@ -247,7 +249,10 @@ class Sampler(AAlgorithm):
 
     # Local iteration methods mimic remote iterations for interchangeability purpose
     def _probs_iterate_locally(self, max_shots: int = None, progress_callback: callable = None):
-        self._max_shots = max_shots
+        old_shots = self._max_shots
+        if max_shots is not None:
+            self._max_shots = max_shots
+
         default_it = self._it_default_parameters()
         results = {'results_list': []}
         for idx, it in enumerate(self._iterator):
@@ -257,19 +262,23 @@ class Sampler(AAlgorithm):
             results['results_list'][-1]['iteration'] = it
             if progress_callback is not None:
                 progress_callback((idx + 1) / len(self._iterator))
+
         self._apply_iteration(default_it)
+        self._max_shots = old_shots
         return results
 
     def _samples_iterate_locally(self, max_shots: int = None, max_samples: int = None,
                                  progress_callback: callable = None):
-        if max_samples is None and max_shots is None:
-            if not self._check_sample_shot_iterator():
-                raise RuntimeError("Local sampling simulation requires max_samples and/or max_shots parameters")
+        if max_samples is None and max_shots is None and not self._check_sample_shot_iterator():
+            raise RuntimeError("Local sampling simulation requires max_samples and/or max_shots parameters")
 
+        old_samples = self._max_samples
+        old_shots = self._max_shots
         if max_samples is None:
             max_samples = self.SAMPLES_MAX_COUNT
         self._max_samples = max_samples
         self._max_shots = max_shots
+
         default_it = self._it_default_parameters()
         results = {'results_list': []}
         for idx, it in enumerate(self._iterator):
@@ -278,7 +287,10 @@ class Sampler(AAlgorithm):
             results['results_list'][-1]['iteration'] = it
             if progress_callback is not None:
                 progress_callback((idx + 1) / len(self._iterator))
+
         self._apply_iteration(default_it)  # restore default parameters
+        self._max_samples = old_samples
+        self._max_shots = old_shots
         return results
 
     def _apply_iteration(self, it):
@@ -310,6 +322,12 @@ class Sampler(AAlgorithm):
     def _set_noise(self, noise: NoiseModel):
         self._processor.noise = noise
 
+    def _set_postselect(self, post_select: PostSelect | None):
+        if post_select is not None:
+            self._processor.set_postselection(post_select)
+        else:
+            self._processor.clear_postselection()
+
     def _it_default_parameters(self) -> dict:
         """Creates an iteration with default parameters"""
         input_state = self._processor.input_state
@@ -322,5 +340,6 @@ class Sampler(AAlgorithm):
                 "min_detected_photons": self._processor.experiment.min_photons_filter,
                 "max_samples": self._max_samples,
                 "max_shots": self._max_shots,
-                "noise": self._processor.noise
+                "noise": self._processor.noise,
+                "postselect": self._processor.post_select_fn
                 }

@@ -122,6 +122,8 @@ At the input, they declare a number of photon in a mode that the user won't have
 >>> p.heralds_in
 {0: 1}
 
+The input heralds can be removed from a state using :code:`state = remove_in_heralded_modes(state)`.
+
 At the output, they will automatically filter states so only states matching the given number of photons will be selected.
 They also remove these modes from the resulting BasicStates.
 This filtering has an impact on the perf of the processor.

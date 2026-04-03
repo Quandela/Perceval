@@ -122,7 +122,7 @@ class ISimulator(ABC):
         """
         self._compute_physical_logical_perf = value
 
-    def format_results(self, results: dict(), physical_perf: float, logical_perf: float):
+    def format_results(self, results: dict, physical_perf: float, logical_perf: float):
         """
             Format the simulation results by computing the global performance, and returning the physical and
             logical performances only if needed.

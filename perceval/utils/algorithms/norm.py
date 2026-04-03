@@ -63,7 +63,7 @@ def modulus_fidelity(u: Matrix, v: Matrix, skip_colums: list[int] = []) -> float
     n = _count_non_skipped_cols(u.shape[1], skip_colums)
     if n == 0:
         return 1.0
-    f = frobenius_inner_product(u, v, skip_colums)/n
+    f = frobenius_inner_product(abs(u), abs(v), skip_colums)/n
     if isinstance(f, complex):
         return f.real
     else:
