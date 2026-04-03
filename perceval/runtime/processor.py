@@ -35,6 +35,7 @@ from perceval.runtime.abstract_processor import AProcessor
 from perceval.components.experiment import Experiment
 from perceval.components.linear_circuit import ACircuit, Circuit
 from perceval.components.source import Source
+from perceval.backends import ExqaliburBackendWrapper, ASamplingBackend
 
 
 class Processor(AProcessor):
@@ -162,8 +163,7 @@ class Processor(AProcessor):
     def samples(self, max_samples: int, max_shots: int = None, progress_callback=None) -> dict:
         self.check_min_detected_photons_filter()
 
-        # TODO: move imports on top of this file after moving Processor to runtime
-        from perceval.backends import ExqaliburBackendWrapper, ASamplingBackend
+        # Avoids circular import
         from perceval.simulators import ExqaliburNoisySamplingSimulator, NoisySamplingSimulator
 
         assert isinstance(self.backend, ASamplingBackend), "A sampling backend is required to call samples method"
