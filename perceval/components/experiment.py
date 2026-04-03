@@ -477,15 +477,10 @@ class Experiment:
                         self.add_port(port_mode, port, PortLocation.OUTPUT)
 
         new_components = simplify(new_components, self.circuit_size)
-        if len(new_components) > 0:
-            if isinstance(new_components[0][1], PERM):
-                for m in new_components[0][0]:
-                    if m < len(out_mode_type) and out_mode_type[m] == ModeType.CLASSICAL:
-                        raise UnavailableModeException(m, "Can't add permutations on classical modes")
-            if isinstance(new_components[-1][1], PERM):
-                for m in new_components[-1][0]:
-                    if m < len(out_mode_type) and out_mode_type[m] == ModeType.CLASSICAL:
-                        raise UnavailableModeException(m, "Can't add permutations on classical modes")
+        for component in new_components:
+            for m in component[0]:
+                if m < len(out_mode_type) and out_mode_type[m] == ModeType.CLASSICAL:
+                    raise UnavailableModeException(m, "Can't add components on classical modes")
         self._components += new_components
 
         # Retrieve ports from the other experiment
