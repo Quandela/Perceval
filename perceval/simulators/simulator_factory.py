@@ -34,9 +34,8 @@ from .loss_simulator import LossSimulator
 from .polarization_simulator import PolarizationSimulator
 from ._simulator_utils import _unitary_components_to_circuit
 from perceval.components import ACircuit, TD, LC, Experiment, AFFConfigurator
-from perceval.backends import ABackend, SLOSBackend, BACKEND_LIST
+from perceval.backends import ABackend, SLOSBackend, BACKEND_LIST, ExqaliburBackendWrapper
 from perceval.runtime import Processor
-from .. import ExqaliburBackendWrapper
 
 
 class SimulatorFactory:

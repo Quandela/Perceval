@@ -86,3 +86,17 @@ Here is a list of the simulation methods in the :code:`Simulator`
 .. autoclass:: perceval.simulators.Simulator
    :members:
    :inherited-members:
+
+
+ExqaliburSimulator
+===============================
+
+The :code:`ExqaliburSimulator` does the same things as the :code:`Simulator`, but some of its methods
+are implemented in exqalibur so it runs faster.
+
+Also, this simulator requires the backend to be a wrapper around a pure exqalibur sampling backend.
+The :ref:`SLAP` backend is an example of such a backend.
+
+.. autoclass:: perceval.simulators.ExqaliburSimulator
+   :members:
+   :inherited-members:
