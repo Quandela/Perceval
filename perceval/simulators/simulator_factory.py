@@ -28,7 +28,7 @@
 # SOFTWARE.
 from .feed_forward_simulator import FFSimulator
 from .simulator_interface import ISimulator
-from .simulator import Simulator
+from .simulator import Simulator, ExqaliburSimulator
 from .delay_simulator import DelaySimulator
 from .loss_simulator import LossSimulator
 from .polarization_simulator import PolarizationSimulator
@@ -36,6 +36,7 @@ from ._simulator_utils import _unitary_components_to_circuit
 from perceval.components import ACircuit, TD, LC, Experiment, AFFConfigurator
 from perceval.backends import ABackend, SLOSBackend, BACKEND_LIST
 from perceval.runtime import Processor
+from .. import ExqaliburBackendWrapper
 
 
 class SimulatorFactory:
@@ -123,7 +124,11 @@ class SimulatorFactory:
             simulator.set_noise(noise)
 
         else:
-            simulator = Simulator(backend)
+            if isinstance(backend, ExqaliburBackendWrapper):
+                simulator = ExqaliburSimulator(backend)
+            else:
+                simulator = Simulator(backend)
+
             if sim_polarization:
                 simulator = PolarizationSimulator(simulator)
             if sim_delay:
