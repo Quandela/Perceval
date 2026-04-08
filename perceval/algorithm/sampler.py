@@ -70,6 +70,20 @@ class Sampler(AAlgorithm):
         self._iterator = ParameterIterator(self._computation)
         self._max_samples = None
 
+    def _input_available(self) -> bool:
+        if not self._iterator.input_available():
+            return False
+
+        # Further checks using the Processor
+        try:
+            for iter_params in self._iterator.iterations:
+                if 'input_state' in iter_params:
+                    self._processor.check_input(iter_params['input_state'])
+            return True
+        except Exception as e:
+            get_logger().error(e, channel.error)
+            return False
+
     def _get_primitive_converter(self, method: str):
         available_primitives = self._processor.available_commands
         if method in available_primitives:
@@ -83,7 +97,7 @@ class Sampler(AAlgorithm):
 
     # Job creation methods
     def _create_job(self, method: str):
-        assert self._iterator.input_available(), "Missing input state"
+        assert self._input_available(), "Missing input state"
         primitive, converter = self._get_primitive_converter(method)
         if primitive is None:
             raise RuntimeError(
@@ -204,6 +218,7 @@ class Sampler(AAlgorithm):
         for idx, it in enumerate(self._iterator):
             max_shots_local = max_shots or it.max_shots
             precision = None if max_shots_local is None else min(1e-6, 1 / max_shots_local)
+            self._processor.experiment = it.experiment
             results['results_list'].append(self._processor.probs(precision))
             results['results_list'][-1]['iteration'] = it.parameters
             if progress_callback is not None:
@@ -222,6 +237,7 @@ class Sampler(AAlgorithm):
         results = {'results_list': []}
         for idx, it in enumerate(self._iterator):
             max_samples_local = it.max_samples or max_samples
+            self._processor.experiment = it.experiment
             results['results_list'].append(self._processor.samples(max_samples_local, it.max_shots))
             results['results_list'][-1]['iteration'] = it.parameters
             if progress_callback is not None:

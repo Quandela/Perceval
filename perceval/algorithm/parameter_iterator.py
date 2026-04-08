@@ -64,7 +64,6 @@ class ParameterIterator:
 
         self._iterations: list[dict[str, Any]] = []
 
-
     def check_sample_shot_iterator(self) -> bool:
         return all("max_samples" in it or "max_shots" in it for it in self._iterations)
 
@@ -104,7 +103,7 @@ class ParameterIterator:
             elif key == 'input_state':
                 assert val.m == self._experiment.m, \
                     f"Iteration: input state and processor size mismatch (processor size is {self._experiment.m})"
-                self._experiment.check_input(iter_params['input_state'])   # TODO: repair further check by processor
+                self._experiment.check_input(iter_params['input_state'])
 
     def add_iteration(self, **kwargs):
         """

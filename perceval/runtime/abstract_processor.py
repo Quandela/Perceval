@@ -53,6 +53,9 @@ class AProcessor(ABC):
         experiment.add_observers(self._circuit_change_observer,
                                  self._noise_changed_observer,
                                  self._input_changed_observer)
+        self._noise_changed_observer()
+        self._circuit_change_observer()
+        self._input_changed_observer()
 
     @abstractmethod
     def _circuit_change_observer(self, new_component = None):
