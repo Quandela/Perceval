@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 from .abstract_algorithm import AAlgorithm
-from .parameter_iterator import ParameterIterator, ComputationDescriptor
+from .parameter_iterator import ParameterIterator
 
 from perceval.utils import samples_to_sample_count, samples_to_probs, sample_count_to_samples, \
     sample_count_to_probs, probs_to_samples, probs_to_sample_count
@@ -66,9 +66,8 @@ class Sampler(AAlgorithm):
 
     def __init__(self, processor: AProcessor, **kwargs):
         super().__init__(processor, **kwargs)
-        self._computation = ComputationDescriptor(processor.experiment, self._max_shots, None)
-        self._iterator = ParameterIterator(self._computation)
         self._max_samples = None
+        self._iterator = ParameterIterator(processor.experiment, self._max_shots, self._max_samples)
 
     def _input_available(self) -> bool:
         if not self._iterator.input_available():
@@ -81,7 +80,7 @@ class Sampler(AAlgorithm):
                     self._processor.check_input(iter_params['input_state'])
             return True
         except Exception as e:
-            get_logger().error(e, channel.error)
+            get_logger().error(e, channel.user)
             return False
 
     def _get_primitive_converter(self, method: str):
@@ -214,6 +213,8 @@ class Sampler(AAlgorithm):
 
     # Local iteration methods mimic remote iterations for interchangeability purpose
     def _probs_iterate_locally(self, max_shots: int = None, progress_callback: callable = None):
+        default_experiment = self._processor.experiment
+
         results = {'results_list': []}
         for idx, it in enumerate(self._iterator):
             max_shots_local = max_shots or it.max_shots
@@ -223,6 +224,8 @@ class Sampler(AAlgorithm):
             results['results_list'][-1]['iteration'] = it.parameters
             if progress_callback is not None:
                 progress_callback((idx + 1) / len(self._iterator))
+
+        self._processor.experiment = default_experiment
 
         return results
 
@@ -234,6 +237,8 @@ class Sampler(AAlgorithm):
         if max_samples is None:
             max_samples = self.SAMPLES_MAX_COUNT
 
+        default_experiment = self._processor.experiment
+
         results = {'results_list': []}
         for idx, it in enumerate(self._iterator):
             max_samples_local = it.max_samples or max_samples
@@ -242,5 +247,7 @@ class Sampler(AAlgorithm):
             results['results_list'][-1]['iteration'] = it.parameters
             if progress_callback is not None:
                 progress_callback((idx + 1) / len(self._iterator))
+
+        self._processor.experiment = default_experiment
 
         return results

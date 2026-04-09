@@ -31,7 +31,7 @@ import dataclasses
 from numbers import Number
 from typing import Any
 
-from perceval import Experiment, FockState, NoiseModel, PostSelect, BasicState
+from perceval import Experiment, NoiseModel, PostSelect, BasicState
 
 
 @dataclasses.dataclass
@@ -43,6 +43,8 @@ class ComputationDescriptor:
 
 
 class ParameterIterator:
+    # TODO: in the end, this is the class we want to send to the cloud that describes the computation
+    # TODO: document this class in the code reference? I would say no as long as this is an internal class
 
     _ITERATOR_TYPE_CHECK: dict[str, type] = {'circuit_params': dict,
                                              'input_state': BasicState,
@@ -52,23 +54,42 @@ class ParameterIterator:
                                              'noise': NoiseModel,
                                              'postselect': PostSelect}
 
-    def __init__(self, computation: ComputationDescriptor):
+    def __init__(self, experiment: Experiment, max_shots: int | None, max_samples: int | None):
         # Constant parameters
-        self._computation = computation
-        self._computation.parameters = self._extract_default_it(computation)
-
-        # Moving parameters
-        self._experiment = computation.experiment.copy()
-        self._max_samples = None
-        self._max_shots = None
+        self._experiment = experiment
+        self._max_samples = max_samples
+        self._max_shots = max_shots
 
         self._iterations: list[dict[str, Any]] = []
+
+    @classmethod
+    def from_payload(cls, payload: dict):
+        """
+        :param payload: A deserialized payload. Must contain an "experiment" field.
+        :return: a ParameterIterator suited to simulate that payload
+        """
+        experiment = payload['experiment']
+        n_shots = payload.get('max_shots')
+        n_samples = payload.get('max_samples')
+        self = cls(experiment, n_shots, n_samples)
+
+        if "iterator" in payload:  # No check, we suppose the iterator has already been checked
+            self._iterations = payload["iterator"]
+        return self
+
+    def to_payload(self):
+        return {
+            "experiment": self._experiment,
+            "max_shots": self._max_shots,
+            "max_samples": self._max_samples,
+            "iterator": self._iterations
+        }
 
     def check_sample_shot_iterator(self) -> bool:
         return all("max_samples" in it or "max_shots" in it for it in self._iterations)
 
     def input_available(self) -> bool:
-        if self._computation.experiment.input_state is not None:  # Default input will cover all cases
+        if self._experiment.input_state is not None:  # Default input will cover all cases
             return True
         elif len(self._iterations) == 0:  # ...else you need at least one iteration...
             return False
@@ -132,13 +153,11 @@ class ParameterIterator:
 
     def __iter__(self):
         if len(self._iterations) == 0:  # no iterations
-            yield self._computation
+            yield ComputationDescriptor(self._experiment, self._max_shots, self._max_samples)
             return
 
         for it in self._iterations:
-            self._apply_iteration(self._computation.parameters | it)
-            yield ComputationDescriptor(self._experiment, self._max_shots, self._max_samples, it)
-            self._experiment = self._computation.experiment.copy()
+            yield self._apply_iteration(it)
 
     def __len__(self):
         return len(self._iterations)
@@ -147,53 +166,47 @@ class ParameterIterator:
         return bool(self._iterations)
 
     def _apply_iteration(self, it):
+        # TODO: avoid copy if nothing in the iteration changes the Experiment
+        computation = ComputationDescriptor(self._experiment.copy(), self._max_shots, self._max_samples)
         for key, val in it.items():
             try:
-                self.__getattribute__(f"_set_{key}")(val)
+                self.__getattribute__(f"_set_{key}")(val, computation)
             except AttributeError:
                 raise KeyError(f"Received unknown iteration key: {key}")
+        computation.parameters = it
+        return computation
 
-    def _set_circuit_params(self, params: dict):
+    @staticmethod
+    def _set_circuit_params(params: dict, computation: ComputationDescriptor):
         if params:
-            circuit_params = self._experiment.get_circuit_parameters()
+            circuit_params = computation.experiment.get_circuit_parameters()
             for name, value in params.items():
                 if value is not None:
                     circuit_params[name].set_value(value)
 
-    def _set_input_state(self, input_state: BasicState):
-        self._experiment.with_input(input_state)
-
-    def _set_min_detected_photons(self, count: int):
-        self._experiment.min_detected_photons_filter(count)
-
-    def _set_max_samples(self, val: int):
-        self._max_samples = val
-
-    def _set_max_shots(self, val: int):
-        self._max_shots = val
-
-    def _set_noise(self, noise: NoiseModel):
-        self._experiment.noise = noise
-
-    def _set_postselect(self, post_select: PostSelect | None):  # TODO: remove None
-        if post_select is not None:
-            self._experiment.set_postselection(post_select)
-        else:
-            self._experiment.clear_postselection()
+    @staticmethod
+    def _set_input_state(input_state: BasicState, computation: ComputationDescriptor):
+        computation.experiment.with_input(input_state)
 
     @staticmethod
-    def _extract_default_it(computation: ComputationDescriptor) -> dict:
-        """Creates an iteration with default parameters"""
-        input_state = computation.experiment.input_state
-        if isinstance(input_state, FockState) and computation.experiment.in_heralds:
-            # If it's not a FockState, the user needs to provide all the modes
-            input_state = FockState([v for m, v in enumerate(input_state) if m not in computation.experiment.in_heralds])
+    def _set_min_detected_photons(count: int, computation: ComputationDescriptor):
+        computation.experiment.min_detected_photons_filter(count)
 
-        return {"circuit_params": {k: v._value for k, v in computation.experiment.get_circuit_parameters().items()},
-                "input_state": input_state,
-                "min_detected_photons": computation.experiment.min_photons_filter,
-                "max_samples": computation.max_samples,
-                "max_shots": computation.max_shots,
-                "noise": computation.experiment.noise,
-                "postselect": computation.experiment.post_select_fn
-                }
+    @staticmethod
+    def _set_max_samples(val: int, computation: ComputationDescriptor):
+        computation.max_samples = val
+
+    @staticmethod
+    def _set_max_shots(val: int, computation: ComputationDescriptor):
+        computation.max_shots = val
+
+    @staticmethod
+    def _set_noise(noise: NoiseModel, computation: ComputationDescriptor):
+        computation.experiment.noise = noise
+
+    @staticmethod
+    def _set_postselect(post_select: PostSelect | None, computation: ComputationDescriptor):  # TODO: remove None
+        if post_select is not None:
+            computation.experiment.set_postselection(post_select)
+        else:
+            computation.experiment.clear_postselection()
