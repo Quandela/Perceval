@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+from perceval.runtime.platform_specs import PlatformSpecs
 from perceval.runtime.remote_processor import AProcessor, RemoteProcessor, TRANSMITTANCE_KEY
 from perceval.components import Unitary, BS, PS, Experiment, Detector, FFCircuitProvider, Circuit
 from perceval.utils import Matrix, BasicState, P
@@ -36,7 +36,7 @@ import random
 class _MockRemoteProcessor(RemoteProcessor):
     def __init__(self):
         AProcessor.__init__(self)  # Avoid RemoteProcessor __init__ to prevent the https request from firing
-        self._specs = {}
+        self._specs = PlatformSpecs()
         self._perfs = {
             TRANSMITTANCE_KEY: 6  # in percent
         }

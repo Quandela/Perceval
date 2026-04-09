@@ -28,10 +28,10 @@
 # SOFTWARE.
 import sys
 
-from perceval.utils import SVDistribution, BasicState, FockState, AnnotatedFockState, StateVector, NoiseModel
+from perceval.utils import SVDistribution, BasicState, FockState, AnnotatedFockState, StateVector, NoiseModel, ProcessorType
 from perceval.utils.logging import get_logger, channel
 
-from perceval.runtime.abstract_processor import AProcessor, ProcessorType
+from perceval.runtime.abstract_processor import AProcessor
 from perceval.components.experiment import Experiment
 from perceval.components.linear_circuit import ACircuit, Circuit
 from perceval.components.source import Source
