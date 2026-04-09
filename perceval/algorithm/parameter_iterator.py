@@ -205,8 +205,5 @@ class ParameterIterator:
         computation.experiment.noise = noise
 
     @staticmethod
-    def _set_postselect(post_select: PostSelect | None, computation: ComputationDescriptor):  # TODO: remove None
-        if post_select is not None:
-            computation.experiment.set_postselection(post_select)
-        else:
-            computation.experiment.clear_postselection()
+    def _set_postselect(post_select: PostSelect, computation: ComputationDescriptor):
+        computation.experiment.set_postselection(post_select)
