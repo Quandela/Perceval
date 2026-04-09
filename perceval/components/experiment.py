@@ -94,7 +94,7 @@ class Experiment:
     def _reset_circuit(self):
         self._in_ports: dict = {}
         self._out_ports: dict = {}
-        self._postselect: PostSelect | None = None
+        self._postselect: PostSelect = PostSelect()
 
         self._is_unitary: bool = True
         self._has_td: bool = False
@@ -199,23 +199,26 @@ class Experiment:
     def post_select_fn(self):
         return self._postselect
 
-    def set_postselection(self, postselect: PostSelect):
+    def set_postselection(self, postselect: PostSelect | str):
         r"""
         Set a logical post-selection function. Along with the heralded modes, this function has an impact
         on the logical performance of the processor holding this experiment
 
-        :param postselect: Sets a post-selection function. Its signature must be `func(s: BasicState) -> bool`.
-            If None is passed as parameter, removes the previously defined post-selection function.
+        :param postselect: Sets a post-selection function.
         """
+        if isinstance(postselect, str):
+            postselect = PostSelect(postselect)
+
         if not isinstance(postselect, PostSelect):
             raise TypeError("Parameter must be a PostSelect object")
+
         self._circuit_changed()
         self._postselect = postselect
 
     def clear_postselection(self):
-        if self._postselect is not None:
+        if self._postselect != PostSelect():
             self._circuit_changed()
-            self._postselect = None
+            self._postselect = PostSelect()
 
     def __deepcopy__(self, memo):
         if id(self) in memo:
@@ -368,11 +371,10 @@ class Experiment:
         return self._detectors
 
     def _validate_postselect_composition(self, mode_mapping: dict):
-        if self._postselect is not None and isinstance(self._postselect, PostSelect):
-            impacted_modes = list(mode_mapping.keys())
-            # can_compose_with can take a bit of time so leave this test as an assert which can be removed by -O
-            assert self._postselect.can_compose_with(impacted_modes), \
-                f"Post-selection conditions cannot compose with modes {impacted_modes}"
+        impacted_modes = list(mode_mapping.keys())
+        # can_compose_with can take a bit of time so leave this test as an assert which can be removed by -O
+        assert self._postselect.can_compose_with(impacted_modes), \
+            f"Post-selection conditions cannot compose with modes {impacted_modes}"
 
     def _validate_new_parameters(self, new_params: dict[str, Parameter]):
         self_params = self.get_circuit_parameters()
@@ -518,17 +520,15 @@ class Experiment:
             self._postselect.apply_permutation(perm_component.perm_vector, c_first)
 
         # Retrieve post process function from the other experiment
-        if experiment._postselect is not None:
-            c_first = perm_modes[0]
-            other_postselect = copy.copy(experiment._postselect)
-            if perm_component is not None and is_symmetrical:
-                other_postselect.apply_permutation(perm_inv.perm_vector, c_first)
-            other_postselect.shift_modes(c_first)
-            if not (self._postselect is None or other_postselect is None
-                    or self._postselect.is_independent_with(other_postselect)):
-                raise RuntimeError("Cannot automatically compose experiment's post-selection conditions")
-            self._postselect = self._postselect or PostSelect()
+        c_first = perm_modes[0]
+        other_postselect = copy.copy(experiment._postselect)
+        if perm_component is not None and is_symmetrical:
+            other_postselect.apply_permutation(perm_inv.perm_vector, c_first)
+        other_postselect.shift_modes(c_first)
+        if self._postselect.is_independent_with(other_postselect):
             self._postselect.merge(other_postselect)
+        else:
+            raise RuntimeError("Cannot automatically compose experiment's post-selection conditions")
 
     def _add_component(self, mode_mapping, component, keep_port: bool):
         self._validate_postselect_composition(mode_mapping)

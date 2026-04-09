@@ -93,8 +93,7 @@ class ISimulator(ABC):
         """
         if min_detected_photons_filter is not None:
             self.set_min_detected_photons_filter(min_detected_photons_filter)
-        if postselect is not None:
-            self._postselect = postselect
+        self._postselect = postselect or PostSelect()
         if heralds is not None:
             self.set_heralds(heralds)
 

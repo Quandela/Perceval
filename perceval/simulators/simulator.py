@@ -107,11 +107,17 @@ class Simulator(ISimulator):
     def logical_perf(self):
         return self._logical_perf
 
-    def set_postselection(self, postselect: PostSelect):
+    def set_postselection(self, postselect: PostSelect | str):
         """Set a post-selection function
 
-        :param postselect: a PostSelect object
+        :param postselect: a PostSelect object or a string describing it
         """
+        if isinstance(postselect, str):
+            postselect = PostSelect(postselect)
+
+        if not isinstance(postselect, PostSelect):
+            raise TypeError("param must be a PostSelect object")
+
         self._postselect = postselect
 
     def clear_postselection(self):

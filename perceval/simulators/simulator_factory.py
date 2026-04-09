@@ -26,6 +26,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from perceval.utils.postselect import PostSelect
+
 from .feed_forward_simulator import FFSimulator
 from .simulator_interface import ISimulator
 from .simulator import Simulator
@@ -65,7 +67,7 @@ class SimulatorFactory:
         sim_feed_forward = False
         convert_to_circuit = False
         min_detected_photons = None
-        post_select = None
+        post_select = PostSelect()
         heralds = None
         noise = None
         m = None

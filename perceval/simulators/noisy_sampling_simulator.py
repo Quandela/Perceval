@@ -317,9 +317,7 @@ class NoisySamplingSimulator(ASamplingSimulator):
         for m, v in self._heralds.items():
             if state[m] != v:
                 return False
-        if self._postselect is not None:
-            return self._postselect(state)
-        return True
+        return self._postselect(state)
 
     def _perfect_sampling_no_selection(
             self,
