@@ -35,6 +35,7 @@ from perceval.runtime.abstract_processor import AProcessor
 from perceval.components.experiment import Experiment
 from perceval.components.linear_circuit import ACircuit, Circuit
 from perceval.components.source import Source
+from perceval.backends import ExqaliburBackendWrapper, ASamplingBackend
 
 
 class Processor(AProcessor):
@@ -161,10 +162,15 @@ class Processor(AProcessor):
 
     def samples(self, max_samples: int, max_shots: int = None, progress_callback=None) -> dict:
         self.check_min_detected_photons_filter()
-        from perceval.simulators import NoisySamplingSimulator
-        from perceval.backends import ASamplingBackend
+
+        # Avoids circular import
+        from perceval.simulators import ExqaliburNoisySamplingSimulator, NoisySamplingSimulator
+
         assert isinstance(self.backend, ASamplingBackend), "A sampling backend is required to call samples method"
-        sampling_simulator = NoisySamplingSimulator(self.backend)
+        if isinstance(self.backend, ExqaliburBackendWrapper):
+            sampling_simulator = ExqaliburNoisySamplingSimulator(self.backend)
+        else:
+            sampling_simulator = NoisySamplingSimulator(self.backend)
         sampling_simulator.sleep_between_batches = 0  # Remove sleep time between batches of samples in local simulation
         sampling_simulator.set_circuit(self.linear_circuit())
         sampling_simulator.set_selection(

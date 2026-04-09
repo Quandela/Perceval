@@ -30,10 +30,10 @@
 import exqalibur as xq
 from perceval.utils import FockState
 from perceval.components import ACircuit
-from ._abstract_backends import ASamplingBackend
+from ._abstract_backends import ASamplingBackend, ExqaliburBackendWrapper
 
 
-class Clifford2017Backend(ASamplingBackend):
+class Clifford2017Backend(ASamplingBackend, ExqaliburBackendWrapper):
     def __init__(self):
         super().__init__()
         self._clifford = xq.Clifford2017()
@@ -59,3 +59,6 @@ class Clifford2017Backend(ASamplingBackend):
     @property
     def name(self) -> str:
         return "CliffordClifford2017"
+
+    def get_exqalibur_backend(self):
+        return self._clifford

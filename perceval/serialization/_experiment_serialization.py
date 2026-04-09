@@ -29,12 +29,12 @@
 
 from multipledispatch import dispatch
 
-from perceval.components import Experiment, Herald, Port, APort, IDetector, BSLayeredPPNR, Detector, AComponent
+from perceval.components import Experiment, Herald, Port, APort, IDetector, AComponent
 from perceval.serialization import _schema_circuit_pb2 as pb
 from perceval.serialization import serialize
 from perceval.serialization._circuit_serialization import serialize_port, serialize_herald, ComponentSerializer
 from perceval.serialization._constants import VALUE_NOT_SET
-from perceval.serialization._detector_serialization import serialize_detector, serialize_bs_layer
+from perceval.serialization._detector_serialization import serialize_idetector
 
 
 class ExperimentSerializer:
@@ -92,24 +92,10 @@ class ExperimentSerializer:
             pb_port = self._serialize_port(port)
             self._serialized.output_ports[modes[0]].CopyFrom(pb_port)
 
-    @staticmethod
-    @dispatch(BSLayeredPPNR)
-    def _serialize_detector(detector):
-        pb_detector = pb.IDetector()
-        pb_detector.ppnr.CopyFrom(serialize_bs_layer(detector))
-        return pb_detector
-
-    @staticmethod
-    @dispatch(Detector)
-    def _serialize_detector(detector):
-        pb_detector = pb.IDetector()
-        pb_detector.detector.CopyFrom(serialize_detector(detector))
-        return pb_detector
-
     def _serialize_detectors(self, detectors: list[IDetector]):
         for i, detector in enumerate(detectors):
             if detector is not None:
-                pb_detector = self._serialize_detector(detector)
+                pb_detector = serialize_idetector(detector)
                 self._serialized.detectors[i].CopyFrom(pb_detector)
 
     def _serialize_components(self, components: list[tuple[tuple, AComponent]]):

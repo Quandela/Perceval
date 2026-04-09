@@ -233,3 +233,10 @@ class IFFBackend(ABC):
         :param m: The number of modes in the circuit.
         """
         pass
+
+
+class ExqaliburBackendWrapper(ABC):
+
+    @abstractmethod
+    def get_exqalibur_backend(self):
+        pass

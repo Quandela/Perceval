@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.simulators import NoisySamplingSimulator
+from perceval.simulators import NoisySamplingSimulator, ExqaliburNoisySamplingSimulator
 from perceval.backends import Clifford2017Backend
 from perceval.components import Unitary, Source, BS, Detector
 from perceval.utils import Matrix, BasicState, SVDistribution
@@ -35,9 +35,10 @@ from perceval.utils import Matrix, BasicState, SVDistribution
 import pytest
 
 
+@pytest.mark.parametrize("use_exqalibur", [True, False])
 @pytest.mark.parametrize("max_samples, max_shots", [(100, None), (100, 10), (10, 100)])
-def test_perfect_sampling(max_samples, max_shots):
-    sim = _build_noisy_simulator(8)
+def test_perfect_sampling(max_samples, max_shots, use_exqalibur):
+    sim = _build_noisy_simulator(8, use_exqalibur)
     input_state = SVDistribution(BasicState([1, 0]*4))
     sim.compute_physical_logical_perf(True)
     sampling = sim.samples(input_state, max_samples, max_shots)
@@ -48,9 +49,10 @@ def test_perfect_sampling(max_samples, max_shots):
         assert output_state.n == 4
 
 
+@pytest.mark.parametrize("use_exqalibur", [True, False])
 @pytest.mark.parametrize("max_samples, max_shots", [(100, None), (100, 10), (10, 100)])
-def test_perfect_sampling_source(max_samples, max_shots):
-    sim = _build_noisy_simulator(8)
+def test_perfect_sampling_source(max_samples, max_shots, use_exqalibur):
+    sim = _build_noisy_simulator(8, use_exqalibur)
     input_state = BasicState([1, 0]*4)
     sim.compute_physical_logical_perf(True)
     sampling = sim.samples((Source(), input_state), max_samples, max_shots)
@@ -61,31 +63,37 @@ def test_perfect_sampling_source(max_samples, max_shots):
         assert output_state.n == 4
 
 
-def _build_noisy_simulator(size: int):
+def _build_noisy_simulator(size: int, use_exqalibur: bool = False):
     c = Unitary(Matrix.random_unitary(size))
-    sim = NoisySamplingSimulator(Clifford2017Backend())
+    if use_exqalibur:
+        sim = ExqaliburNoisySamplingSimulator(Clifford2017Backend())
+    else:
+        sim = NoisySamplingSimulator(Clifford2017Backend())
     sim.set_circuit(c)
     return sim
 
 
-def test_sample_0_samples():
-    sim = _build_noisy_simulator(6)
+@pytest.mark.parametrize("use_exqalibur", [True, False])
+def test_sample_0_samples(use_exqalibur):
+    sim = _build_noisy_simulator(6, use_exqalibur)
     source = Source(losses=0.8, indistinguishability=0.75, multiphoton_component=0.05)
     input_state = source.generate_distribution(BasicState([1, 0] * 3))
     sampling = sim.samples(input_state, 0)
     assert len(sampling['results']) == 0
 
 
-def test_sample_0_samples_source():
-    sim = _build_noisy_simulator(6)
+@pytest.mark.parametrize("use_exqalibur", [True, False])
+def test_sample_0_samples_source(use_exqalibur):
+    sim = _build_noisy_simulator(6, use_exqalibur)
     source = Source(losses=0.8, indistinguishability=0.75, multiphoton_component=0.05)
     input_state = BasicState([1, 0] * 3)
     sampling = sim.samples((source, input_state), 0)
     assert len(sampling['results']) == 0
 
 
-def test_noisy_sampling():
-    sim = _build_noisy_simulator(6)
+@pytest.mark.parametrize("use_exqalibur", [True, False])
+def test_noisy_sampling(use_exqalibur):
+    sim = _build_noisy_simulator(6, use_exqalibur)
     sim.compute_physical_logical_perf(True)
     source = Source(losses=0.8, indistinguishability=0.75, multiphoton_component=0.05)
     input_state = source.generate_distribution(BasicState([1, 0] * 3))
@@ -107,8 +115,9 @@ def test_noisy_sampling():
     assert sampling['results'].total() == 100
 
 
-def test_noisy_sampling_source():
-    sim = _build_noisy_simulator(6)
+@pytest.mark.parametrize("use_exqalibur", [True, False])
+def test_noisy_sampling_source(use_exqalibur):
+    sim = _build_noisy_simulator(6, use_exqalibur)
     sim.compute_physical_logical_perf(True)
     source = Source(losses=0.8, indistinguishability=0.75, multiphoton_component=0.05)
     input_state = BasicState([1, 0] * 3)
@@ -130,8 +139,9 @@ def test_noisy_sampling_source():
     assert sampling['results'].total() == 100
 
 
-def test_noisy_sampling_with_heralds():
-    sim = _build_noisy_simulator(6)
+@pytest.mark.parametrize("use_exqalibur", [True, False])
+def test_noisy_sampling_with_heralds(use_exqalibur):
+    sim = _build_noisy_simulator(6, use_exqalibur)
     sim.compute_physical_logical_perf(True)
     source = Source(losses=0.8, indistinguishability=0.75, multiphoton_component=0.05)
     input_state = source.generate_distribution(BasicState([1, 0] * 3))
@@ -153,8 +163,12 @@ def test_noisy_sampling_with_heralds():
         assert len(output_state) == 5  # The ancillary mode was removed from all output states
 
 
-def test_noisy_sampling_with_detectors():
-    simulator = NoisySamplingSimulator(Clifford2017Backend())
+@pytest.mark.parametrize("use_exqalibur", [True, False])
+def test_noisy_sampling_with_detectors(use_exqalibur):
+    if use_exqalibur:
+        simulator = ExqaliburNoisySamplingSimulator(Clifford2017Backend())
+    else:
+        simulator = NoisySamplingSimulator(Clifford2017Backend())
     simulator.set_circuit(BS())
     simulator.set_detectors([Detector.pnr(), Detector.pnr()])
     simulator.compute_physical_logical_perf(True)
