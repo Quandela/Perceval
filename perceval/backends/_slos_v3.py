@@ -89,14 +89,14 @@ class SLOSV3Backend(ABackend):
     def prob_distribution(self) -> BSDistribution:
         return self._slos.distribution()
 
-    def all_prob_ampli(self):
+    def all_prob_ampli(self) -> list[complex]:
         return self._slos.all_amplitudes()
 
     @property
     def name(self) -> str:
         return "SLOS_V3"
 
-    def all_prob(self, input_state: FockState = None):
+    def all_prob(self, input_state: FockState = None) -> list[float]:
         return self._slos.all_probabilities()
 
     def evolve(self) -> StateVector:

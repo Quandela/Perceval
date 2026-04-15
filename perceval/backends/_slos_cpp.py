@@ -66,7 +66,7 @@ class SLOSCPPBackend(AStrongSimulationBackend):
 
         return self._slos.distribution()
 
-    def all_prob_ampli(self):
+    def all_prob_ampli(self) -> list[complex]:
         self._slos.set_input_state(self._input_state)
         return self._slos.all_amplitudes()
 
@@ -74,7 +74,7 @@ class SLOSCPPBackend(AStrongSimulationBackend):
     def name(self) -> str:
         return "SLOS_CPP"
 
-    def all_prob(self, input_state: FockState = None):
+    def all_prob(self, input_state: FockState = None) -> list[float]:
         self._slos.set_input_state(input_state or self._input_state)
         return self._slos.all_probabilities()
 
