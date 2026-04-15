@@ -27,37 +27,25 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""
-Functions which output the binary representation of objects having a protobuf serializer
-This binary representation loses all knowledge about the type of the input object and have to be deserialized using
-specialized deserialize functions (e.g. deserialize_circuit)
-"""
-
-from multipledispatch import dispatch
-
-from ._circuit_serialization import serialize_circuit
-from ._detector_serialization import serialize_idetector
-from ._matrix_serialization import serialize_matrix
-from perceval.components.linear_circuit import ACircuit
-from perceval.components.detector import IDetector
-from perceval.utils.matrix import Matrix
+from perceval.utils.states import AnnotatedFockState, BasicState, FockState, NoisyFockState
+import warnings
 
 
-@dispatch(ACircuit)
-def serialize_binary(circuit: ACircuit) -> bytes:
-    return serialize_circuit(circuit).SerializeToString()
+def not_implemented_from(derivedClass, baseClass):
+    ignored = [
+                "__weakref__", "__final__",
+                "__firstlineno__", "__static_attributes__"
+              ]
+    for attr in  baseClass.__dict__:
+        if not hasattr(derivedClass, attr) and not attr in ignored:
+            warnings.warn(FutureWarning(f"{derivedClass.__name__} does not implement '{attr}' which is present in class {baseClass.__name__}"))
+    return [attr for attr in  baseClass.__dict__ if not hasattr(derivedClass, attr) and not attr.startswith('__')]
 
+def test_FockStates_interface():
+    baseClass = BasicState
 
-@dispatch(Matrix)
-def serialize_binary(matrix: Matrix) -> bytes:
-    return serialize_matrix(matrix).SerializeToString()
+    assert len( not_implemented_from(FockState, baseClass) ) == 0, f"Some methods declared in {baseClass.__name__} are not implemented"
 
+    assert len( not_implemented_from(NoisyFockState, baseClass) ) == 0, f"Some methods declared in {baseClass.__name__} are not implemented"
 
-@dispatch(IDetector)
-def serialize_binary(detector: IDetector) -> bytes:
-    return serialize_idetector(detector).SerializeToString()
-
-
-@dispatch(list)
-def serialize_binary(l: list) -> list[bytes]:
-    return [serialize_binary(o) for o in l]
+    assert len( not_implemented_from(AnnotatedFockState, baseClass) ) == 0, f"Some methods declared in {baseClass.__name__} are not implemented"

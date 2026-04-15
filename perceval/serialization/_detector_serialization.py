@@ -26,6 +26,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from multipledispatch import dispatch
+
 from perceval.serialization import _schema_circuit_pb2 as pb
 from perceval.components import BSLayeredPPNR, Detector
 
@@ -63,3 +65,17 @@ def deserialize_detector(pb_d: pb.Detector) -> Detector:
     detector = Detector(n_wires, max_detections, wire_efficiency)
     detector.name = pb_d.name
     return detector
+
+
+@dispatch(BSLayeredPPNR)
+def serialize_idetector(detector):
+    pb_detector = pb.IDetector()
+    pb_detector.ppnr.CopyFrom(serialize_bs_layer(detector))
+    return pb_detector
+
+
+@dispatch(Detector)
+def serialize_idetector(detector):
+    pb_detector = pb.IDetector()
+    pb_detector.detector.CopyFrom(serialize_detector(detector))
+    return pb_detector

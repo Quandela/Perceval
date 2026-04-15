@@ -27,38 +27,49 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import exqalibur as xq
+from perceval.backends import SLAPBackend, ASamplingBackend
+from perceval.components import Circuit, ACircuit
+from perceval.components.unitary_components import Unitary
 from perceval.utils import FockState
-from perceval.components import ACircuit
-from ._abstract_backends import ASamplingBackend, ExqaliburBackendWrapper
+from perceval.utils.matrix import Matrix
 
-
-class Clifford2017Backend(ASamplingBackend, ExqaliburBackendWrapper):
+class StepperBackend(ASamplingBackend):
     def __init__(self):
         super().__init__()
-        self._clifford = xq.Clifford2017()
+        self._backend = SLAPBackend()
 
     def set_circuit(self, circuit: ACircuit):
-        super().set_circuit(circuit)  # Computes circuit unitary as _umat
-        self._clifford.set_unitary(self._umat)
+        if isinstance(circuit, Circuit):
+            self._circuit = circuit
+        else:
+            self._circuit = Circuit(circuit.m).add(0, circuit)
 
     def set_input_state(self, input_state: FockState):
         super().set_input_state(input_state)
-        self._clifford.set_input_state(input_state)
 
     def sample(self):
-        return self._clifford.sample()
+        m = self._circuit.m
+        current_unitary = Matrix.eye(m)
+        current_state = self._input_state
+        for r, c in self._circuit:
+            circuit_unitary = Matrix.eye(m)
+            circuit_unitary[r[0]:(r[-1]+1), r[0]:(r[-1]+1)] = c.compute_unitary()
+            current_unitary = circuit_unitary @ current_unitary
+            self._backend.set_circuit(Unitary(current_unitary))
+            if any(k >= 32 for k in current_state):
+                raise ValueError(f"Cannot simulate state {current_state} which has more than 31 photon in a single mode")
+            self._backend.set_mask(''.join([ ' ' if i in r else chr(ord('0') + current_state[i]) for i in range(0, m) ]))
+            self._backend.set_input_state(self._input_state)
+            current_state = self._backend.prob_distribution().sample(1)[0]
+
+        return current_state
 
     def samples(self, count: int):
         """
         Request `count` samples from the circuit given an input state.
-        Uses parallel processing, so it is much more efficient than calling `self.sample()` several times.
         """
-        return self._clifford.samples(count)
+        return [self.sample() for _ in range(count)]
 
     @property
     def name(self) -> str:
-        return "CliffordClifford2017"
-
-    def get_exqalibur_backend(self):
-        return self._clifford
+        return "StepperSampler"

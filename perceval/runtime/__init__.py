@@ -31,9 +31,9 @@ from .job_status import JobStatus, RunningStatus
 from .job import Job
 from .local_job import LocalJob
 from .remote_job import RemoteJob
-from .abstract_processor import AProcessor, ProcessorType
+from .abstract_processor import AProcessor
 from .processor import Processor
-from .remote_processor import RemoteProcessor
+from .remote_processor import RemoteProcessor, perf_dict_to_noise
 from .session import ISession
 from .remote_config import RemoteConfig
 from .job_group import JobGroup

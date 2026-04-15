@@ -433,6 +433,7 @@ class Experiment:
         # Add PERM, component, (PERM^-1 if is_symmetrical)
         perm_modes, perm_component = connector.generate_permutation(mode_mapping)
         new_components = []
+        out_mode_type = self._out_mode_type  # Store for later use
         if perm_component is not None:
             get_logger().debug(
                 f"  Add {perm_component.perm_vector} permutation before experiment compose", channel.general)
@@ -476,6 +477,10 @@ class Experiment:
                         self.add_port(port_mode, port, PortLocation.OUTPUT)
 
         new_components = simplify(new_components, self.circuit_size)
+        for component in new_components:
+            for m in component[0]:
+                if m < len(out_mode_type) and out_mode_type[m] == ModeType.CLASSICAL:
+                    raise UnavailableModeException(m, "Can't add components on classical modes")
         self._components += new_components
 
         # Retrieve ports from the other experiment
@@ -503,9 +508,10 @@ class Experiment:
             for m in range(experiment.circuit_size):
                 # The heralded modes detectors have already been added at the bottom modes
                 d = experiment.detectors[m]
+                new_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(m)]
                 if m not in experiment.heralds and d is not None:
-                    new_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(m)]
                     self._detectors[new_mode] = d
+                self._out_mode_type[new_mode] = experiment._out_mode_type[m]
 
         if self._postselect is not None and perm_component is not None and not is_symmetrical:
             c_first = perm_modes[0]
@@ -537,6 +543,9 @@ class Experiment:
 
         perm_modes, perm_component = ModeConnector.generate_permutation(mode_mapping)
         if perm_component is not None:
+            for m in perm_modes:
+                if self._out_mode_type[m] == ModeType.CLASSICAL:
+                    raise UnavailableModeException(m, "Can't add permutations on classical modes")
             self._components.append((perm_modes, perm_component))
 
         sorted_modes = tuple(range(min(mode_mapping), min(mode_mapping) + component.m))

@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from ._abstract_backends import ABackend, ASamplingBackend, AStrongSimulationBackend, IFFBackend
+from ._abstract_backends import ABackend, ASamplingBackend, AStrongSimulationBackend, IFFBackend, ExqaliburBackendWrapper
 from ._clifford2017 import Clifford2017Backend
 from ._mps import MPSBackend
 from ._naive import NaiveBackend
@@ -37,10 +37,12 @@ from ._slap import SLAPBackend
 from ._slos_v2 import SLOSV2Backend
 from ._slos_v3 import SLOSV3Backend
 from ._slos_cpp import SLOSCPPBackend
+from ._stepper import StepperBackend
 
 
 BACKEND_LIST = {
     "CliffordClifford2017": Clifford2017Backend,
+    "SamplingStepper": StepperBackend,
     "MPS": MPSBackend,
     "Naive": NaiveBackend,
     "NaiveApprox": NaiveApproxBackend,

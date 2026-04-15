@@ -30,35 +30,32 @@
 import math
 import pytest
 
-from perceval import PortLocation
+from perceval import PortLocation, ModeType
 from perceval.components import (catalog, Circuit, BS, PS, PERM, Detector, UnavailableModeException,
-                                 FFConfigurator, FFCircuitProvider, Unitary, Barrier)
+                                 FFConfigurator, FFCircuitProvider, Unitary, Barrier, Experiment)
 from perceval.utils import Matrix, P, LogicalState
-from perceval.runtime import RemoteProcessor, Processor
-
-from tests.runtime._mock_rpc_handler import get_rpc_handler_for_tests
 
 
 def test_processor_composition():
-    p = catalog['postprocessed cnot'].build_processor()  # Circuit with [0,1] and [2,3] post-selection conditions
+    p = catalog['postprocessed cnot'].build_experiment()  # Circuit with [0,1] and [2,3] post-selection conditions
     p.add((0, 1), BS())  # Composing with a component on modes [0,1] should work
     with pytest.raises(AssertionError):
         p.add((1, 2), BS())  # Composing with a component on modes [1,2] should fail
-    p_bs = Processor("SLOS", BS())
+    p_bs = Experiment(BS())
     p.add((0, 1), p_bs)  # Composing with a processor on modes [0,1] should work
     with pytest.raises(AssertionError):
         p.add((1, 2), p_bs)  # Composing with a processor on modes [1,2] should fail
 
 
 def test_composition_error_post_selection():
-    processor = catalog['postprocessed cnot'].build_processor()
+    processor = catalog['postprocessed cnot'].build_experiment()
     # Composing 2 CNOTs on the exact same modes should work in theory, but not in the current implementation,
     # it's still possible to apply a PostSelect manually to the resulting Processor.
     with pytest.raises(AssertionError):
         processor.add(0, processor)
 
-    processor2 = Processor("SLOS", 5)
-    pp_cnot = catalog['postprocessed cnot'].build_processor()
+    processor2 = Experiment(5)
+    pp_cnot = catalog['postprocessed cnot'].build_experiment()
     processor2.add(0, pp_cnot)
     # It's 100% valid that this 2nd case is blocked
     with pytest.raises(AssertionError):
@@ -69,8 +66,8 @@ def test_processor_composition_mismatch_modes():
     # tests composing a smaller processor into larger one works
     # without breaking simplification (verifies it works with gates based circuits too)
     def sub_size_processor():
-        h_cnot = catalog['heralded cnot'].build_processor()
-        p = Processor('SLOS', m_circuit=4, name='my_example')
+        h_cnot = catalog['heralded cnot'].build_experiment()
+        p = Experiment(4, name='my_example')
         p.add(0, BS.H())
         p.add(0, h_cnot)
         p.add(1, PS(math.pi / 4))
@@ -78,7 +75,7 @@ def test_processor_composition_mismatch_modes():
         return p
 
     smaller_processor = sub_size_processor()
-    p = Processor('SLOS', m_circuit=5, name='to_Which_i_add')
+    p = Experiment(5, name='to_Which_i_add')
     p.add(0, smaller_processor)
 
     assert len(p.components) == 7  # 3 PERMs get added because heralds need to move
@@ -105,24 +102,23 @@ def test_processor_composition_mismatch_modes():
 
 
 def test_processor_add_detector():
-    p = Processor("SLOS", 4)
-    p.add(0, Detector.pnr())
+    p = Experiment(4)
+    p.add(1, Detector.pnr())
     with pytest.raises(UnavailableModeException):
-        p.add(0, PS(phi=0))  # Cannot add an optical component after a detector
+        p.add(1, PS(phi=0))  # Cannot add an optical component after a detector
     with pytest.raises(UnavailableModeException):
-        p.add(0, Detector.pnr())  # Cannot add a detector after a detector
-
-
-def test_remote_processor_creation():
-    rp = RemoteProcessor(rpc_handler=get_rpc_handler_for_tests(), m=8)
-    rp.add(0, BS())
+        p.add(1, Detector.pnr())  # Cannot add a detector after a detector
+    with pytest.raises(UnavailableModeException):
+        p.add([0, 2], BS())  # Cannot add an automatically generated permutation after a detector
+    with pytest.raises(UnavailableModeException):
+        p.add([0, 2], Experiment(BS()))  # Cannot add an automatically generated permutation after a detector
 
 
 def test_processor_composition_ports():
     ls = LogicalState([0, 0])
-    cnot = catalog['postprocessed cnot'].build_processor()
+    cnot = catalog['postprocessed cnot'].build_experiment()
 
-    rp = RemoteProcessor(rpc_handler=get_rpc_handler_for_tests(), m=4)
+    rp = Experiment(4)
     rp.min_detected_photons_filter(2)
     rp.add(0, cnot)
     rp.with_input(ls)
@@ -145,7 +141,7 @@ def test_processor_composition_ports():
 def test_processor_building_feed_forward():
     m = 4
     u = Unitary(Matrix.random_unitary(m), "U0")
-    p = Processor("SLOS", u)
+    p = Experiment(u)
 
     ffm = FFCircuitProvider(1, 0, Unitary(Matrix.random_unitary(1)), name="D2")
 
@@ -170,7 +166,7 @@ def test_processor_building_feed_forward():
 def test_processor_feed_forward_multiple_layers():
     m = 4
     u = Unitary(Matrix.random_unitary(m), "U0")
-    p = Processor("SLOS", u)
+    p = Experiment(u)
     p.add(2, Detector.pnr())
     mzi = catalog["mzi phase last"].build_circuit()
     mzi.name = "U1"
@@ -191,7 +187,7 @@ def test_processor_feed_forward_multiple_layers():
 def test_ff_controlled_circuit_size():
     m = 4
     u = Unitary(Matrix.random_unitary(m), "U0")
-    p = Processor("SLOS", u)
+    p = Experiment(u)
 
     ffm = FFCircuitProvider(1, 0, Circuit(1), name="D2")
     ffm.add_configuration((1,), Circuit(2))  # Can add a larger circuit than the default one before it's used
@@ -204,17 +200,19 @@ def test_ff_controlled_circuit_size():
 
 
 def test_asymmetrical_composition():
-    p = Processor("SLOS", 3)
+    p = Experiment(3)
     p.add(0, BS())
     p.add(1, BS())
     p.add_herald(0, 0, location=PortLocation.OUTPUT)
     p.add_herald(2, 1, location=PortLocation.INPUT)
 
-    p2 = Processor("SLOS", 3)
+    p2 = Experiment(3)
     p2.add(0, BS())
     p2.add(1, BS())
     p2.add_herald(0, 2, location=PortLocation.INPUT)
     p2.add_herald(2, 3, location=PortLocation.OUTPUT)
+    detector_2 = Detector.ppnr(2)
+    p2.add(0, detector_2)
 
     p.add(1, p2)
 
@@ -223,19 +221,23 @@ def test_asymmetrical_composition():
     assert p.in_heralds == {2: 1, 3: 2}
     assert p.heralds == {0: 0, 3: 3}
 
+    assert p._out_mode_type == [ModeType.HERALD, ModeType.CLASSICAL, ModeType.PHOTONIC, ModeType.HERALD]
+
 
 def test_detector_composition():
     detector_2 = Detector.ppnr(2)
     detector_3 = Detector.ppnr(3)
     detector_4 = Detector.ppnr(4)
 
-    p = Processor("SLOS", 3)
+    p = Experiment(4)
     p.add(1, detector_2)
 
-    p2 = Processor("SLOS", 2)
+    p2 = Experiment(2)
     p2.add(0, detector_3)
     p2.add(1, detector_4)
 
     p.add({2: 0, 0: 1}, p2)
 
-    assert p.detectors == [detector_4, detector_2, detector_3]
+    assert p.detectors == [detector_4, detector_2, detector_3, None]
+
+    assert p._out_mode_type == [ModeType.CLASSICAL, ModeType.CLASSICAL, ModeType.CLASSICAL, ModeType.PHOTONIC]

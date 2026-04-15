@@ -31,13 +31,14 @@ import pytest
 from unittest.mock import patch
 
 import perceval as pcvl
-from perceval import BSDistribution, FockState, NoisyFockState, Experiment, FFCircuitProvider
+from perceval import BSDistribution, FockState, NoisyFockState, Experiment, FFCircuitProvider, RemoteProcessor
 from perceval.components import Circuit, BS, PS, catalog, UnavailableModeException, Port, PortLocation, \
     PERM, Detector
 from perceval.utils import BasicState, StateVector, SVDistribution, Encoding, NoiseModel, P
 from perceval.backends import Clifford2017Backend
 from perceval.runtime import Processor
 
+from ._mock_rpc_handler import get_rpc_handler_for_tests
 from .._test_utils import LogChecker, assert_svd_close, assert_bsd_close
 
 
@@ -429,3 +430,8 @@ def test_get_parameters():
     params = e.get_circuit_parameters()
 
     assert set(params.keys()) == {"theta0", "theta1", "theta2"}
+
+
+def test_remote_processor_creation():
+    rp = RemoteProcessor(rpc_handler=get_rpc_handler_for_tests(), m=8)
+    rp.add(0, BS())

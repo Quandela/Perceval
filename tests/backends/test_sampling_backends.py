@@ -27,37 +27,44 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""
-Functions which output the binary representation of objects having a protobuf serializer
-This binary representation loses all knowledge about the type of the input object and have to be deserialized using
-specialized deserialize functions (e.g. deserialize_circuit)
-"""
+import math
+import pytest
 
-from multipledispatch import dispatch
+from perceval.backends import ASamplingBackend, BackendFactory
+from perceval.components import catalog
+from perceval.utils import BasicState
 
-from ._circuit_serialization import serialize_circuit
-from ._detector_serialization import serialize_idetector
-from ._matrix_serialization import serialize_matrix
-from perceval.components.linear_circuit import ACircuit
-from perceval.components.detector import IDetector
-from perceval.utils.matrix import Matrix
+@pytest.mark.long_test
+@pytest.mark.parametrize("backend_name", ["CliffordClifford2017", "SamplingStepper"])
+def test_backend_cnot(backend_name):
+    # Two last modes are ancillaries
+    s00 = BasicState([1, 0, 1, 0, 0, 0])
+    s01 = BasicState([1, 0, 0, 1, 0, 0])
+    s10 = BasicState([0, 1, 1, 0, 0, 0])
+    s11 = BasicState([0, 1, 0, 1, 0, 0])
 
+    expected = [
+        [ s00, s00 ],
+        [ s01, s01 ],
+        [ s10, s11 ],
+        [ s11, s10 ],
+    ]
+    backend: ASamplingBackend = BackendFactory.get_backend(backend_name)
+    cnot = catalog["postprocessed cnot"].build_circuit()
+    backend.set_circuit(cnot)
 
-@dispatch(ACircuit)
-def serialize_binary(circuit: ACircuit) -> bytes:
-    return serialize_circuit(circuit).SerializeToString()
-
-
-@dispatch(Matrix)
-def serialize_binary(matrix: Matrix) -> bytes:
-    return serialize_matrix(matrix).SerializeToString()
-
-
-@dispatch(IDetector)
-def serialize_binary(detector: IDetector) -> bytes:
-    return serialize_idetector(detector).SerializeToString()
-
-
-@dispatch(list)
-def serialize_binary(l: list) -> list[bytes]:
-    return [serialize_binary(o) for o in l]
+    N = 1000
+    for input, output in expected:
+        backend.set_input_state(input)
+        unknown = set()
+        correct = 0
+        for _ in range(N):
+            bs = backend.sample()
+            if bs == output:
+                correct += 1
+            elif bs[4] or bs[5] or bs[0] + bs[1] != 0 or bs[2] + bs[3] != 0:
+                pass # post-processed
+            else:
+                unknown.add(bs)
+        assert len(unknown) == 0
+        assert correct/N == pytest.approx(1/9, abs = 2.5758 * math.sqrt(8/81 / N)), "correct sample proportion out of 99% confidence interval"

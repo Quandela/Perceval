@@ -152,13 +152,7 @@ class BasicState(metaclass=BasicStateMeta):
     def __add__(self, other) -> State | StateVector | BSDistribution:
         return StateVector()
 
-    def __radd__(self, other) -> State | StateVector | BSDistribution:
-        return StateVector()
-
     def __sub__(self, other) -> State | StateVector | BSDistribution:
-        return StateVector()
-
-    def __rsub__(self, other) -> State | StateVector | BSDistribution:
         return StateVector()
 
     @property
@@ -168,24 +162,6 @@ class BasicState(metaclass=BasicStateMeta):
     @property
     def has_annotations(self) -> bool:
         return False
-
-    def separate_state(self) -> list[FockState]:
-        """
-        :return: A list of states where each state represents a collection of indistinguishable photons from the original state
-        """
-
-    def split_state(self) -> dict[int, FockState]:
-        """
-        :return: A dict of states where each state represents a collection of indistinguishable photons from the original state,
-         associated with the noise tag they were defined with.
-        """
-
-    def partition(self, photon_nb: list[int]) -> list[list[FockState]]:
-        """
-        :param photon_nb: a list of photon numbers. The sum of this list must be equal to self.n
-        :return: A list containing all lists of states such that the merge of all these states is self,
-         where each state of the sublists has the number of photons specified in ``photon_nb``.
-        """
 
     def clear_annotations(self) -> FockState:
         """
