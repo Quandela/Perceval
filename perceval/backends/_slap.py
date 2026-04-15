@@ -45,7 +45,7 @@ class SLAPBackend(AStrongSimulationBackend, IFFBackend, ExqaliburBackendWrapper)
 
     def set_circuit(self, circuit: ACircuit):
         super().set_circuit(circuit)  # Computes circuit unitary as _umat
-        # self._slap.reset_feed_forward()
+        self._slap.reset_feed_forward()
         self._slap.set_unitary(self._umat)
 
     def _init_mask(self):

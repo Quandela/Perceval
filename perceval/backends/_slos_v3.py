@@ -32,10 +32,10 @@ from perceval.components import ACircuit
 from perceval.utils.postselect import PostSelect
 from perceval.utils.states import BasicState
 
-from ._abstract_backends import ABackend
+from ._abstract_backends import AStrongSimulationBackend, ExqaliburBackendWrapper
 
 
-class SLOSV3Backend(ABackend):
+class SLOSV3Backend(AStrongSimulationBackend, ExqaliburBackendWrapper):
 
     def __init__(self, mask=None):
         super().__init__()
@@ -47,33 +47,14 @@ class SLOSV3Backend(ABackend):
     def set_circuit(self, circuit: ACircuit):
         super().set_circuit(circuit)  # Computes circuit unitary as _umat
         self._slos.set_unitary(self._umat)
-        if self._circuit and self._input_state:
-            assert self._circuit.m == self._input_state.m, f'Circuit({self._circuit.m}) and state({self._input_state}) size mismatch'
 
     def set_input_state(self, input_state: BasicState):
-        self._input_state = input_state
+        super().set_input_state(input_state)
         self._slos.set_input_state(input_state)
-        if self._circuit and self._input_state:
-            assert self._circuit.m == self._input_state.m, f'Circuit({self._circuit.m}) and state({self._input_state}) size mismatch'
 
     def _init_mask(self):
         super()._init_mask()
         self._slos.set_mask(self._mask)
-
-    def set_mask(self, masks: str | list[str], n = None, at_least_modes = None):
-        if isinstance(masks, str):
-            masks = [masks]
-        mask_length = len(masks[0])
-        for mask in masks:
-            mask = mask.replace("*", " ")
-            assert len(mask) == mask_length, "Inconsistent mask lengths"
-        fsmask = None
-        if masks is not None:
-            if at_least_modes:
-                fsmask = xq.FSMask(mask_length, n or self._input_state.n, masks, at_least_modes)
-            else:
-                fsmask = xq.FSMask(mask_length, n or self._input_state.n, masks)
-        self._slos.set_mask(fsmask)
 
     def set_post_select(self, post_selection: PostSelect):
         self._slos.set_post_select(post_selection)
@@ -97,6 +78,7 @@ class SLOSV3Backend(ABackend):
         return "SLOS_V3"
 
     def all_prob(self, input_state: FockState = None) -> list[float]:
+        self._slos.set_input_state(input_state or self._input_state)
         return self._slos.all_probabilities()
 
     def evolve(self) -> StateVector:
@@ -106,3 +88,6 @@ class SLOSV3Backend(ABackend):
         for output_state, pa in zip(self._slos.get_states(), all_pa):
             res += output_state * pa
         return res
+
+    def get_exqalibur_backend(self):
+        return self._slos

@@ -31,10 +31,10 @@ from perceval.utils import FockState, BSDistribution, StateVector
 from perceval.components import ACircuit
 from perceval.utils.states import BasicState
 
-from ._abstract_backends import AStrongSimulationBackend
+from ._abstract_backends import AStrongSimulationBackend, ExqaliburBackendWrapper
 
 
-class SLOSCPPBackend(AStrongSimulationBackend):
+class SLOSCPPBackend(AStrongSimulationBackend, ExqaliburBackendWrapper):
 
     def __init__(self, mask=None):
         super().__init__()
@@ -87,3 +87,6 @@ class SLOSCPPBackend(AStrongSimulationBackend):
             if self._mask is None or self._mask.match(output_state):
                 res += output_state * pa
         return res
+
+    def get_exqalibur_backend(self):
+        return self._slos
