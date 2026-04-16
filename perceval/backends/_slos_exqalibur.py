@@ -29,19 +29,20 @@
 import exqalibur as xq
 from perceval.utils import FockState, BSDistribution, StateVector
 from perceval.components import ACircuit
+from perceval.utils.postselect import PostSelect
 from perceval.utils.states import BasicState
 
 from ._abstract_backends import AStrongSimulationBackend, ExqaliburBackendWrapper
 
 
-class SLOSCPPBackend(AStrongSimulationBackend, ExqaliburBackendWrapper):
+class SLOSExqaliburBackend(AStrongSimulationBackend, ExqaliburBackendWrapper):
 
     def __init__(self, mask=None):
         super().__init__()
-        self._slos = xq.SLOS()
-        self._fock_space = None
-        if mask is not None:
+        self._slos = xq.SLOS_V3()
+        if mask:
             self.set_mask(mask)
+        self._post_select = None
 
     def set_circuit(self, circuit: ACircuit):
         super().set_circuit(circuit)  # Computes circuit unitary as _umat
@@ -49,30 +50,32 @@ class SLOSCPPBackend(AStrongSimulationBackend, ExqaliburBackendWrapper):
 
     def set_input_state(self, input_state: BasicState):
         super().set_input_state(input_state)
-        if self._fock_space is None or self._fock_space.m != input_state.m or self._fock_space.n != input_state.n:
-            self._fock_space = xq.FSArray(input_state.m, input_state.n, self._mask)
+        self._slos.set_input_state(input_state)
 
     def _init_mask(self):
         super()._init_mask()
         self._slos.set_mask(self._mask)
 
+    def set_post_select(self, post_selection: PostSelect):
+        self._slos.set_post_select(post_selection)
+
     def prob_amplitude(self, output_state: FockState) -> complex:
-        self._slos.set_input_state(self._input_state)
         all_pa = self._slos.all_amplitudes()
-        return all_pa[self._fock_space.find(output_state)]
+        idx = self._slos.get_index(output_state)
+        return all_pa[idx]
+
+    def probability(self, output_state: FockState) -> float:
+        return abs(self.prob_amplitude(output_state)) ** 2
 
     def prob_distribution(self) -> BSDistribution:
-        self._slos.set_input_state(self._input_state)
-
         return self._slos.distribution()
 
     def all_prob_ampli(self) -> list[complex]:
-        self._slos.set_input_state(self._input_state)
         return self._slos.all_amplitudes()
 
     @property
     def name(self) -> str:
-        return "SLOS_CPP"
+        return "SLOS"
 
     def all_prob(self, input_state: FockState = None) -> list[float]:
         self._slos.set_input_state(input_state or self._input_state)
@@ -82,10 +85,8 @@ class SLOSCPPBackend(AStrongSimulationBackend, ExqaliburBackendWrapper):
         self._slos.set_input_state(self._input_state)
         all_pa = self._slos.all_amplitudes()
         res = StateVector()
-        for output_state, pa in zip(self._fock_space, all_pa):
-            # Utterly non-optimized. Mask management should be added in the computation
-            if self._mask is None or self._mask.match(output_state):
-                res += output_state * pa
+        for output_state, pa in zip(self._slos.get_states(), all_pa):
+            res += output_state * pa
         return res
 
     def get_exqalibur_backend(self):

@@ -10,12 +10,12 @@ advancedPath="${scriptPath}/.."
 
 modes=""
 nphotons="4"
-backends="SLOS SLAP SLOS_CPP SLOS_V2 SLOS_V3"
+backends="SLOS_LEGACY SLAP SLOS"
 mask=""
 compute_method=1
 
 # message strings
-USAGESTR="Usage: $0 [--modes/-m] 20 [--nphotons/-n] 10 [--backends/-b] \"SLOS_V2 SLOS_V3\" [--mask/-k] \"1010**\" [--compute/-c] 2"
+USAGESTR="Usage: $0 [--modes/-m] 20 [--nphotons/-n] 10 [--backends/-b] \"SLOS_LEGACY SLOS\" [--mask/-k] \"1010**\" [--compute/-c] 2"
 ERRORSTR="Failed to parse options... exiting."
 
 # option strings

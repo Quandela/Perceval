@@ -162,7 +162,7 @@ def test_log_resources_simulator(mock_info):
     assert SOURCE not in my_dict
     assert NOISE not in my_dict
     assert my_dict[LAYER] == 'Simulator'
-    assert my_dict[BACKEND] == 'SLOS'
+    assert my_dict[BACKEND] == 'SLOS_LEGACY'
     assert my_dict[N] == input_state.n
     assert my_dict[M] == circuit.m
     assert my_dict[METHOD] == 'evolve'
@@ -172,7 +172,7 @@ def test_log_resources_simulator(mock_info):
     assert SOURCE not in my_dict
     assert NOISE not in my_dict
     assert my_dict[LAYER] == 'Simulator'
-    assert my_dict[BACKEND] == 'SLOS'
+    assert my_dict[BACKEND] == 'SLOS_LEGACY'
     assert my_dict[N] == input_state_svd.n_max
     assert my_dict[M] == circuit.m
     assert my_dict[METHOD] == 'probs_svd'

@@ -33,8 +33,6 @@ import perceval as pcvl
 import psutil
 
 from perceval.backends import BACKEND_LIST
-from perceval.backends._slos_v2 import SLOSV2Backend
-from perceval.backends._slos_v3 import SLOSV3Backend
 from perceval.utils.dist_metrics import tvd_dist
 from perceval.utils.postselect import PostSelect
 import exqalibur as xq
@@ -42,9 +40,6 @@ import exqalibur as xq
 from perceval.utils import get_logger
 get_logger().set_level(pcvl.logging.level.warn, pcvl.logging.channel.general)
 # get_logger().set_level(pcvl.logging.level.info, pcvl.logging.channel.general)
-
-# BACKEND_LIST[ "SLOS_V2_PS" ] = SLOSV2Backend
-# BACKEND_LIST[ "SLOS_V3_PS" ] = SLOSV3Backend
 
 def human_readable_size(size, decimal_places=2):
     for unit in ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB']:
@@ -65,8 +60,6 @@ def do_compute(backend, method):
 def set_mask(backend, mask_str, m, n):
     if mask_str:
         backend.set_mask((mask_str + "*" * m)[:m], n)
-    # if backend.name == "SLOS_V2_PS" or backend.name == "SLOS_V3_PS":
-    #     backend.set_post_select(ps)
 
 def bench(m, n, backends, mask_str, method):
     u1 = pcvl.Matrix.random_unitary(m)
@@ -102,7 +95,7 @@ def bench(m, n, backends, mask_str, method):
         bsd = do_compute(backend, method)
         end2 = time.time()
 
-        # if backend_name == "SLOS_V2" or backend_name == "SLOS_V2_PS":
+        # if backend_name == "SLOS_LEGACY":
         #     print(bsd)
         # if refbsd:
         #     tvds[backend_name] = tvd_dist(bsd, refbsd)
@@ -154,7 +147,7 @@ if __name__ == "__main__":
                         help='number of modes')
     parser.add_argument('--memusage', '-u', action='store_true', default=False)
     parser.add_argument('--backends', '-b',
-                        type=str, action='store', default='SLOS SLAP SLOS_CPP SLOS_V2 SLOS_V3',
+                        type=str, action='store', default='SLOS_LEGACY SLAP SLOS',
                         help='backend used')
     parser.add_argument('--mask', '-k',
                         type=str, action='store', default='',

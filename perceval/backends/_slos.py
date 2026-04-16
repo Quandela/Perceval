@@ -112,7 +112,7 @@ class SLOSBackend(AStrongSimulationBackend):
 
     @property
     def name(self) -> str:
-        return "SLOS"
+        return "SLOS_LEGACY"
 
     def _reset(self):
         self._fsms: list[xq.FSMap] = [[]]
