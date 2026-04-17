@@ -146,7 +146,6 @@ class AStrongSimulationBackend(ABackend):
         self._mask = None
         self._mask_n = None
         self.clear_iterator_cache()
-        self._mask = None
 
     def set_input_state(self, input_state: FockState):
         super().set_input_state(input_state)

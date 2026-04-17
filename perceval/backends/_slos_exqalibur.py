@@ -45,12 +45,6 @@ class SLOSExqaliburBackend(AStrongSimulationBackend, ExqaliburBackendWrapper):
         self._post_select = None
 
     def set_circuit(self, circuit: ACircuit):
-        # get around SLOS_V3 crash when m = 1
-        if circuit.m == 1:
-            self._slos = xq.SLOS()
-        else:
-            self._slos = xq.SLOS_V3()
-
         super().set_circuit(circuit)  # Computes circuit unitary as _umat
         self._slos.set_unitary(self._umat)
 
