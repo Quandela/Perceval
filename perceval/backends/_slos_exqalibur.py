@@ -61,11 +61,6 @@ class SLOSExqaliburBackend(AStrongSimulationBackend, ExqaliburBackendWrapper):
 
     def prob_amplitude(self, output_state: FockState) -> complex:
         all_pa = self._slos.all_amplitudes()
-
-        # get around SLOS_V3 crash when m = 1
-        if self._circuit.m == 1:
-            return all_pa[0]
-
         idx = self._slos.get_index(output_state)
         return all_pa[idx]
 
