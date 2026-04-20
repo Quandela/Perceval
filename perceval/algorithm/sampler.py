@@ -322,11 +322,11 @@ class Sampler(AAlgorithm):
     def _set_noise(self, noise: NoiseModel):
         self._processor.noise = noise
 
-    def _set_postselect(self, post_select: PostSelect | None):
-        if post_select is not None:
-            self._processor.set_postselection(post_select)
-        else:
-            self._processor.clear_postselection()
+    def _set_postselect(self, post_select: PostSelect):
+        self._processor.set_postselection(post_select)
+
+    def _reset_postselect(self):
+        self._processor.clear_postselection()
 
     def _it_default_parameters(self) -> dict:
         """Creates an iteration with default parameters"""

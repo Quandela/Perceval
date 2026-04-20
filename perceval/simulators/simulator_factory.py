@@ -26,6 +26,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from perceval.utils.postselect import PostSelect
+
 from .feed_forward_simulator import FFSimulator
 from .simulator_interface import ISimulator
 from .simulator import Simulator, ExqaliburSimulator
@@ -34,7 +36,7 @@ from .loss_simulator import LossSimulator
 from .polarization_simulator import PolarizationSimulator
 from ._simulator_utils import _unitary_components_to_circuit
 from perceval.components import ACircuit, TD, LC, Experiment, AFFConfigurator
-from perceval.backends import ABackend, SLOSBackend, BACKEND_LIST, ExqaliburBackendWrapper
+from perceval.backends import ABackend, SLOSExqaliburBackend, BACKEND_LIST, ExqaliburBackendWrapper
 from perceval.runtime import Processor
 
 
@@ -65,7 +67,7 @@ class SimulatorFactory:
         sim_feed_forward = False
         convert_to_circuit = False
         min_detected_photons = None
-        post_select = None
+        post_select = PostSelect()
         heralds = None
         noise = None
         m = None
@@ -108,7 +110,7 @@ class SimulatorFactory:
 
 
         if backend is None:
-            backend = SLOSBackend()  # The default is SLOS
+            backend = SLOSExqaliburBackend()  # The default is SLOS
         if isinstance(backend, str):
             if backend in BACKEND_LIST:
                 backend = BACKEND_LIST[backend](**kwargs)  # Create an instance of the backend

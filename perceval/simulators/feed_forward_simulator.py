@@ -261,11 +261,8 @@ class FFSimulator(ISimulator):
                     proc.add_port(r, Herald(v), PortLocation.OUTPUT)
 
             if self._postselect.has_condition:
-                if proc.post_select_fn is not None:
-                    postselect = copy.copy(self._postselect)
-                    postselect.merge(proc.post_select_fn)
-                else:
-                    postselect = self._postselect
+                postselect = copy.copy(self._postselect)
+                postselect.merge(proc.post_select_fn)
                 proc.set_postselection(postselect)
 
             # We need to retrieve the new heralds as they are actually counting user photons

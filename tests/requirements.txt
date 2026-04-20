@@ -4,3 +4,4 @@ pytest-benchmark
 flake8
 responses
 pytest-responses
+flaky

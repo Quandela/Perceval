@@ -152,13 +152,12 @@ class AProcessor(ABC):
     def post_select_fn(self):
         return self.experiment.post_select_fn
 
-    def set_postselection(self, postselect: PostSelect):
+    def set_postselection(self, postselect: PostSelect | str):
         r"""
         Set a logical post-selection function. Along with the heralded modes, this function has an impact
         on the logical performance of the processor
 
-        :param postselect: Sets a post-selection function. Its signature must be `func(s: BasicState) -> bool`.
-            If None is passed as parameter, removes the previously defined post-selection function.
+        :param postselect: Sets a post-selection function.
         """
         self.experiment.set_postselection(postselect)
 
@@ -177,9 +176,7 @@ class AProcessor(ABC):
         for m, v in self.heralds.items():
             if state[m] != v:
                 return False
-        if self.experiment.post_select_fn is not None:
-            return self.experiment.post_select_fn(state)
-        return True
+        return self.experiment.post_select_fn(state)
 
     def set_circuit(self, circuit: ACircuit) -> AProcessor:
         r"""

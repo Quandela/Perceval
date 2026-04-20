@@ -112,7 +112,7 @@ class SLOSBackend(AStrongSimulationBackend):
 
     @property
     def name(self) -> str:
-        return "SLOS"
+        return "SLOS_LEGACY"
 
     def _reset(self):
         self._fsms: list[xq.FSMap] = [[]]
@@ -192,6 +192,9 @@ class SLOSBackend(AStrongSimulationBackend):
         result = self._state_mapping[self._input_state].coefs[output_idx, 0] * math.sqrt(output_state.prodnfact() / self._input_state.prodnfact())
         return result if self._symb else complex(result)
 
+    def all_prob_ampli(self) -> list[complex]:
+        return [ v * math.sqrt(fs.prodnfact() / self._input_state.prodnfact()) for (v, fs) in zip(self._state_mapping[self._input_state].coefs, self._get_iterator(self._input_state))]
+
     def prob_distribution(self) -> BSDistribution:
         istate = self._input_state
         c = self._state_mapping[istate].coefs.reshape(self._fsas[istate.n].count())
@@ -202,7 +205,7 @@ class SLOSBackend(AStrongSimulationBackend):
             bsd.add(output_state, probability)
         return bsd
 
-    def all_prob(self, input_state: FockState = None):
+    def all_prob(self, input_state: FockState = None) -> list[float]:
         """SLOS specific signature, to enhance optimization in some computations"""
         if input_state is not None:
             self.set_input_state(input_state)

@@ -31,6 +31,7 @@ from perceval.simulators import SimulatorFactory, Simulator, DelaySimulator, Los
 from perceval.components import BS, PBS, Unitary, PS, TD, LC
 from perceval.runtime import Processor
 from perceval.backends._slos import SLOSBackend
+from perceval.backends._slos_exqalibur import SLOSExqaliburBackend
 from perceval.backends._naive import NaiveBackend
 from perceval.utils import BasicState
 
@@ -41,7 +42,7 @@ def test_create_simulator_from_circuit():
     c = BS()
     simu = SimulatorFactory.build(c)
     assert isinstance(simu, Simulator)
-    assert isinstance(simu._backend, SLOSBackend)  # Default backend is SLOS
+    assert isinstance(simu._backend, SLOSExqaliburBackend)  # Default backend is SLOS
     assert simu._backend._circuit == c
 
     simu = SimulatorFactory.build(c, SLOSBackend())
@@ -50,7 +51,7 @@ def test_create_simulator_from_circuit():
 
     simu = SimulatorFactory.build(c, "SLOS")
     assert isinstance(simu, Simulator)
-    assert isinstance(simu._backend, SLOSBackend)
+    assert isinstance(simu._backend, SLOSExqaliburBackend)
 
     simu = SimulatorFactory.build(c, "Naive")
     assert isinstance(simu, Simulator)
@@ -62,7 +63,7 @@ def test_create_simulator_from_polarized_circuit():
     simu = SimulatorFactory.build(c2)
     assert isinstance(simu, PolarizationSimulator)
     assert isinstance(simu._simulator, Simulator)
-    assert isinstance(simu._simulator._backend, SLOSBackend)
+    assert isinstance(simu._simulator._backend, SLOSExqaliburBackend)
     # PolarizationSimulator prepares _upol and the circuit is set only when a polarized input is set
     assert np.allclose(simu._upol, c2.compute_unitary())
     simu.probs(BasicState('|{P:H},0>'))
@@ -75,7 +76,7 @@ def test_create_simulator_from_components():
                  ((0,1), BS())]
     simu = SimulatorFactory.build(cp_list_1, "SLOS")
     assert isinstance(simu, Simulator)
-    assert isinstance(simu._backend, SLOSBackend)
+    assert isinstance(simu._backend, SLOSExqaliburBackend)
 
     cp_list_2 = [((0,1), BS()),
                  ((1,), TD(dt=2)),
@@ -91,7 +92,7 @@ def test_create_simulator_from_components():
     simu = SimulatorFactory.build(cp_list_3)
     assert isinstance(simu, LossSimulator)
     assert isinstance(simu._simulator, Simulator)
-    assert isinstance(simu._simulator._backend, SLOSBackend)
+    assert isinstance(simu._simulator._backend, SLOSExqaliburBackend)
 
 
 def test_create_simulator_from_complex_processor():
