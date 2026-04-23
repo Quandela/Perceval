@@ -210,7 +210,7 @@ def test_physical_perf():
 def test_with_proc():
     proc = Processor("SLOS", 6)
 
-    cfg = FFCircuitProvider(2, 0, Circuit(4)).add_configuration((0, 1), catalog['postprocessed cnot'].build_processor())
+    cfg = FFCircuitProvider(2, 0, Circuit(4)).add_configuration((0, 1), catalog['postprocessed cnot'].build_experiment())
     cnot_perf = 1 / 9
     proc.add(0, BS())
     proc.add(0, detector)
@@ -232,7 +232,7 @@ def test_with_proc():
     # Same with heralded processor as default circuit
     proc = Processor("SLOS", 6)
 
-    cfg = FFCircuitProvider(2, 0, catalog['postprocessed cnot'].build_processor())
+    cfg = FFCircuitProvider(2, 0, catalog['postprocessed cnot'].build_experiment())
     cfg.add_configuration((1, 0), Circuit(4))
 
     cnot_perf = 1 / 9

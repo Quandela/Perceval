@@ -971,7 +971,7 @@ class ExqaliburSimulator(Simulator):
 
     @Simulator.precision.setter
     def precision(self, value: float):
-        super().precision = value
+        Simulator.precision.fset(self, value)
         self._sim.rel_precision = value
 
     @property
