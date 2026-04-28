@@ -37,6 +37,7 @@ from packaging.version import Version
 from .._test_utils import assert_circuits_eq, assert_experiment_equals, LogChecker, assert_compiled_circuit_equals
 from perceval.components import ACircuit, Circuit, BSLayeredPPNR, Detector, BS, PS, TD, LC, Port, Herald, Experiment, \
     catalog, FFConfigurator, FFCircuitProvider, CompiledCircuit
+from perceval.components.compiled_circuit import CompiledCircuitVersion
 from perceval.components.core_catalog import MZIPhaseFirst
 from perceval.utils import Matrix, E, P, BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, StateVector, \
     NoiseModel, PostSelect, Encoding
@@ -268,8 +269,35 @@ def test_detector_serialization(detector):
             "Wrong deserialized detector parameters"
 
 
+def get_cc_version():
+    res = CompiledCircuitVersion()
+    res.hardware_version = Version("0.1.0")
+    res.carac_version = Version("2.7")
+    res.user_input_mapping = [ 0, 1, 4 ]
+    res.user_output_mapping = [ 1, 4, 3 ]
+    res.unused_inputs_mapping = [ 0, 5, 2 ]
+    res.user_input_state = BasicState("|1, 0, 1>")
+    res.free_phase_at_input = [ 2, 3, 4 ]
+    res.free_phase_at_output = [ 0, 2, 5 ]
+    return res
+
+def test_compiled_circuit_version_serialization():
+    cc_version = get_cc_version()
+    v_ser = serialize(cc_version)
+    v_deser = deserialize(v_ser)
+    assert v_deser.hardware_version == cc_version.hardware_version
+    assert v_deser.carac_version == cc_version.carac_version
+    assert v_deser.user_input_state == cc_version.user_input_state
+    assert v_deser.user_output_mapping == cc_version.user_output_mapping
+    assert v_deser.unused_inputs_mapping == cc_version.unused_inputs_mapping
+    assert v_deser.user_input_state == cc_version.user_input_state
+    assert v_deser.free_phase_at_input == cc_version.free_phase_at_input
+    assert v_deser.free_phase_at_output == cc_version.free_phase_at_output
+
+    assert v_deser == cc_version
+
 def test_experiment_serialization():
-    compiled_circuit = CompiledCircuit("chip name", 2, [], Version("1.0"))
+    compiled_circuit = CompiledCircuit("chip name", 2, [], get_cc_version())
 
     # Empty experiment
     e = Experiment()
@@ -318,9 +346,8 @@ def test_experiment_serialization():
     e_2 = deserialize(ser_e)
     assert_experiment_equals(e, e_2)
 
-
 def test_compiled_circuit_serialization():
-    circuit = CompiledCircuit("chip name", MZIPhaseFirst().build_circuit(), [0., 1.], Version("1.0"))
+    circuit = CompiledCircuit("chip name", MZIPhaseFirst().build_circuit(), [0., 1.], get_cc_version())
     c_ser = serialize(circuit)
     c_deser = deserialize(c_ser)
     assert_compiled_circuit_equals(circuit, c_deser)

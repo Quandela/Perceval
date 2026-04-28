@@ -29,7 +29,7 @@
 
 from multipledispatch import dispatch
 
-from perceval.components.compiled_circuit import CompiledCircuit
+from perceval.components.compiled_circuit import CompiledCircuit, CompiledCircuitVersion
 from perceval.serialization import _schema_circuit_pb2 as pb
 from perceval.components import ACircuit, Circuit, AComponent, Herald, Port
 import perceval.components.unitary_components as comp
@@ -210,13 +210,26 @@ def serialize_circuit(circuit: ACircuit) -> pb.Circuit:
     return pb_circuit
 
 
+def serialize_compiled_circuit_version(circuit_version: CompiledCircuitVersion) -> pb.CompiledCircuitVersion:
+    pb_circuit_version = pb.CompiledCircuitVersion()
+    pb_circuit_version.hardware_version = str(circuit_version.hardware_version)
+    pb_circuit_version.carac_version = str(circuit_version.carac_version)
+    pb_circuit_version.user_input_mapping.extend(circuit_version.user_input_mapping)
+    pb_circuit_version.user_output_mapping.extend(circuit_version.user_output_mapping)
+    pb_circuit_version.unused_inputs_mapping.extend(circuit_version.unused_inputs_mapping)
+    pb_circuit_version.user_input_state = str(circuit_version.user_input_state)
+    pb_circuit_version.free_phase_at_input.extend(circuit_version.free_phase_at_input)
+    pb_circuit_version.free_phase_at_output.extend(circuit_version.free_phase_at_output)
+    return pb_circuit_version
+
+
 def serialize_compiled_circuit(circuit: CompiledCircuit) -> pb.CompiledCircuit:
     pb_circuit = pb.CompiledCircuit()
     if circuit.name != Circuit.DEFAULT_NAME:
         pb_circuit.name = circuit.name
     pb_circuit.n_mode = circuit.m
     pb_circuit.parameters.extend(circuit.parameters)
-    pb_circuit.version = str(circuit.version)
+    pb_circuit.version.CopyFrom(serialize_compiled_circuit_version(circuit.version))
     return pb_circuit
 
 
