@@ -27,11 +27,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import dataclasses, packaging, uuid
+import dataclasses, packaging
 
 from perceval.components.linear_circuit import ACircuit
 from perceval.utils.matrix import Matrix
-from perceval.utils.states import BasicState
+from perceval.utils.states import FockState
 
 @dataclasses.dataclass
 class CompiledCircuitVersion:
@@ -44,7 +44,7 @@ class CompiledCircuitVersion:
     unused_inputs_mapping: list[int] = dataclasses.field(default_factory=list)
 
     # Compilation options
-    user_input_state = BasicState()
+    user_input_state = FockState()
     free_phase_at_input: list[int] = dataclasses.field(default_factory=list)
     free_phase_at_output: list[int] = dataclasses.field(default_factory=list)
 
