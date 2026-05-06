@@ -30,7 +30,7 @@
 from multipledispatch import dispatch
 
 from perceval.components import Experiment, Herald, Port, APort, IDetector, AComponent
-from perceval.serialization import _schema_circuit_pb2 as pb
+from exqalibur.serialization import circuit_pb2 as pb
 from perceval.serialization import serialize
 from perceval.serialization._circuit_serialization import serialize_port, serialize_herald, ComponentSerializer
 from perceval.serialization._constants import VALUE_NOT_SET

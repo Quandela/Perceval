@@ -28,7 +28,7 @@
 # SOFTWARE.
 from multipledispatch import dispatch
 
-from perceval.serialization import _schema_circuit_pb2 as pb
+from exqalibur.serialization import circuit_pb2 as pb
 from perceval.components import BSLayeredPPNR, Detector
 
 
