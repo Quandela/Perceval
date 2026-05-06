@@ -475,13 +475,17 @@ class Unitary(ACircuit):
         return Unitary(matrix)
 
     @staticmethod
-    def fourier(m: int) -> "Unitary": # Python 3.11 : Replace using Self typing
+    def fourier(m: int, adjoint: bool = False) -> "Unitary": # Python 3.11 : Replace using Self typing
         r"""Static method generating a Fourier interferometer unitary.
 
-        :param m: Number of modes in random unitary.
+        :param m: Number of modes in Fourier unitary.
+        :param adjoint: Whether to return adjoint Fourier unitary.
         :return: a Unitary circuit component
         """
         factor = 2j * np.pi / m
+        if adjoint:
+            factor *= -1
+
         indices = np.arange(m)
         matrix = np.exp(factor * np.outer(indices, indices))
         matrix /= np.sqrt(m)
