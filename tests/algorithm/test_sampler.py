@@ -43,10 +43,11 @@ Sampler.PROBS_SIMU_SAMPLE_COUNT = 1000
 def test_sampler_standard(backend_name):
     TRANSMITTANCE = 0.9
     noise_model = NoiseModel(brightness=TRANSMITTANCE)
-    p = catalog['postprocessed cnot'].build_processor(backend=backend_name)
-    p.noise = noise_model
-    p.min_detected_photons_filter(0)
-    p.with_input(pcvl.BasicState([1, 0, 1, 0]))
+    e = catalog['postprocessed cnot'].build_experiment()
+    e.noise = noise_model
+    e.min_detected_photons_filter(0)
+    e.with_input(pcvl.BasicState([1, 0, 1, 0]))
+    p = Processor(backend_name, e)
     sampler = Sampler(p)
     probs = sampler.probs()
     assert probs['results'][pcvl.BasicState([1, 0, 1, 0])] == pytest.approx(1)
@@ -201,7 +202,7 @@ def test_sampler_iterator(backend_name):
 
 
 def test_iterator_with_heralds():
-    c = pcvl.catalog['postprocessed cnot'].build_processor()
+    c = pcvl.catalog['postprocessed cnot'].build_experiment()
 
     processor = pcvl.Processor("SLOS")
     processor.add(0, c)

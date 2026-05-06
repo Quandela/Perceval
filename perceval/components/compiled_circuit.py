@@ -27,12 +27,30 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from packaging.version import Version
+import dataclasses, packaging
+
 from perceval.components.linear_circuit import ACircuit
 from perceval.utils.matrix import Matrix
+from perceval.utils.states import FockState
+
+@dataclasses.dataclass
+class CompiledCircuitVersion:
+    hardware_version: packaging.version.Version = packaging.version.Version('0')
+    carac_version: packaging.version.Version = packaging.version.Version('0')
+
+    # User circuit mapping
+    user_input_mapping: list[int] = dataclasses.field(default_factory=list)
+    user_output_mapping: list[int] = dataclasses.field(default_factory=list)
+    unused_inputs_mapping: list[int] = dataclasses.field(default_factory=list)
+
+    # Compilation options
+    user_input_state = FockState()
+    free_phase_at_input: list[int] = dataclasses.field(default_factory=list)
+    free_phase_at_output: list[int] = dataclasses.field(default_factory=list)
+
 
 class CompiledCircuit(ACircuit):
-    def __init__(self, name: str, template_or_size: ACircuit | int, parameters: list[float], version: Version | None = None):
+    def __init__(self, name: str, template_or_size: ACircuit | int, parameters: list[float], version: CompiledCircuitVersion | None = None):
         m = template_or_size if isinstance(template_or_size, int) else template_or_size.m
         template = template_or_size if isinstance(template_or_size, ACircuit) else None
         super().__init__(m, name)

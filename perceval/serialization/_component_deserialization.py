@@ -34,7 +34,7 @@ from perceval.serialization._matrix_serialization import deserialize_pb_matrix
 import perceval.components.unitary_components as comp
 import perceval.components.non_unitary_components as nu
 from perceval.components.feed_forward_configurator import FFConfigurator, FFCircuitProvider
-from perceval.components.compiled_circuit import CompiledCircuit
+from perceval.components.compiled_circuit import CompiledCircuit, CompiledCircuitVersion
 from perceval.utils import BasicState
 
 
@@ -136,11 +136,25 @@ def deserialize_ff_circuit_provider(m: int, serial_ffcp, known_params: dict = No
         ffcp.block_circuit_size()
     return ffcp
 
+def deserialize_ccv(serial_ccv, known_params: dict = None) -> CompiledCircuitVersion:
+    compiled_circuit_version = CompiledCircuitVersion()
+
+    compiled_circuit_version.hardware_version      = Version(serial_ccv.hardware_version)
+    compiled_circuit_version.carac_version         = Version(serial_ccv.carac_version)
+    compiled_circuit_version.user_input_mapping    = serial_ccv.user_input_mapping
+    compiled_circuit_version.user_output_mapping   = serial_ccv.user_output_mapping
+    compiled_circuit_version.unused_inputs_mapping = serial_ccv.unused_inputs_mapping
+    compiled_circuit_version.user_input_state      = BasicState(serial_ccv.user_input_state)
+    compiled_circuit_version.free_phase_at_input   = serial_ccv.free_phase_at_input
+    compiled_circuit_version.free_phase_at_output  = serial_ccv.free_phase_at_output
+
+    return compiled_circuit_version
+
 
 def deserialize_cc(serial_cc, known_params: dict = None) -> CompiledCircuit:
     name = serial_cc.name
     m = serial_cc.n_mode
-    version = Version(serial_cc.version)
+    version = deserialize_ccv(serial_cc.version)
     parameters = serial_cc.parameters
 
     if not name:

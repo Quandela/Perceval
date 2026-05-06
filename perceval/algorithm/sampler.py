@@ -26,15 +26,15 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from numbers import Number
 
 from .abstract_algorithm import AAlgorithm
+from .parameter_iterator import ParameterIterator
+
 from perceval.utils import samples_to_sample_count, samples_to_probs, sample_count_to_samples, \
     sample_count_to_probs, probs_to_samples, probs_to_sample_count
 from perceval.utils.logging import get_logger, channel
 from perceval.runtime.abstract_processor import AProcessor
 from perceval.runtime import Job, RemoteJob, LocalJob
-from perceval.utils import BasicState, NoiseModel, PostSelect
 
 
 class Sampler(AAlgorithm):
@@ -64,18 +64,24 @@ class Sampler(AAlgorithm):
         'samples': {'probs': probs_to_samples, 'sample_count': sample_count_to_samples}
     }
 
-    _ITERATOR_TYPE_CHECK: dict[str, type] = {'circuit_params': dict,
-                                             'input_state': BasicState,
-                                             'min_detected_photons': int,
-                                             'max_samples': int,
-                                             'max_shots': int,
-                                             'noise': NoiseModel,
-                                             'postselect': PostSelect}
-
     def __init__(self, processor: AProcessor, **kwargs):
         super().__init__(processor, **kwargs)
-        self._iterator = []
         self._max_samples = None
+        self._iterator = ParameterIterator(processor.experiment, self._max_shots, self._max_samples)
+
+    def _input_available(self) -> bool:
+        if not self._iterator.input_available():
+            return False
+
+        # Further checks using the Processor
+        try:
+            for iter_params in self._iterator.iterations:
+                if 'input_state' in iter_params:
+                    self._processor.check_input(iter_params['input_state'])
+            return True
+        except Exception as e:
+            get_logger().error(e, channel.user)
+            return False
 
     def _get_primitive_converter(self, method: str):
         available_primitives = self._processor.available_commands
@@ -87,20 +93,6 @@ class Sampler(AAlgorithm):
                 if k in available_primitives:
                     return k, converter
         return None, None
-
-    def _input_available(self) -> bool:
-        if self._processor.input_state is not None:  # Default input will cover all cases
-            return True
-        elif len(self._iterator) == 0:  # ...else you need at least one iteration...
-            return False
-        else:
-            for it in self._iterator:  # ...and all iterations must contain an input state
-                if 'input_state' not in it:
-                    return False
-        return True
-
-    def _check_sample_shot_iterator(self) -> bool:
-        return all("max_samples" in it or "max_shots" in it for it in self._iterator)
 
     # Job creation methods
     def _create_job(self, method: str):
@@ -170,34 +162,6 @@ class Sampler(AAlgorithm):
         """
         return self._create_job("probs")
 
-    # Iterator construction methods
-    def _add_iteration(self, iter_params):
-        self._check_iteration(iter_params)
-        self._iterator.append(iter_params)
-
-    def _check_iteration(self, iter_params):
-        assert isinstance(iter_params, dict), "Iteration parameters must be a valid dictionary"
-        for key, val in iter_params.items():
-            if key in self._ITERATOR_TYPE_CHECK:
-                correct_type = self._ITERATOR_TYPE_CHECK[key]
-                assert isinstance(val, correct_type), \
-                    (f"Iteration: unexpected type for {key}, expected {correct_type.__name__},"
-                     f" received {type(val).__name__}")
-            else:
-                raise NotImplementedError(f"Iteration: received unknown key {key}")
-
-            # Further checks
-            if key == 'circuit_params':
-                for param_name, param_value in val.items():
-                    assert isinstance(param_value, Number), \
-                        f"Iteration: circuit parameters have to be numerical values (got {param_value})"
-                    assert param_name in self._processor.get_circuit_parameters(), \
-                        f"Iteration: circuit parameter {param_name} does not exist in processor"
-            elif key == 'input_state':
-                assert val.m == self._processor.m, \
-                    f"Iteration: input state and processor size mismatch (processor size is {self._processor.m})"
-                self._processor.check_input(iter_params['input_state'])
-
     def add_iteration(self, **kwargs):
         """
         Add a single iteration to future jobs.
@@ -213,7 +177,7 @@ class Sampler(AAlgorithm):
            - postselect: PostSelect
         """
         get_logger().info("Add 1 iteration to Sampler", channel.general)
-        self._add_iteration(kwargs)
+        self._iterator.add_iteration(**kwargs)
 
     def add_iteration_list(self, iterations: list[dict]):
         """
@@ -221,14 +185,14 @@ class Sampler(AAlgorithm):
         """
         get_logger().info(f"Add {len(iterations)} iterations to Sampler", channel.general)
         for iter_params in iterations:
-            self._add_iteration(iter_params)
+            self._iterator.add_iteration(**iter_params)
 
     def clear_iterations(self):
         """
         Clear all prepared iterations.
         """
         get_logger().info(f"Clear all iterations in Sampler", channel.general)
-        self._iterator = []
+        self._iterator.clear_iterations()
 
     @property
     def n_iterations(self):
@@ -249,97 +213,41 @@ class Sampler(AAlgorithm):
 
     # Local iteration methods mimic remote iterations for interchangeability purpose
     def _probs_iterate_locally(self, max_shots: int = None, progress_callback: callable = None):
-        old_shots = self._max_shots
-        if max_shots is not None:
-            self._max_shots = max_shots
+        default_experiment = self._processor.experiment
 
-        default_it = self._it_default_parameters()
         results = {'results_list': []}
         for idx, it in enumerate(self._iterator):
-            self._apply_iteration(default_it | it)
-            precision = None if self._max_shots is None else min(1e-6, 1 / self._max_shots)
+            max_shots_local = max_shots or it.max_shots
+            precision = None if max_shots_local is None else min(1e-6, 1 / max_shots_local)
+            self._processor.experiment = it.experiment
             results['results_list'].append(self._processor.probs(precision))
-            results['results_list'][-1]['iteration'] = it
+            results['results_list'][-1]['iteration'] = it.parameters
             if progress_callback is not None:
                 progress_callback((idx + 1) / len(self._iterator))
 
-        self._apply_iteration(default_it)
-        self._max_shots = old_shots
+        self._processor.experiment = default_experiment
+
         return results
 
     def _samples_iterate_locally(self, max_shots: int = None, max_samples: int = None,
                                  progress_callback: callable = None):
-        if max_samples is None and max_shots is None and not self._check_sample_shot_iterator():
+        if max_samples is None and max_shots is None and not self._iterator.check_sample_shot_iterator():
             raise RuntimeError("Local sampling simulation requires max_samples and/or max_shots parameters")
 
-        old_samples = self._max_samples
-        old_shots = self._max_shots
         if max_samples is None:
             max_samples = self.SAMPLES_MAX_COUNT
-        self._max_samples = max_samples
-        self._max_shots = max_shots
 
-        default_it = self._it_default_parameters()
+        default_experiment = self._processor.experiment
+
         results = {'results_list': []}
         for idx, it in enumerate(self._iterator):
-            self._apply_iteration(default_it | it)
-            results['results_list'].append(self._processor.samples(self._max_samples, self._max_shots))
-            results['results_list'][-1]['iteration'] = it
+            max_samples_local = it.max_samples or max_samples
+            self._processor.experiment = it.experiment
+            results['results_list'].append(self._processor.samples(max_samples_local, it.max_shots))
+            results['results_list'][-1]['iteration'] = it.parameters
             if progress_callback is not None:
                 progress_callback((idx + 1) / len(self._iterator))
 
-        self._apply_iteration(default_it)  # restore default parameters
-        self._max_samples = old_samples
-        self._max_shots = old_shots
+        self._processor.experiment = default_experiment
+
         return results
-
-    def _apply_iteration(self, it):
-        for key, val in it.items():
-            try:
-                self.__getattribute__(f"_set_{key}")(val)
-            except AttributeError:
-                pass
-
-    def _set_circuit_params(self, params: dict):
-        if params:
-            circuit_params = self._processor.get_circuit_parameters()
-            for name, value in params.items():
-                if value is not None:
-                    circuit_params[name].set_value(value)
-
-    def _set_input_state(self, input_state: BasicState):
-        self._processor.with_input(input_state)
-
-    def _set_min_detected_photons(self, count: int):
-        self._processor.min_detected_photons_filter(count)
-
-    def _set_max_samples(self, val: int):
-        self._max_samples = val
-
-    def _set_max_shots(self, val: int):
-        self._max_shots = val
-
-    def _set_noise(self, noise: NoiseModel):
-        self._processor.noise = noise
-
-    def _set_postselect(self, post_select: PostSelect):
-        self._processor.set_postselection(post_select)
-
-    def _reset_postselect(self):
-        self._processor.clear_postselection()
-
-    def _it_default_parameters(self) -> dict:
-        """Creates an iteration with default parameters"""
-        input_state = self._processor.input_state
-        if isinstance(input_state, BasicState) and self._processor.heralds:
-            # If it's not a BasicState, the user needs to provide all the modes
-            input_state = BasicState([v for m, v in enumerate(input_state) if m not in self._processor.heralds])
-
-        return {"circuit_params": {k: v._value for k, v in self._processor.get_circuit_parameters().items()},
-                "input_state": input_state,
-                "min_detected_photons": self._processor.experiment.min_photons_filter,
-                "max_samples": self._max_samples,
-                "max_shots": self._max_shots,
-                "noise": self._processor.noise,
-                "postselect": self._processor.post_select_fn
-                }
