@@ -49,7 +49,6 @@ from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_sta
     _list_merge, _separate_state
 from ._simulate_detectors import simulate_detectors
 from .simulator_interface import ISimulator
-from .. import Circuit
 
 
 class Simulator(ISimulator):
