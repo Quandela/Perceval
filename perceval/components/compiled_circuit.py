@@ -27,7 +27,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import dataclasses, packaging
+import dataclasses
+from packaging.version import Version
 
 from perceval.components.linear_circuit import ACircuit
 from perceval.utils.matrix import Matrix
@@ -35,8 +36,8 @@ from perceval.utils.states import FockState
 
 @dataclasses.dataclass
 class CompiledCircuitVersion:
-    hardware_version: packaging.version.Version = packaging.version.Version('0')
-    carac_version: packaging.version.Version = packaging.version.Version('0')
+    hardware_version: Version = Version('0')
+    carac_version: Version = Version('0')
 
     # User circuit mapping
     user_input_mapping: list[int] = dataclasses.field(default_factory=list)

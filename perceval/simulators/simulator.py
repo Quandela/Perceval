@@ -28,19 +28,22 @@
 # SOFTWARE.
 import sys
 from collections import defaultdict
+from typing import Callable
 
 from exqalibur import SimpleSourceIterator
 from multipledispatch import dispatch
 from numbers import Number
 from scipy.sparse import csc_array, csr_array
+import exqalibur as xq
 
-from perceval.backends import AStrongSimulationBackend
+from perceval.backends import AStrongSimulationBackend, ExqaliburBackendWrapper
 from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType, check_heralds_detectors, Source
 from perceval.utils import BasicState, FockState, NoisyFockState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, \
     DensityMatrix, post_select_distribution, post_select_statevector, partial_progress_callable
 from perceval.utils.density_matrix_utils import extract_upper_triangle
 from perceval.utils.logging import get_logger
 from perceval.runtime import cancel_requested
+from perceval.serialization import serialize_binary
 
 from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping, _split_by_photon_and_tag_count, \
     _list_merge, _separate_state
@@ -893,3 +896,119 @@ class Simulator(ISimulator):
         if extra_parameters:
             my_dict.update(extra_parameters)
         get_logger().log_resources(my_dict)
+
+
+
+class ExqaliburSimulator(Simulator):
+    """
+    Simulates a probability distribution. It takes noise and post-processing (heralds,
+    post-selection, detector characteristics) into account.
+
+    This particular simulator runs exclusively using exqalibur methods for an even faster computation.
+
+    :param backend: Instance of a probability-capable exqalibur-wrapped back-end
+    """
+
+    def __init__(self, backend: ExqaliburBackendWrapper):
+        assert isinstance(backend, ExqaliburBackendWrapper) and isinstance(backend, AStrongSimulationBackend),\
+            "The given backend must be an Exqalibur backend wrapper and a Probability backend."
+        super().__init__(backend)
+        self._sim = xq.StrongSimulator(backend.get_exqalibur_backend())
+
+    def _set_detectors(self, detector_list: list[IDetector | None] | None):
+        if detector_list is None:
+            self._sim.set_detectors([])
+        else:
+            l = []
+            for d in detector_list:
+                l.append(serialize_binary(d) if d is not None else "")
+            self._sim.set_detectors(l)
+
+    def keep_heralds(self, value: bool):
+        super().keep_heralds(value)
+        self._sim.keep_heralds = value
+
+    def compute_physical_logical_perf(self, value: bool):
+        super().compute_physical_logical_perf(value)
+        self._sim.differentiate_perf = value
+
+    def set_min_detected_photons_filter(self, value: int):
+        super().set_min_detected_photons_filter(value)
+        self._sim.min_photons_filter = value
+
+    def set_heralds(self, value: dict[int, int]):
+        super().set_heralds(value)
+        self._sim.heralds = value
+
+    def set_selection(self,
+                      min_detected_photons_filter: int = None,
+                      postselect: PostSelect = None,
+                      heralds: dict[int, int] = None):
+        super().set_selection(min_detected_photons_filter, postselect, heralds)
+        self._sim.postselect = postselect or PostSelect()
+
+    def set_postselection(self, postselect: PostSelect):
+        super().set_postselection(postselect)
+        self._sim.postselect = postselect
+
+    def clear_postselection(self):
+        super().clear_postselection()
+        self._sim.postselect = PostSelect()
+
+    @property
+    def callback_interval(self):
+        """
+        The minimal time between two callback calls, in seconds.
+        Too small values may involve slowdown, while too big values may involve imprecise progress monitoring.
+        """
+        return self._sim.callback_interval
+
+    @callback_interval.setter
+    def callback_interval(self, value):
+        self._sim.callback_interval = value
+
+    @Simulator.precision.setter
+    def precision(self, value: float):
+        Simulator.precision.fset(self, value)
+        self._sim.rel_precision = value
+
+    @property
+    def logical_perf(self):
+        return self._sim.get_logical_perf()
+
+    def probs_svd(self,
+                input_dist: SVDistribution | tuple[Source, FockState],
+                detectors: list[IDetector | None] = None,
+                progress_callback: Callable[[float, str], None | dict] = None) -> dict:
+        """
+        Compute the probability distribution from a SVDistribution input and as well as performance scores
+
+        :param input_dist: A state vector distribution describing the input to simulate
+        :param detectors: An optional list of detectors
+        :param progress_callback: A function with the signature `func(progress: float, message: str)`
+
+        :return: A dictionary of the form { "results": BSDistribution, "physical_perf": float, "logical_perf": float }
+
+            * results is the post-selected output state distribution
+            * physical_perf is the performance computed from the detected photon filter
+            * logical_perf is the performance computed from the post-selection
+        """
+        if not check_heralds_detectors(self._heralds, detectors):
+            return self.format_results(BSDistribution(), 1, 0)
+
+        if progress_callback is not None:
+            self._sim.progress_callback = lambda prog, msg: cancel_requested(progress_callback(prog, msg))
+        else:
+            self._sim.progress_callback = None
+
+        self._set_detectors(detectors)
+
+        if isinstance(input_dist, tuple):
+            n = input_dist[1].n
+            res = self._sim.probs_svd(input_dist[0]._source, input_dist[1])
+        else:
+            n = input_dist.n_max
+            res = self._sim.probs_svd(input_dist)
+
+        self.log_resources(sys._getframe().f_code.co_name, {'n': n})
+        return self.format_results(res, self._sim.get_physical_perf(), self._sim.get_logical_perf())

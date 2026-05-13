@@ -27,6 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from abc import ABC, abstractmethod
+from typing import Any
 
 from perceval.components import ACircuit, IDetector
 from perceval.utils import BSDistribution, StateVector, SVDistribution, PostSelect, post_select_distribution, \
@@ -121,7 +122,7 @@ class ISimulator(ABC):
         """
         self._compute_physical_logical_perf = value
 
-    def format_results(self, results: dict, physical_perf: float, logical_perf: float):
+    def format_results(self, results: Any, physical_perf: float, logical_perf: float):
         """
             Format the simulation results by computing the global performance, and returning the physical and
             logical performances only if needed.

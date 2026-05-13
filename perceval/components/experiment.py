@@ -816,7 +816,7 @@ class Experiment:
             self._min_detected_photons_filter = input_state.n
         self.with_input(input_state)
 
-    @dispatch(FockState)
+    @dispatch((FockState, list, tuple))
     def with_input(self, input_state: FockState) -> None:
         self.check_input(input_state)
         input_list = [0] * self.circuit_size
