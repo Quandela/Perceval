@@ -945,8 +945,7 @@ class ExqaliburSimulator(Simulator):
                       postselect: PostSelect = None,
                       heralds: dict[int, int] = None):
         super().set_selection(min_detected_photons_filter, postselect, heralds)
-        if postselect is not None:
-            self._sim.postselect = postselect
+        self._sim.postselect = postselect or PostSelect()
 
     def set_postselection(self, postselect: PostSelect):
         super().set_postselection(postselect)
