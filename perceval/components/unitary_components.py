@@ -67,11 +67,11 @@ class BS(ACircuit):
                  convention: BSConvention = BSConvention.Rx):
         super().__init__(2)
         self._convention = convention
-        self._theta = self._set_parameter("theta", theta, 0, 4*sp.pi)
-        self._phi_tl = self._set_parameter("phi_tl", phi_tl, 0, 2*sp.pi)
-        self._phi_bl = self._set_parameter("phi_bl", phi_bl, 0, 2*sp.pi)
-        self._phi_tr = self._set_parameter("phi_tr", phi_tr, 0, 2*sp.pi)
-        self._phi_br = self._set_parameter("phi_br", phi_br, 0, 2*sp.pi)
+        self._theta = self._set_parameter("theta", theta, 0, 4*math.pi)
+        self._phi_tl = self._set_parameter("phi_tl", phi_tl, 0, 2*math.pi)
+        self._phi_bl = self._set_parameter("phi_bl", phi_bl, 0, 2*math.pi)
+        self._phi_tr = self._set_parameter("phi_tr", phi_tr, 0, 2*math.pi)
+        self._phi_br = self._set_parameter("phi_br", phi_br, 0, 2*math.pi)
 
     @property
     def name(self):
@@ -227,14 +227,14 @@ class BS(ACircuit):
                 if param.defined:
                     param.set_value(-float(param), force=True)
                 else:
-                    self._set_parameter(param.name, -param, 0, 4*sp.pi)
+                    self._set_parameter(param.name, -param, 0, 4*math.pi)
 
             # For H BS, horizontal inversion does not impact theta parameter
             if self._convention == BSConvention.Rx or self._convention == BSConvention.Ry:
                 if self._theta.defined:
                     self._theta.set_value(-theta, force=True)
                 else:
-                    self._theta = self._set_parameter("theta", -theta, 0, 4*sp.pi)
+                    self._theta = self._set_parameter("theta", -theta, 0, 4*math.pi)
 
     def definition(self):
         return BS(Parameter('theta'), Parameter('phi_tl'), Parameter('phi_bl'), Parameter('phi_tr'),
@@ -308,8 +308,8 @@ class WP(ACircuit):
 
     def __init__(self, delta: float | Parameter, xsi: float | Parameter):
         super().__init__(1)
-        self._delta = self._set_parameter("delta", delta, -sp.pi, sp.pi)
-        self._xsi = self._set_parameter("xsi", xsi, -sp.pi, sp.pi)
+        self._delta = self._set_parameter("delta", delta, -math.pi, math.pi)
+        self._xsi = self._set_parameter("xsi", xsi, -math.pi, math.pi)
 
     def _compute_unitary(self, assign=None, use_symbolic=False):
         self.assign(assign)
@@ -394,7 +394,7 @@ class PR(ACircuit):
 
     def __init__(self, delta: float | Parameter):
         super().__init__(1)
-        self._delta = self._set_parameter("delta", delta, -sp.pi, sp.pi)
+        self._delta = self._set_parameter("delta", delta, -math.pi, math.pi)
 
     def _compute_unitary(self, assign=None, use_symbolic=False):
         self.assign(assign)
@@ -638,4 +638,3 @@ class Barrier(ACircuit):
 
     def inverse(self, v=False, h=False):
         pass
-
