@@ -54,7 +54,7 @@ def generalized_cz(n: int, m: int) -> Experiment:
 
     mapping = {control1: 0, control2: 1, target1: 2, target2: 3}
     circ = Experiment(total_modes, name="GeneralizedCZ")
-    cz = PostProcessedCzItem().build_processor()
+    cz = PostProcessedCzItem().build_experiment()
     cz.clear_postselection()
     cz.remove_port(0)
     cz.remove_port(2)

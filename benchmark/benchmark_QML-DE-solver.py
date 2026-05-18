@@ -64,7 +64,7 @@ N2 = N ** 2
 input_state = pcvl.BasicState([1] * N + [0] * (m - N))
 s1 = pcvl.SLOSBackend()
 s1.set_circuit(pcvl.Unitary(pcvl.Matrix.random_unitary(m)))
-s1.preprocess([input_state])
+s1.set_input_state([input_state])
 
 random.seed(0)
 np.random.seed(0)

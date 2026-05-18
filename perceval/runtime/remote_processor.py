@@ -102,7 +102,7 @@ class RemoteProcessor(AProcessor):
         :param noise: a NoiseModel containing noise parameters (defaults to no noise)
                       simulated noise is ignored when working on a physical Quantum Processing Unit
         """
-        super().__init__(Experiment(m, noise=noise, name=name))
+        super().__init__(Experiment(m, name=name))
         if rpc_handler is not None:  # When a rpc_handler object is passed, name, token and url are expected to be None
             self._rpc_handler = rpc_handler
             self.name = rpc_handler.name  # Here, we are mixing the experiment name and the Processor name
@@ -131,6 +131,7 @@ class RemoteProcessor(AProcessor):
         self._status = None
         self._available_circuit_parameters = {}
         self.fetch_data()
+        self._experiment.noise = noise
         get_logger().info(f"Connected to Cloud platform {self.name}", channel.general)
 
     @property
