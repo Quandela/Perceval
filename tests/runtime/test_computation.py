@@ -27,18 +27,29 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .job_status import JobStatus, RunningStatus
-from .job import Job
-from .local_job import LocalJob
-from .remote_job import RemoteJob
-from .abstract_processor import AProcessor
-from .processor import Processor
-from .remote_processor import RemoteProcessor, perf_dict_to_noise
-from .session import ISession
-from .remote_config import RemoteConfig
-from .job_group import JobGroup
-from .check_cancel import cancel_requested
-from .payload_generator import PayloadGenerator
-from .computation import Computation
-from .command import Command, CommandFactory
-from .error_mitigation import *
+import pytest
+
+from perceval import Computation, CommandFactory, Experiment
+
+
+def test_parameters():
+    experiment = Experiment()  # This Experiment does not have anything here
+    comp = Computation(CommandFactory.probs, experiment)
+
+    with pytest.raises(ValueError):
+        comp.validate()
+
+    # Assume Command is well tested - no need to test its internal behaviour
+    comp.add_params(10_000)
+    assert comp.parameters == {"max_samples": 10_000}
+
+    comp.add_params(max_shots=20_000)
+    assert comp.parameters == {"max_samples": 10_000, "max_shots": 20_000}
+
+    comp.add_params(max_shots=100_000)
+    assert comp.parameters == {"max_samples": 10_000, "max_shots": 100_000}
+
+    comp.add_params(max_samples=50_000)
+    assert comp.parameters == {"max_samples": 50_000, "max_shots": 100_000}
+
+    comp.validate()

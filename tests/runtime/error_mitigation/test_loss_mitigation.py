@@ -29,7 +29,7 @@
 
 import pytest
 
-from .._test_utils import retry
+from tests._test_utils import retry
 
 from perceval.error_mitigation import photon_recycling
 from perceval.utils import BasicState, BSDistribution

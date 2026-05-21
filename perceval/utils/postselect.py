@@ -29,8 +29,8 @@
 from typing import TypeAlias
 
 import exqalibur as xq
-
-from .states import BSDistribution, StateVector
+from exqalibur import BSCount, BSSamples, BSDistribution, StateVector
+from multipledispatch import dispatch
 
 PostSelect: TypeAlias = xq.PostSelect
 
@@ -73,6 +73,15 @@ def post_select_distribution(
     return result, logical_perf
 
 
+@dispatch(BSDistribution, PostSelect, dict, bool)
+def apply_post_select(
+        bsd: BSDistribution,
+        postselect: PostSelect,
+        heralds: dict,
+        keep_heralds: bool = True) -> tuple[BSDistribution, float]:
+    return post_select_distribution(bsd, postselect, heralds, keep_heralds)
+
+
 def post_select_statevector(
         sv: StateVector,
         postselect: PostSelect,
@@ -109,3 +118,71 @@ def post_select_statevector(
     if len(result):
         result.normalize()
     return result, logical_perf
+
+
+@dispatch(BSCount, PostSelect, dict, bool)
+def apply_post_select(
+        bsc: BSCount,
+        postselect: PostSelect,
+        heralds: dict,
+        keep_heralds: bool = True) -> tuple[BSCount, float]:
+    """Post select a BSCount
+
+    :param bsc: BSCount to post select
+    :param postselect: Post-selection conditions to apply
+    :param heralds: Heralds to apply, defaults to None
+    :param keep_heralds: Keep heralded modes in the BSCount (heralded modes will be removed from Fock states),
+                         defaults to True
+    :return: A tuple containing post-selected BSCount and logical performance
+    """
+    if not (postselect.has_condition or heralds):
+        return bsc, 1
+
+    if heralds is None:
+        heralds = {}
+    accepted = 0
+    result = BSCount()
+    for state, nb in bsc.items():
+        heralds_ok = True
+        for m, v in heralds.items():
+            if state[m] != v:
+                heralds_ok = False
+        if heralds_ok and postselect(state):
+            if not keep_heralds:
+                state = state.remove_modes(list(heralds.keys()))
+            result[state] = nb
+            accepted += nb
+    return result, accepted / bsc.total()
+
+
+@dispatch(BSSamples, PostSelect, dict, bool)
+def apply_post_select(
+        bss: BSSamples,
+        postselect: PostSelect,
+        heralds: dict,
+        keep_heralds: bool = True) -> tuple[BSSamples, float]:
+    """Post select a BSSamples
+
+    :param bss: BSSamples to post select
+    :param postselect: Post-selection conditions to apply
+    :param heralds: Heralds to apply, defaults to None
+    :param keep_heralds: Keep heralded modes in the BSSamples (heralded modes will be removed from Fock states),
+                         defaults to True
+    :return: A tuple containing post-selected BSSamples and logical performance
+    """
+    if not (postselect.has_condition or heralds):
+        return bss, 1
+
+    if heralds is None:
+        heralds = {}
+    result = BSSamples()
+    for state in bss:
+        heralds_ok = True
+        for m, v in heralds.items():
+            if state[m] != v:
+                heralds_ok = False
+        if heralds_ok and postselect(state):
+            if not keep_heralds:
+                state = state.remove_modes(list(heralds.keys()))
+            result.append(state)
+    return result, len(result) / len(bss)

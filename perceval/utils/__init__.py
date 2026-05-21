@@ -36,11 +36,12 @@ from .states import BasicState, FockState, NoisyFockState, AnnotatedFockState, A
     max_photon_state_iterator, filter_distribution_photon_count
 from .logical_state import LogicalState, generate_all_logical_states
 from .polarization import Polarization, convert_polarized_state, build_spatial_output_states
-from .postselect import PostSelect, post_select_distribution, post_select_statevector
+from .postselect import PostSelect, post_select_distribution, post_select_statevector, apply_post_select
+from .min_photons import apply_min_photons
 from ._random import random_seed
 from .globals import global_params
 from .conversion import samples_to_sample_count, samples_to_probs, sample_count_to_samples, sample_count_to_probs,\
-    probs_to_samples, probs_to_sample_count
+    probs_to_samples, probs_to_sample_count, ConversionHelper
 from .stategenerator import StateGenerator
 from ._enums import Encoding, InterferometerShape, FileFormat, ModeType, ProcessorType
 from .persistent_data import PersistentData

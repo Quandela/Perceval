@@ -27,18 +27,39 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .job_status import JobStatus, RunningStatus
-from .job import Job
-from .local_job import LocalJob
-from .remote_job import RemoteJob
-from .abstract_processor import AProcessor
-from .processor import Processor
-from .remote_processor import RemoteProcessor, perf_dict_to_noise
-from .session import ISession
-from .remote_config import RemoteConfig
-from .job_group import JobGroup
-from .check_cancel import cancel_requested
-from .payload_generator import PayloadGenerator
-from .computation import Computation
-from .command import Command, CommandFactory
-from .error_mitigation import *
+from typing import Any
+
+from perceval.components import Experiment
+from .command import Command
+
+
+class Computation:
+
+    def __init__(self, command: Command, experiment: Experiment):
+        """
+        Descriptor of what we want to compute.
+        This is meant to be fully independent of how we will get the results for it
+
+        :param command: A command to do, describing what kind of results we want and the allowed parameters
+        :param experiment: The Experiment we want to compute results for
+        """
+        self.command = command
+        self.experiment = experiment
+        self.parameters: dict[str, Any] = dict()
+
+    def add_params(self, *args, **kwargs) -> None:
+        """
+        Adds or replace parameters with the given values, following the signature given by the command
+
+        :param args: The user given positional arguments
+        :param kwargs: The user given keyword arguments
+        """
+        self.parameters |= self.command.fill(*args, **kwargs)
+
+    def validate(self):
+        """
+        Checks that all non-optional parameters are filled
+
+        :raises ValueError: if parameters are not correct
+        """
+        self.command.check(self.parameters)

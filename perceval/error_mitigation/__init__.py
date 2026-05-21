@@ -26,5 +26,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from perceval.utils import get_logger
 
-from .loss_mitigation import photon_recycling
+get_logger().warn("Importing the perceval.error_mitigation module is deprecated since version 1.3.0 - Import it from perceval.runtime.error_mitigation instead")
+
+from perceval.runtime.error_mitigation import photon_recycling

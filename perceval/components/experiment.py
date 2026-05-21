@@ -169,7 +169,7 @@ class Experiment:
         self._min_detected_photons_filter = n
 
     @property
-    def min_photons_filter(self):
+    def min_photons_filter(self) -> int | None:
         return self._min_detected_photons_filter
 
     @property

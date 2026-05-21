@@ -29,8 +29,11 @@
 
 from collections import Counter
 import random
+from typing import Callable
+
 import numpy as np
 
+from .inspection import has_kwargs
 from .states import BSDistribution, BSCount, BSSamples
 
 
@@ -176,3 +179,39 @@ def sample_count_to_samples(sample_count: BSCount, **kwargs) -> BSSamples:
     except RuntimeError:
         count = sum(sample_count.values())
     return sample_count_to_probs(sample_count).sample(count, non_null=False)
+
+
+class ConversionHelper:
+    """
+    Helper to makes the conversion between probs, samples and sample_count easy
+    """
+
+    _METHOD_MAPPING = {
+        'probs': {BSCount: sample_count_to_probs, BSSamples: samples_to_probs},
+        'sample_count': {BSDistribution: probs_to_sample_count, BSSamples: samples_to_sample_count},
+        'samples': {BSDistribution: probs_to_samples, BSCount: sample_count_to_samples}
+    }
+
+    @staticmethod
+    def convert_to(target: str, original: BSDistribution | BSSamples | BSCount, **kwargs) -> BSDistribution | BSSamples | BSCount:
+        """
+        :param target: the target name (probs, samples, sample_count)
+        :param original: The BSSamples, BSCount or BSDistribution to convert
+        :param kwargs: The parameters to pass to the conversion (shots, samples)
+        :return:
+        """
+        converter = ConversionHelper._get_converter(target, original)
+        use_params = has_kwargs(converter)
+
+        if use_params:
+            return converter(original, **kwargs)
+        else:
+            return converter(original)
+
+    @staticmethod
+    def _get_converter(target: str, original: BSDistribution | BSSamples | BSCount) -> Callable:
+        if target not in ConversionHelper._METHOD_MAPPING:
+            raise RuntimeError(f"Target '{target}' is not a valid target for conversion")
+
+        # TODO: allow for subclasses (use multiple dispatch?)
+        return ConversionHelper._METHOD_MAPPING[target].get(type(original), lambda x: x)
