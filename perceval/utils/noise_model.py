@@ -30,6 +30,11 @@ from ._validated_params import AValidatedParam, ValidatedBool, ValidatedFloat
 from math import pi
 
 
+TRANSMITTANCE_KEY = "Transmittance (%)"
+INDISTINGUISHABILITY_KEY = "HOM (%)"
+G2_KEY = "g2 (%)"
+
+
 class NoiseModel:
     """
     The NoiseModel class contains all noise parameters which are supported by Perceval. Default value of each
@@ -101,3 +106,22 @@ class NoiseModel:
                 if getattr(self, attr) != getattr(other, attr):
                     return False
         return True
+
+
+def perf_dict_to_noise(perfs: dict[str, float]) -> NoiseModel:
+    nm = NoiseModel()
+    if TRANSMITTANCE_KEY in perfs:
+        nm.transmittance = perfs[TRANSMITTANCE_KEY] / 100
+    if INDISTINGUISHABILITY_KEY in perfs:
+        nm.indistinguishability = perfs[INDISTINGUISHABILITY_KEY] / 100
+    if G2_KEY in perfs:
+        nm.g2 = perfs[G2_KEY] / 100
+    return nm
+
+
+def noise_to_perf_dict(nm: NoiseModel) -> dict:
+    return {
+        INDISTINGUISHABILITY_KEY: nm.indistinguishability * 100,
+        TRANSMITTANCE_KEY: nm.brightness * nm.transmittance * 100,
+        G2_KEY: nm.g2 * 100
+    }

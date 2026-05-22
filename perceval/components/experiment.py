@@ -82,6 +82,7 @@ class Experiment:
 
         self._min_detected_photons_filter: int | None = None
 
+        # TODO: Legacy - Remove when removing Processors
         self._circuit_changed_observers: list[Callable[[Experiment | AComponent | None], None]] = []
         self._noise_changed_observers: list[Callable[[], None]] = []
         self._input_changed_observers: list[Callable[[], None]] = []
@@ -177,7 +178,7 @@ class Experiment:
         return self._input_state
 
     @property
-    def noise(self):
+    def noise(self) -> NoiseModel | None:
         return self._noise
 
     @noise.setter

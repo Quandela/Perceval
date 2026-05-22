@@ -31,7 +31,7 @@ from typing import Any
 
 from perceval.components import ACircuit, IDetector
 from perceval.utils import BSDistribution, StateVector, SVDistribution, PostSelect, post_select_distribution, \
-    post_select_statevector, filter_distribution_photon_count
+    post_select_statevector, filter_distribution_photon_count, ProgressCallback
 
 
 class ISimulator(ABC):
@@ -59,7 +59,7 @@ class ISimulator(ABC):
     def probs_svd(self,
                   svd: SVDistribution,
                   detectors: list[IDetector] = None,
-                  progress_callback: callable = None) -> dict:
+                  progress_callback: ProgressCallback = None) -> dict:
         pass
 
     @abstractmethod
@@ -210,7 +210,7 @@ class ASimulatorDecorator(ISimulator, ABC):
         results = self._postprocess_bsd(results)[0]
         return results
 
-    def probs_svd(self, svd: SVDistribution, detectors=None, progress_callback: callable = None) -> dict:
+    def probs_svd(self, svd: SVDistribution, detectors=None, progress_callback: ProgressCallback = None) -> dict:
         if not self._simulator._compute_physical_logical_perf and self._can_transmit_selection:
             self._transmit_heralds_postselect()
         probs = self._simulator.probs_svd(self._prepare_input(svd),

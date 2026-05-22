@@ -28,7 +28,8 @@
 # SOFTWARE.
 import sys
 
-from perceval.utils import SVDistribution, BasicState, FockState, AnnotatedFockState, StateVector, NoiseModel, ProcessorType
+from perceval.utils import SVDistribution, BasicState, FockState, AnnotatedFockState, StateVector, NoiseModel, \
+                           ProcessorType, ProgressCallback
 from perceval.utils.logging import get_logger, channel
 
 from perceval.runtime.abstract_processor import AProcessor
@@ -188,7 +189,7 @@ class Processor(AProcessor):
         get_logger().info("Local sampling complete!", channel.general)
         return res
 
-    def probs(self, precision: float = None, progress_callback: callable = None) -> dict:
+    def probs(self, precision: float = None, progress_callback: ProgressCallback = None) -> dict:
         self.check_min_detected_photons_filter()
 
         # assert self._inputs_map is not None, "Input is missing, please call with_inputs()"

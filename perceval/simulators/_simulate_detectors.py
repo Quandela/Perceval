@@ -26,11 +26,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from typing import Callable
 
 from perceval.runtime import cancel_requested
 from perceval.components.detector import IDetector, DetectionType, get_detection_type
-from perceval.utils import BSDistribution, FockState
+from perceval.utils import BSDistribution, FockState, ProgressCallback
 
 
 def heralds_compatible_threshold(s: FockState, heralds: dict[int, int]) -> bool:
@@ -84,7 +83,7 @@ def compute_distributions(s: FockState, detectors: list[IDetector], heralds: dic
 
 def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_photons: int = 0,
                        prob_threshold: float = 0, heralds: dict[int, int] = {},
-                       progress_callback: Callable = None) -> tuple[BSDistribution, float]:
+                       progress_callback: ProgressCallback = None) -> tuple[BSDistribution, float]:
     """
     Simulates the effect of imperfect detectors on a theoretical distribution.
 

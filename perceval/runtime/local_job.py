@@ -31,6 +31,7 @@ from __future__ import annotations  # Python 3.11 : Replace using Self typing
 import threading
 
 from perceval.utils.logging import get_logger, channel
+from perceval.utils import ProgressCallback
 from .job import Job
 from .job_status import JobStatus, RunningStatus
 
@@ -63,7 +64,7 @@ class LocalJob(Job):
     def delta_parameters(self) -> dict:
         return self._delta_parameters
 
-    def set_progress_callback(self, callback: callable):  # Signature must be (float, str | None)
+    def set_progress_callback(self, callback: ProgressCallback):  # Signature must be (float, str | None)
         """
         Set a progress callback function with the following signature:
 

@@ -41,3 +41,19 @@ def has_kwargs(func: Callable):
             return True
 
     return False
+
+
+def has_arguments(func: Callable):
+    """Check if a function can be called with at least one non-named argument (i.e. signature is not empty or only **kwargs)"""
+    sig = signature(func)
+    parameters = list(sig.parameters.values())
+
+    for param in parameters:
+        if param.kind == param.VAR_POSITIONAL:  # *args
+            return True
+        elif param.kind == param.VAR_KEYWORD:  # **kwargs
+            continue
+        else:
+            return True
+
+    return False

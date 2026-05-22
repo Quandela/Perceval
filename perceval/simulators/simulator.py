@@ -28,7 +28,7 @@
 # SOFTWARE.
 import sys
 from collections import defaultdict
-from typing import Callable
+from typing import Any
 
 from exqalibur import SimpleSourceIterator
 from multipledispatch import dispatch
@@ -39,7 +39,7 @@ import exqalibur as xq
 from perceval.backends import AStrongSimulationBackend, ExqaliburBackendWrapper
 from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType, check_heralds_detectors, Source
 from perceval.utils import BasicState, FockState, NoisyFockState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, \
-    DensityMatrix, post_select_distribution, post_select_statevector, partial_progress_callable
+    DensityMatrix, post_select_distribution, post_select_statevector, partial_progress_callable, ProgressCallback
 from perceval.utils.density_matrix_utils import extract_upper_triangle
 from perceval.utils.logging import get_logger
 from perceval.runtime import cancel_requested
@@ -353,7 +353,7 @@ class Simulator(ISimulator):
         return _to_bsd(self.evolve(input_state))
 
     def _probs_svd_generic(self, input_dist, p_threshold, non_pnr_detector_modes: list[int] | None,
-                        progress_callback: callable = None):
+                        progress_callback: ProgressCallback = None):
         """decomposed input:
         From a SVD = {
             pa_11*bs_11 + ... + pa_n1*bs_n1: p1,
@@ -419,7 +419,7 @@ class Simulator(ISimulator):
         return res
 
     def _probs_svd_fast(self, input_dist, p_threshold, non_pnr_detector_modes: list[int] | None,
-                        progress_callback: callable = None):
+                        progress_callback: ProgressCallback = None):
         """decomposed input:
            From a SVD = {
                bs_1: p1,
@@ -581,7 +581,7 @@ class Simulator(ISimulator):
     def probs_svd(self,
                   input_dist: SVDistribution | tuple[Source, FockState],
                   detectors: list[IDetector] = None,
-                  progress_callback: callable = None) -> dict[str, any]:
+                  progress_callback: ProgressCallback = None) -> dict[str, Any]:
         """
         Compute the probability distribution from a SVDistribution input and as well as performance scores
 
@@ -775,7 +775,7 @@ class Simulator(ISimulator):
 
     def evolve_svd(self,
                    svd: SVDistribution | StateVector | BasicState,
-                   progress_callback: callable = None) -> dict:
+                   progress_callback: ProgressCallback = None) -> dict:
         """
         Compute the SVDistribution evolved through a linear optics circuit
 
@@ -979,7 +979,7 @@ class ExqaliburSimulator(Simulator):
     def probs_svd(self,
                 input_dist: SVDistribution | tuple[Source, FockState],
                 detectors: list[IDetector | None] = None,
-                progress_callback: Callable[[float, str], None | dict] = None) -> dict:
+                progress_callback: ProgressCallback = None) -> dict:
         """
         Compute the probability distribution from a SVDistribution input and as well as performance scores
 

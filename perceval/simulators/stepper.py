@@ -29,7 +29,7 @@
 from collections import defaultdict
 import copy
 
-from perceval.utils import StateVector, BasicState, BSDistribution, SVDistribution, allstate_iterator
+from perceval.utils import StateVector, BasicState, BSDistribution, SVDistribution, allstate_iterator, ProgressCallback
 from perceval.components import ACircuit
 from perceval.backends import AStrongSimulationBackend, BACKEND_LIST
 from .simulator_interface import ISimulator
@@ -105,7 +105,7 @@ class Stepper(ISimulator):
         """
         return _to_bsd(self.evolve(input_state))
 
-    def probs_svd(self, svd: SVDistribution, detectors=None, progress_callback: callable = None) -> dict:
+    def probs_svd(self, svd: SVDistribution, detectors=None, progress_callback: ProgressCallback = None) -> dict:
         """
         Compute the probability distribution from a SVDistribution input
 

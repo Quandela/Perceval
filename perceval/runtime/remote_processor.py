@@ -26,6 +26,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from typing import Any
+
 from requests import HTTPError
 from copy import copy
 
@@ -33,6 +35,7 @@ from perceval.components import ACircuit, AComponent, Experiment, PortLocation
 from perceval.utils import FockState, NoiseModel, PostSelect, ProcessorType
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import deserialize
+from perceval.utils.noise_model import TRANSMITTANCE_KEY, perf_dict_to_noise
 
 from .platform_specs import PlatformSpecs
 from .remote_job import RemoteJob
@@ -43,21 +46,7 @@ from .abstract_processor import AProcessor
 from .processor import Processor
 
 PERFS_KEY = "perfs"
-TRANSMITTANCE_KEY = "Transmittance (%)"
-INDISTINGUISHABILITY_KEY = "HOM (%)"
-G2_KEY = "g2 (%)"
 DEFAULT_TRANSMITTANCE = 0.06
-
-
-def perf_dict_to_noise(perfs: dict[str, float]) -> NoiseModel:
-    nm = NoiseModel()
-    if TRANSMITTANCE_KEY in perfs:
-        nm.transmittance = perfs[TRANSMITTANCE_KEY] / 100
-    if INDISTINGUISHABILITY_KEY in perfs:
-        nm.indistinguishability = perfs[INDISTINGUISHABILITY_KEY] / 100
-    if G2_KEY in perfs:
-        nm.g2 = perfs[G2_KEY] / 100
-    return nm
 
 
 class RemoteProcessor(AProcessor):
@@ -250,7 +239,7 @@ class RemoteProcessor(AProcessor):
     def available_commands(self) -> list[str]:
         return self._specs.available_commands
 
-    def prepare_job_payload(self, command: str, **kwargs) -> dict[str, any]:
+    def prepare_job_payload(self, command: str, **kwargs) -> dict[str, Any]:
         self.check_min_detected_photons_filter()
         self.check_circuit_size(self.circuit_size)
         if self.input_state:

@@ -48,7 +48,7 @@ class SimulatorFactory:
     """
 
     @staticmethod
-    def build(circuit: ACircuit | Processor | list,
+    def build(circuit: ACircuit | Processor | Experiment | list,
               backend: ABackend | str = None,
               **kwargs) -> ISimulator:
         """

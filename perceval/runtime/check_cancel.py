@@ -27,5 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-def cancel_requested(exec_request: dict = None):
-    return exec_request is not None and exec_request.get('cancel_requested', False)
+def cancel_requested(exec_request: dict | bool = None):
+    if isinstance(exec_request, dict):
+        return exec_request.get('cancel_requested', False)
+    return exec_request

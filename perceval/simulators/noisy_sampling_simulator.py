@@ -38,7 +38,7 @@ import exqalibur as xq
 from perceval.backends import ASamplingBackend, ExqaliburBackendWrapper
 from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType, check_heralds_detectors, Source
 from perceval.utils import BasicState, FockState, StateVector, NoisyFockState, BSCount, BSSamples, SVDistribution, PostSelect, \
-    samples_to_sample_count
+    samples_to_sample_count, ProgressCallback
 from perceval.serialization.serialize_binary import serialize_binary
 from perceval.utils.logging import get_logger, channel
 from perceval.runtime import cancel_requested
@@ -132,7 +132,7 @@ class ASamplingSimulator(ABC):
                 svd: SVDistribution | tuple[Source, FockState],
                 max_samples: int,
                 max_shots: int = None,
-                progress_callback: Callable[[float, str], None | dict] = None) -> dict:
+                progress_callback: ProgressCallback = None) -> dict:
         """
         Run a noisy sampling simulation and retrieve the results
 
@@ -152,7 +152,7 @@ class ASamplingSimulator(ABC):
                      svd: SVDistribution | tuple[Source, BasicState],
                      max_samples: int,
                      max_shots: int = None,
-                     progress_callback: Callable[[float, str], None | dict] = None) -> dict:
+                     progress_callback: ProgressCallback = None) -> dict:
         """
         Run a noisy sampling simulation and retrieve the results
 
@@ -220,7 +220,7 @@ class SamplesProvider:
         self._max_samples = 2000  # to be sampled at once. Needs to be at least 10 * _min_samples to be coherent
         self.sleep_between_batches = 0.2
 
-    def prepare(self, progress_callback: callable = None):
+    def prepare(self, progress_callback: ProgressCallback = None):
         """
         Compute a first batch of outputs for all the inputs whose weight has been estimated
 
@@ -323,7 +323,7 @@ class NoisySamplingSimulator(ASamplingSimulator):
             self,
             input_state: BasicState,
             n_samples: int,
-            progress_callback: callable = None) -> dict:
+            progress_callback: ProgressCallback = None) -> dict:
         self._backend.set_input_state(input_state)
         samples_acquired = 0
         results = BSSamples()
@@ -336,7 +336,7 @@ class NoisySamplingSimulator(ASamplingSimulator):
             if progress_callback:
                 cancel_request = progress_callback(samples_acquired / n_samples, 'sampling')
                 time.sleep(self.sleep_between_batches)  # else callback method doesn't have time to be called
-                if cancel_request is not None and cancel_request.get('cancel_requested', False):
+                if cancel_requested(cancel_request):
                     break
 
         return self.format_results(results, 1, 1)
@@ -349,7 +349,7 @@ class NoisySamplingSimulator(ASamplingSimulator):
             max_shots: int,
             detection_type: DetectionType,
             first_batch: list[BSSamples],
-            progress_callback: callable = None) -> dict:
+            progress_callback: ProgressCallback = None) -> dict:
 
         output = BSSamples()
         idx = 0
@@ -473,7 +473,7 @@ class NoisySamplingSimulator(ASamplingSimulator):
                           svd: SVDistribution | tuple[Source, FockState],
                           max_samples: int,
                           max_shots: int,
-                          progress_callback: callable):
+                          progress_callback: ProgressCallback):
         pre_physical_perf = 1
         prepare_samples = self.compute_samples(max_samples, max_shots)
         first_batch = []
@@ -523,7 +523,7 @@ class NoisySamplingSimulator(ASamplingSimulator):
                 svd: SVDistribution | tuple[Source, FockState],
                 max_samples: int,
                 max_shots: int = None,
-                progress_callback: callable = None) -> dict:
+                progress_callback: ProgressCallback = None) -> dict:
         """
         Run a noisy sampling simulation and retrieve the results
 
@@ -637,7 +637,7 @@ class ExqaliburNoisySamplingSimulator(ASamplingSimulator):
                 svd: SVDistribution | tuple[Source, FockState],
                 max_samples: int,
                 max_shots: int = None,
-                progress_callback: Callable[[float, str], None | dict] = None) -> dict:
+                progress_callback: ProgressCallback = None) -> dict:
         """
         Run a noisy sampling simulation and retrieve the results
 

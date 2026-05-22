@@ -31,7 +31,7 @@ from typing import Any
 
 from perceval.components import AComponent, Barrier, PERM, IDetector, Herald, PortLocation, Source, Experiment
 from perceval.utils import (NoiseModel, BasicState, FockState, BSDistribution, SVDistribution, StateVector,
-                            partial_progress_callable, get_logger, deprecated)
+                            partial_progress_callable, ProgressCallback, get_logger, deprecated)
 from perceval.utils.logging import channel
 from perceval.components.feed_forward_configurator import AFFConfigurator
 from perceval.backends import AStrongSimulationBackend, IFFBackend
@@ -76,7 +76,7 @@ class FFSimulator(ISimulator):
     def _probs_svd(self,
                    input_state: SVDistribution | tuple[Source, BasicState],
                    detectors: list[IDetector] = None,
-                   progress_callback: callable = None) -> tuple[BSDistribution, float]:
+                   progress_callback: ProgressCallback = None) -> tuple[BSDistribution, float]:
 
         # 1: Find all the FFConfigurators that can be simulated without measuring more modes
         considered_config, measured_modes, unsafe_modes = self._find_next_simulation_layer()
@@ -285,7 +285,7 @@ class FFSimulator(ISimulator):
                   components: list[tuple[tuple, AComponent | Processor]],
                   m: int,
                   detectors: list[IDetector],
-                  prog_cb=None,
+                  prog_cb: ProgressCallback = None,
                   filter_states: bool = False,
                   new_heralds: dict[int, int] = None) \
             -> dict[str, Any]:
@@ -328,7 +328,7 @@ class FFSimulator(ISimulator):
     def probs_svd(self,
                   input_dist: SVDistribution,
                   detectors: list[IDetector] = None,
-                  progress_callback: callable = None):
+                  progress_callback: ProgressCallback = None):
         """
         Compute the probability distribution from a SVDistribution input and as well as performance scores
 

@@ -31,7 +31,7 @@ from .abstract_algorithm import AAlgorithm
 from .parameter_iterator import ParameterIterator
 
 from perceval.utils import samples_to_sample_count, samples_to_probs, sample_count_to_samples, \
-    sample_count_to_probs, probs_to_samples, probs_to_sample_count
+    sample_count_to_probs, probs_to_samples, probs_to_sample_count, ProgressCallback
 from perceval.utils.logging import get_logger, channel
 from perceval.runtime.abstract_processor import AProcessor
 from perceval.runtime import Job, RemoteJob, LocalJob
@@ -198,13 +198,13 @@ class Sampler(AAlgorithm):
     def n_iterations(self):
         return len(self._iterator)
 
-    def _probs_wrapper(self, progress_callback: callable = None):
+    def _probs_wrapper(self, progress_callback: ProgressCallback = None):
         # max_shots is used as the invert of the precision set in the probs computation
         # Rationale: mimic the fact that the more shots, the more accurate probability distributions are.
         precision = None if self._max_shots is None else min(1e-6, 1 / self._max_shots)
         return self._processor.probs(precision, progress_callback)
 
-    def _samples_wrapper(self, max_samples: int = None, progress_callback: callable = None):
+    def _samples_wrapper(self, max_samples: int = None, progress_callback: ProgressCallback = None):
         if max_samples is None and self._max_shots is None:
             raise RuntimeError("Local sampling simulation requires max_samples and/or max_shots parameters")
         if max_samples is None:
@@ -212,7 +212,7 @@ class Sampler(AAlgorithm):
         return self._processor.samples(max_samples, self._max_shots, progress_callback)
 
     # Local iteration methods mimic remote iterations for interchangeability purpose
-    def _probs_iterate_locally(self, max_shots: int = None, progress_callback: callable = None):
+    def _probs_iterate_locally(self, max_shots: int = None, progress_callback: ProgressCallback = None):
         default_experiment = self._processor.experiment
 
         results = {'results_list': []}
@@ -230,7 +230,7 @@ class Sampler(AAlgorithm):
         return results
 
     def _samples_iterate_locally(self, max_shots: int = None, max_samples: int = None,
-                                 progress_callback: callable = None):
+                                 progress_callback: ProgressCallback = None):
         if max_samples is None and max_shots is None and not self._iterator.check_sample_shot_iterator():
             raise RuntimeError("Local sampling simulation requires max_samples and/or max_shots parameters")
 
