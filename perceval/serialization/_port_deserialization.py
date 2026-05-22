@@ -31,7 +31,7 @@ from base64 import b64decode
 
 import perceval.components.port as port
 from perceval.utils import Encoding
-from perceval.serialization import _schema_circuit_pb2 as pb
+from exqalibur.serialization import circuit_pb2 as pb
 
 
 def deserialize_herald(serial_herald) -> port.Herald:

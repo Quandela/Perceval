@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.serialization import _schema_circuit_pb2 as pb
+from exqalibur.serialization import circuit_pb2 as pb
 import numpy as np
 
 from perceval.utils import Matrix

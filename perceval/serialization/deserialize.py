@@ -58,7 +58,7 @@ from ._constants import (
 )
 from ._state_serialization import deserialize_statevector, deserialize_bssamples
 from . import _component_deserialization as _cd
-from . import _schema_circuit_pb2 as pb
+from exqalibur.serialization import circuit_pb2 as pb
 
 
 def deserialize_float(floatstring):

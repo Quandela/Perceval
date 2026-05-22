@@ -30,7 +30,7 @@
 from multipledispatch import dispatch
 
 from perceval.components.compiled_circuit import CompiledCircuit, CompiledCircuitVersion
-from perceval.serialization import _schema_circuit_pb2 as pb
+from exqalibur.serialization import circuit_pb2 as pb
 from perceval.components import ACircuit, Circuit, AComponent, Herald, Port
 import perceval.components.unitary_components as comp
 import perceval.components.non_unitary_components as nu

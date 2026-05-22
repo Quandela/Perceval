@@ -28,7 +28,7 @@
 # SOFTWARE.
 import sympy as sp
 from perceval.utils import Parameter, Expression
-from perceval.serialization import _schema_circuit_pb2 as pb
+from exqalibur.serialization import circuit_pb2 as pb
 
 
 def serialize_parameter(param: Parameter | float):

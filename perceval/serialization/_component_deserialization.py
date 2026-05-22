@@ -28,7 +28,7 @@
 # SOFTWARE.
 from packaging.version import Version
 
-from perceval.serialization import _schema_circuit_pb2 as pb
+from exqalibur.serialization import circuit_pb2 as pb
 from perceval.serialization._parameter_serialization import deserialize_parameter
 from perceval.serialization._matrix_serialization import deserialize_pb_matrix
 import perceval.components.unitary_components as comp
