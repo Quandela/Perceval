@@ -34,7 +34,7 @@ class Command:
     """
     Describes a command through a name and a signature
 
-    The signature is exposed with a list of (name, expected type, is_optional)
+    The signature is exposed with a list of (name, expected type, is_mandatory)
     """
 
     def __init__(self, name: str, signature: list[tuple[str, type, bool]], apply_emt: bool = True):
@@ -50,8 +50,8 @@ class Command:
 
         :param parameters: The final parameters that will be given as **kwargs in the command
         """
-        for name, t, optional in self.signature:
-            if name not in parameters and not optional:
+        for name, t, mandatory in self.signature:
+            if name not in parameters and mandatory:
                 raise ValueError(f"Didn't receive value for non-optional argument {name}")
 
     def fill(self, *args, **kwargs) -> dict[str, Any]:
@@ -96,7 +96,7 @@ class Command:
 class CommandFactoryClass:
 
     def __init__(self):
-        self.probs = self.create_acquisition_command("probs")
+        self.probs = Command(name="probs", signature=[("max_samples", int, False), ("max_shots", int, False)], apply_emt=True)
         self.samples = self.create_acquisition_command("samples")
         self.sample_count = self.create_acquisition_command("sample_count")
 
