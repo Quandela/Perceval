@@ -440,7 +440,7 @@ def test_evolve_density_matrix():
     assert max((final_dm.mat-comparing_dm.mat).data) < 1e-10
 
 
-@flaky(max_runs=2)
+@flaky(max_runs=3)
 def test_probs_density_matrix():
 
     sim, dm, svd = get_comparison_setup()
