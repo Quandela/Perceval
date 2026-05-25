@@ -128,7 +128,7 @@ class AbstractComputer(ABC):
         computations = emts[0].extend_computation(computation, noise)
         res: list[dict] = []
         for comp in computations:
-            sub_res, current_index = self._post_process(comp, emts[1:], results, is_sync, progress_cb, current_index)
+            sub_res, current_index = self._post_process(comp, emts[1:], results, noise, is_sync, progress_cb, current_index)
             res.append(sub_res)
 
         return emts[0].parse_results(computation, res, noise), current_index

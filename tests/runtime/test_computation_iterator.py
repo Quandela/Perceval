@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval import Experiment, FockState, Computation, CommandFactory, BSSamples
+from perceval import Experiment, FockState, Computation, CommandFactory, BSSamples, NoiseModel
 from perceval.runtime.computation_iterator import ComputationIterator
 from tests._test_utils import assert_experiment_equals
 
@@ -64,7 +64,7 @@ def test_iteration_parsing():
 
     fake_results = [{"results": BSSamples([FockState([1, 0])])}, {"results": BSSamples([FockState([0, 1])])}]
 
-    parsed = comp.parse_results(base_comp, fake_results)
+    parsed = comp.parse_results(base_comp, fake_results, NoiseModel())
 
     assert isinstance(parsed, dict)
     assert "results_list" in parsed

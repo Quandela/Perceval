@@ -39,7 +39,7 @@ class DummyMitigation(AbstractMitigation):
     def extend_computation(self, computation: Computation, noise: NoiseModel) -> list[Computation]:
         return [computation]
 
-    def _parse_results(self, results: list[dict]) -> dict:
+    def _parse_results(self, results: list[dict], noise) -> dict:
         return results[0]
 
 
@@ -60,7 +60,7 @@ def test_min_photon_filter():
         "logical_perf": 1.,}
     ]
 
-    res = mitigation.parse_results(top_layer, sub_results)
+    res = mitigation.parse_results(top_layer, sub_results, NoiseModel())
     expected = BSDistribution({FockState("|1, 1>"): 1.})
 
     assert_bsd_close(res["results"], expected)
@@ -77,7 +77,7 @@ def test_min_photon_filter():
         "global_perf": 0.7}
     ]
 
-    res = mitigation.parse_results(top_layer, sub_results)
+    res = mitigation.parse_results(top_layer, sub_results, NoiseModel())
     expected = BSCount({FockState("|1, 1>"): 300})
 
     assert res["results"] == expected
@@ -89,7 +89,7 @@ def test_min_photon_filter():
         "global_perf": 0.7}
     ]
 
-    res = mitigation.parse_results(top_layer, sub_results)
+    res = mitigation.parse_results(top_layer, sub_results, NoiseModel())
     expected = BSSamples([FockState("|1, 1>"), FockState("|1, 1>"), FockState("|1, 1>")])
 
     assert res["results"] == expected
@@ -114,7 +114,7 @@ def test_logical_postprocess():
         "logical_perf": 1., }
     ]
 
-    res = mitigation.parse_results(top_layer, sub_results)
+    res = mitigation.parse_results(top_layer, sub_results, NoiseModel())
     expected = BSDistribution({FockState("|1, 1>"): 1.})
 
     assert_bsd_close(res["results"], expected)
@@ -131,7 +131,7 @@ def test_logical_postprocess():
         "global_perf": 0.7}
     ]
 
-    res = mitigation.parse_results(top_layer, sub_results)
+    res = mitigation.parse_results(top_layer, sub_results, NoiseModel())
     expected = BSCount({FockState("|1, 1>"): 300})
 
     assert res["results"] == expected
@@ -144,7 +144,7 @@ def test_logical_postprocess():
          "global_perf": 0.7}
     ]
 
-    res = mitigation.parse_results(top_layer, sub_results)
+    res = mitigation.parse_results(top_layer, sub_results, NoiseModel())
     expected = BSSamples([FockState("|1, 1>"), FockState("|1, 1>"), FockState("|1, 1>")])
 
     assert res["results"] == expected
@@ -166,7 +166,7 @@ def test_automatic_conversion_from_bsc():
         "global_perf": 0.7}
     ]
 
-    res = mitigation.parse_results(top_layer, sub_results)
+    res = mitigation.parse_results(top_layer, sub_results, NoiseModel())
     expected = BSDistribution({FockState("|1, 0>"): 0.4, FockState("|1, 1>"): 0.6})
 
     assert_bsd_close(res["results"], expected)
@@ -201,14 +201,14 @@ def test_automatic_conversion_from_bsd():
         "global_perf": 0.7}
     ]
 
-    res = mitigation.parse_results(top_layer, sub_results)
+    res = mitigation.parse_results(top_layer, sub_results, NoiseModel())
     assert isinstance(res["results"], BSCount)
     assert res["results"].total() == 10000
 
     # Now the layer above asked for BSS
     top_layer = Computation(CommandFactory.samples, e)
     top_layer.add_params(10000)
-    res = mitigation.parse_results(top_layer, sub_results)
+    res = mitigation.parse_results(top_layer, sub_results, NoiseModel())
 
     assert isinstance(res["results"], BSSamples)
     assert len(res["results"]) == 10000
@@ -226,7 +226,7 @@ def test_automatic_conversion_from_bss():
         "global_perf": 0.7}
     ]
 
-    res = mitigation.parse_results(top_layer, sub_results)
+    res = mitigation.parse_results(top_layer, sub_results, NoiseModel())
     assert isinstance(res["results"], BSCount)
     assert res["results"].total() == 5
     assert res["results"][FockState("|1, 0>")] == 2
@@ -234,7 +234,7 @@ def test_automatic_conversion_from_bss():
 
     # Now the layer above asked for BSD
     top_layer = Computation(CommandFactory.probs, e)
-    res = mitigation.parse_results(top_layer, sub_results)
+    res = mitigation.parse_results(top_layer, sub_results, NoiseModel())
 
     assert isinstance(res["results"], BSDistribution)
 
