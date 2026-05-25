@@ -53,7 +53,7 @@ class ComputationIterator:
     def command(self) -> Command:
         return self.base_computation.command
 
-    def __iter__(self) -> Generator[Computation]:
+    def __iter__(self):
         if len(self._parameter_iterator) == 0:
             yield self.base_computation
 
