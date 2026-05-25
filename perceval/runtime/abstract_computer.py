@@ -33,7 +33,7 @@ from typing import Any, TypeVar
 
 from .error_mitigation import AbstractMitigation
 from .computation import Computation
-from .iterator import Iterator
+from .computation_iterator import ComputationIterator
 from .platform_specs import PlatformSpecs
 
 from perceval.utils import ProgressCallback, partial_progress_callable, ContextManager, NoiseModel
@@ -77,17 +77,17 @@ class AbstractComputer(ABC):
         if computation.command.name not in self._commands:
             raise ValueError(f"Command '{computation.command.name}' doesn't exist in {self.__class__.__name__}")
 
-    def _handle_iterator(self, comp: Computation | Iterator, emts: list[AbstractMitigation] = None) -> tuple[Computation, list[AbstractMitigation | Iterator]]:
+    def _handle_iterator(self, comp: Computation | ComputationIterator, emts: list[AbstractMitigation] = None) -> tuple[Computation, list[AbstractMitigation | ComputationIterator]]:
         if comp.command.apply_emt:
             emts = emts if emts is not None else self._error_mitigations
         else:
             emts = []
-        if isinstance(comp, Iterator):
+        if isinstance(comp, ComputationIterator):
             return comp.base_computation, [comp] + emts
 
         return comp, emts
 
-    def extend_computation(self, comp: Computation | Iterator) -> list[Computation]:
+    def extend_computation(self, comp: Computation | ComputationIterator) -> list[Computation]:
         """
         :param comp: The computation to be executed as the final step
         :return: The list of all computations to execute
@@ -95,7 +95,7 @@ class AbstractComputer(ABC):
         computation, emts = self._handle_iterator(comp)
         return self._prepare_sub_computations([computation], emts)
 
-    def _prepare_sub_computations(self, computations: list[Computation], emts: list[AbstractMitigation | Iterator]) -> list[Computation]:
+    def _prepare_sub_computations(self, computations: list[Computation], emts: list[AbstractMitigation | ComputationIterator]) -> list[Computation]:
         if len(emts) == 0:
             return computations
 
@@ -105,11 +105,11 @@ class AbstractComputer(ABC):
 
         return res
 
-    def post_process(self, original_computation: Computation | Iterator, results: list[dict], progress_cb: ProgressCallback = None):
+    def post_process(self, original_computation: Computation | ComputationIterator, results: list[dict], progress_cb: ProgressCallback = None):
         computation, emts = self._handle_iterator(original_computation)
         return self._post_process(computation, emts, results, True, progress_cb)[0]
 
-    def _post_process(self, computation: Computation, emts: list[AbstractMitigation | Iterator], results: list,
+    def _post_process(self, computation: Computation, emts: list[AbstractMitigation | ComputationIterator], results: list,
                       is_sync: bool, progress_cb: ProgressCallback = None, current_index: int = 0) -> tuple[dict, int]:
         # current_index supposes that results are in the order requested by self.extend_computation()
         if len(emts) == 0:
@@ -124,12 +124,12 @@ class AbstractComputer(ABC):
         computations = emts[0].extend_computation(computation, self.noise)
         res: list[dict] = []
         for comp in computations:
-            sub_res, current_index = self._post_process(comp, emts[1:], results, is_sync, current_index)
+            sub_res, current_index = self._post_process(comp, emts[1:], results, is_sync, progress_cb, current_index)
             res.append(sub_res)
 
         return emts[0].parse_results(computation, res), current_index
 
-    def execute(self, computation: Computation | Iterator, progress_cb: ProgressCallback = None) -> Any:
+    def execute(self, computation: Computation | ComputationIterator, progress_cb: ProgressCallback = None) -> Any:
         """Synchronous execution of computation"""
         computation.validate()
         computations = self.extend_computation(computation)
@@ -154,7 +154,7 @@ class AbstractComputer(ABC):
     def _execute_command(self, computation: Computation, progress_cb: ProgressCallback = None) -> dict:
         pass
 
-    def execute_async(self, computation: Computation | Iterator) -> tuple[list[AbstractMitigation], list[AsyncGetter]]:
+    def execute_async(self, computation: Computation | ComputationIterator) -> tuple[list[AbstractMitigation], list[AsyncGetter]]:
         """
         Asynchronous execution of computation
 

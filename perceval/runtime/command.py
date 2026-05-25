@@ -29,6 +29,8 @@
 
 from typing import Any
 
+from perceval.utils.constants import KEY_MAX_SAMPLES, KEY_MAX_SHOTS
+
 
 class Command:
     """
@@ -96,12 +98,12 @@ class Command:
 class CommandFactoryClass:
 
     def __init__(self):
-        self.probs = Command(name="probs", signature=[("max_samples", int, False), ("max_shots", int, False)], apply_emt=True)
+        self.probs = Command(name="probs", signature=[(KEY_MAX_SAMPLES, int, False), (KEY_MAX_SHOTS, int, False)], apply_emt=True)
         self.samples = self.create_acquisition_command("samples")
         self.sample_count = self.create_acquisition_command("sample_count")
 
     @staticmethod
     def create_acquisition_command(name: str) -> Command:
-        return Command(name=name, signature=[("max_samples", int, True), ("max_shots", int, False)], apply_emt=True)
+        return Command(name=name, signature=[(KEY_MAX_SAMPLES, int, True), (KEY_MAX_SHOTS, int, False)], apply_emt=True)
 
 CommandFactory = CommandFactoryClass()

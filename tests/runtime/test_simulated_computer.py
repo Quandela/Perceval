@@ -32,6 +32,7 @@ from exqalibur import BSCount, BSSamples
 
 from perceval import SimulatedComputer, Experiment, BS, FockState, BSDistribution, samples_to_sample_count, NoiseModel, \
     ProcessorType, Computation, CommandFactory
+from perceval.runtime.computation_iterator import ComputationIterator
 from tests._test_utils import assert_bsd_close
 
 
@@ -150,3 +151,27 @@ def test_execute_async():
     assert res["results"] == BSDistribution({FockState([1, 0]): 1.})
 
     assert computer.is_complete(getters[0])
+
+
+def test_execute_iterator():
+    experiment = Experiment(2)
+
+    computation = Computation(CommandFactory.probs, experiment)
+    computation = ComputationIterator(computation)
+
+    computation.add_iteration(input_state = FockState([1, 0]))
+    computation.add_iteration(input_state = FockState([0, 1]))
+
+    computer = SimulatedComputer("SLOS")
+    res = computer.execute(computation)
+
+    assert isinstance(res, dict)
+    assert "results_list" in res
+    assert len(res["results_list"]) == 2
+
+    assert_bsd_close(res["results_list"][0]["results"], BSDistribution({FockState([1, 0]): 1.}))
+    assert_bsd_close(res["results_list"][1]["results"], BSDistribution({FockState([0, 1]): 1.}))
+
+    assert "iteration" in res["results_list"][0]
+    assert res["results_list"][0]["iteration"] == {"input_state": FockState([1, 0])}
+    assert res["results_list"][1]["iteration"] == {"input_state": FockState([0, 1])}

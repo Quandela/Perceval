@@ -31,7 +31,8 @@ import dataclasses
 from numbers import Number
 from typing import Any
 
-from perceval import Experiment, NoiseModel, PostSelect, BasicState
+from perceval.components import Experiment
+from perceval.utils import NoiseModel, PostSelect, BasicState
 
 
 @dataclasses.dataclass

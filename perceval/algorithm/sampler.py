@@ -28,11 +28,12 @@
 # SOFTWARE.
 
 from .abstract_algorithm import AAlgorithm
-from .parameter_iterator import ParameterIterator
 
 from perceval.utils import samples_to_sample_count, samples_to_probs, sample_count_to_samples, \
     sample_count_to_probs, probs_to_samples, probs_to_sample_count, ProgressCallback
 from perceval.utils.logging import get_logger, channel
+from perceval.utils.constants import KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_RESULTS_LIST, KEY_ITERATION
+from perceval.runtime.parameter_iterator import ParameterIterator
 from perceval.runtime.abstract_processor import AProcessor
 from perceval.runtime import Job, RemoteJob, LocalJob
 
@@ -106,14 +107,14 @@ class Sampler(AAlgorithm):
 
         delta_parameters = {"command": {}, "mapping": {}}
         # adapt the parameters list
-        command_param_names = [] if primitive_is_probs else ['max_samples']
+        command_param_names = [] if primitive_is_probs else [KEY_MAX_SAMPLES]
         if not method_is_probs and primitive_is_probs:
-            delta_parameters["mapping"]['max_samples'] = None  # Is to be filled by job._handle_params
-            delta_parameters["mapping"]['max_shots'] = self._max_shots
+            delta_parameters["mapping"][KEY_MAX_SAMPLES] = None  # Is to be filled by job._handle_params
+            delta_parameters["mapping"][KEY_MAX_SHOTS] = self._max_shots
         elif method_is_probs and not primitive_is_probs:
-            delta_parameters["command"]['max_samples'] = self.PROBS_SIMU_SAMPLE_COUNT
+            delta_parameters["command"][KEY_MAX_SAMPLES] = self.PROBS_SIMU_SAMPLE_COUNT
         elif not method_is_probs and not primitive_is_probs:
-            delta_parameters["command"]['max_samples'] = None  # Is to be filled by job._handle_params
+            delta_parameters["command"][KEY_MAX_SAMPLES] = None  # Is to be filled by job._handle_params
 
         if self._processor.is_remote:
             job_context = None
@@ -206,7 +207,7 @@ class Sampler(AAlgorithm):
 
     def _samples_wrapper(self, max_samples: int = None, progress_callback: ProgressCallback = None):
         if max_samples is None and self._max_shots is None:
-            raise RuntimeError("Local sampling simulation requires max_samples and/or max_shots parameters")
+            raise RuntimeError(f"Local sampling simulation requires {KEY_MAX_SAMPLES} and/or {KEY_MAX_SHOTS} parameters")
         if max_samples is None:
             max_samples = self.SAMPLES_MAX_COUNT
         return self._processor.samples(max_samples, self._max_shots, progress_callback)
@@ -223,7 +224,7 @@ class Sampler(AAlgorithm):
             results['results_list'].append(self._processor.probs(precision))
             results['results_list'][-1]['iteration'] = it.parameters
             if progress_callback is not None:
-                progress_callback((idx + 1) / len(self._iterator))
+                progress_callback((idx + 1) / len(self._iterator), "Simulating iterations")
 
         self._processor.experiment = default_experiment
 
@@ -232,21 +233,21 @@ class Sampler(AAlgorithm):
     def _samples_iterate_locally(self, max_shots: int = None, max_samples: int = None,
                                  progress_callback: ProgressCallback = None):
         if max_samples is None and max_shots is None and not self._iterator.check_sample_shot_iterator():
-            raise RuntimeError("Local sampling simulation requires max_samples and/or max_shots parameters")
+            raise RuntimeError(f"Local sampling simulation requires {KEY_MAX_SAMPLES} and/or {KEY_MAX_SHOTS} parameters")
 
         if max_samples is None:
             max_samples = self.SAMPLES_MAX_COUNT
 
         default_experiment = self._processor.experiment
 
-        results = {'results_list': []}
+        results = {KEY_RESULTS_LIST: []}
         for idx, it in enumerate(self._iterator):
             max_samples_local = it.max_samples or max_samples
             self._processor.experiment = it.experiment
-            results['results_list'].append(self._processor.samples(max_samples_local, it.max_shots))
-            results['results_list'][-1]['iteration'] = it.parameters
+            results[KEY_RESULTS_LIST].append(self._processor.samples(max_samples_local, it.max_shots))
+            results[KEY_RESULTS_LIST][-1][KEY_ITERATION] = it.parameters
             if progress_callback is not None:
-                progress_callback((idx + 1) / len(self._iterator))
+                progress_callback((idx + 1) / len(self._iterator), "Simulating iterations")
 
         self._processor.experiment = default_experiment
 
