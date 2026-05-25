@@ -33,7 +33,7 @@ from perceval import Command, CommandFactory
 
 
 def test_fill():
-    signature = [("float", float, False), ("list", list, True)]
+    signature = [("float", float, True), ("list", list, False)]
 
     command = Command("test", signature)
 
@@ -66,7 +66,7 @@ def test_fill():
 
 
 def test_validate():
-    signature = [("mandatory", float, False), ("optional", list, True)]
+    signature = [("mandatory", float, True), ("optional", list, False)]
 
     command = Command("test", signature)
 

@@ -34,7 +34,7 @@ from perceval import Computation, CommandFactory, Experiment
 
 def test_parameters():
     experiment = Experiment()  # This Experiment does not have anything here
-    comp = Computation(CommandFactory.probs, experiment)
+    comp = Computation(CommandFactory.sample_count, experiment)
 
     with pytest.raises(ValueError):
         comp.validate()
