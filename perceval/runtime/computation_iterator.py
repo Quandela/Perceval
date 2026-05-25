@@ -101,11 +101,12 @@ class ComputationIterator:
     def extend_computation(self, *args, **kwargs) -> list[Computation]:
         return [comp for comp in self]
 
-    def parse_results(self, computation: Computation, results: list) -> dict:
+    def parse_results(self, computation: Computation, results: list, noise) -> dict:
         """
         Parses the results obtained from an iterator obtained through extend_computation().
         :param computation: The computation asked by the upper layer
         :param results: The results for the list of computations obtained through extend_computation()
+        :param noise: The Computer noise with which the results were obtained
         :return: A dictionary containing the results of the computation as a list in the "results_list" field.
         """
         if len(self._parameter_iterator) == 0:

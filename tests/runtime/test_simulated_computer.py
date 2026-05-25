@@ -142,12 +142,11 @@ def test_execute_async():
     computation = Computation(CommandFactory.probs, experiment)
 
     computer = SimulatedComputer("SLOS")
-    mitigations, getters = computer.execute_async(computation)
+    *access, getters = computer.execute_async(computation)
 
-    assert len(mitigations) == 0
     assert len(getters) == 1
 
-    res = computer.get_results(computation, mitigations, getters)
+    res = computer.get_results(computation, *access, getters)
     assert res["results"] == BSDistribution({FockState([1, 0]): 1.})
 
     assert computer.is_complete(getters[0])
