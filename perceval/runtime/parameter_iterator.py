@@ -44,8 +44,6 @@ class ComputationDescriptor:
 
 
 class ParameterIterator:
-    # TODO: in the end, this is the class we want to send to the cloud that describes the computation
-    # TODO: document this class in the code reference? I would say no as long as this is an internal class
 
     _ITERATOR_TYPE_CHECK: dict[str, type] = {'circuit_params': dict,
                                              'input_state': BasicState,

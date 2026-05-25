@@ -154,7 +154,8 @@ class SimulatedComputer(LocalComputer):
         else:
             simulator = NoisySamplingSimulator(self._backend)
         simulator.sleep_between_batches = 0  # Remove sleep time between batches of samples in local simulation
-        simulator.set_circuit(experiment.unitary_circuit())  # TODO: solve discrepancy for phase noise
+        # TODO: solve discrepancy for phase noise (SimulatorFactory.build)
+        simulator.set_circuit(experiment.unitary_circuit())
         simulator.set_selection(
             min_detected_photons_filter=experiment.min_photons_filter,
             postselect=experiment.post_select_fn,
@@ -213,7 +214,7 @@ class SimulatedComputer(LocalComputer):
         """
         extra_parameters = {key: value for key, value in extra_parameters.items() if value is not None}
         my_dict = {
-            'layer': 'Simulator',  # TODO: change name
+            'layer': type(self).__name__,
             'backend': self._backend.name,
             'm': experiment.circuit_size,
             'method': method

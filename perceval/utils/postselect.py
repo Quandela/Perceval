@@ -120,6 +120,15 @@ def post_select_statevector(
     return result, logical_perf
 
 
+@dispatch(StateVector, PostSelect, dict, bool)
+def apply_post_select(
+        sv: StateVector,
+        postselect: PostSelect,
+        heralds: dict,
+        keep_heralds: bool = True) -> tuple[StateVector, float]:
+    return post_select_statevector(sv, postselect, heralds, keep_heralds)
+
+
 @dispatch(BSCount, PostSelect, dict, bool)
 def apply_post_select(
         bsc: BSCount,

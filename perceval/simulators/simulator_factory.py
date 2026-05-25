@@ -87,6 +87,7 @@ class SimulatorFactory:
                 heralds = circuit.heralds
                 noise = circuit.noise
                 if circuit.is_unitary:
+                    # TODO: solve discrepancy for phase noise (Processor/SimulatedComputer.samples)
                     circuit = circuit.unitary_circuit(use_phase_noise=True)
                 else:
                     circuit = circuit.components
