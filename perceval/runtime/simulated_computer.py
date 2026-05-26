@@ -39,6 +39,7 @@ from perceval.utils.logging import get_logger, channel
 
 from .local_computer import LocalComputer
 from .computation import Computation
+from .platform_specs import PlatformSpecs
 
 
 class SimulatedComputer(LocalComputer):
@@ -77,6 +78,12 @@ class SimulatedComputer(LocalComputer):
     def validate_single(self, computation: Computation) -> None:
         super().validate_single(computation)
         self.check_min_detected_photons_filter(computation)
+
+    @property
+    def specs(self) -> PlatformSpecs:
+        res = PlatformSpecs()
+        res.parameters = self.available_parameters
+        return res
 
     @property
     def available_parameters(self) -> dict[str, str]:

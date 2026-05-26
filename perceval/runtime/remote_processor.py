@@ -118,7 +118,6 @@ class RemoteProcessor(AProcessor):
         self._specs = PlatformSpecs()
         self._perfs = {}
         self._status = None
-        self._available_circuit_parameters = {}
         self.fetch_data()
         self._experiment.noise = noise
         get_logger().info(f"Connected to Cloud platform {self.name}", channel.general)

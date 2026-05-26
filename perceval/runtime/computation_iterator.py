@@ -27,12 +27,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Generator
-
 from .parameter_iterator import ParameterIterator
 from .command import Command
 from .computation import Computation
+
 from perceval.utils.constants import KEY_SHOTS_USED, KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_RESULTS_LIST, KEY_ITERATION
+from perceval.components import Experiment
 
 
 class ComputationIterator:
@@ -52,6 +52,10 @@ class ComputationIterator:
     @property
     def command(self) -> Command:
         return self.base_computation.command
+
+    @property
+    def experiment(self) -> Experiment:
+        return self.base_computation.experiment
 
     def __iter__(self):
         if len(self._parameter_iterator) == 0:

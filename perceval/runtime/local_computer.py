@@ -101,6 +101,9 @@ class LocalComputer(AbstractComputer, ABC):
     def is_complete(self, async_getter: ThreadedExecution) -> bool:
         return async_getter.is_complete()
 
+    def cancel(self, async_getter: ThreadedExecution) -> None:
+        async_getter.cancel()
+
     @abstractmethod
     def probs(self, experiment: Experiment, progress_cb: ProgressCallback = None, **kwargs) -> dict:
         pass

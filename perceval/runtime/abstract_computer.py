@@ -50,6 +50,7 @@ class AbstractComputer(ABC):
         # TODO: link to method to make command parameters checking automatic ?
         self._error_mitigations: list[AbstractMitigation] = []
         self._parameters: dict[str, Any] = {}
+        self.reset_parameters()
 
     def set_mitigations(self, error_mitigations: list[AbstractMitigation]):
         # TODO: The interface to set the mitigation is still to be defined
@@ -61,6 +62,10 @@ class AbstractComputer(ABC):
 
     def set_parameters(self, parameters):
         self._parameters.update(parameters)
+
+    def reset_parameters(self):
+        # May be overloaded to have default parameters
+        self._parameters.clear()
 
     @property
     def available_parameters(self) -> dict[str, str]:
@@ -170,7 +175,7 @@ class AbstractComputer(ABC):
 
         return copy(self._error_mitigations), self.noise, self._execute_all_async(computations)  # deepcopy?
 
-    def get_results(self, computation: Computation, mitigations: list[AbstractMitigation], noise: NoiseModel, async_getters: list[AsyncGetter]) -> dict[str, Any]:
+    def get_results(self, computation: Computation | ComputationIterator, mitigations: list[AbstractMitigation], noise: NoiseModel, async_getters: list[AsyncGetter]) -> dict[str, Any]:
         """
         Get the results for an asynchronous computation
         :param computation: The original computation that was executed
@@ -178,8 +183,8 @@ class AbstractComputer(ABC):
         :param noise: The noise model with which the computations were executed
         :param async_getters: The list of async_getters that point to the executions of the computation (as returned by execute_async)
         """
-        computation, emts = self._handle_iterator(computation, mitigations)
-        return self._post_process(computation, emts, async_getters, noise, False)[0]
+        comp, emts = self._handle_iterator(computation, mitigations)
+        return self._post_process(comp, emts, async_getters, noise, False)[0]
 
     def _execute_all_async(self, computations: list[Computation]) -> list[AsyncGetter]:
         """
@@ -206,6 +211,14 @@ class AbstractComputer(ABC):
         """
         :param async_getter: The object describing where to get the result of a computation
         :return: The results of the computation
+        """
+
+    @abstractmethod
+    def cancel(self, async_getter: AsyncGetter) -> None:
+        """
+        Cancels a launched computation
+        :param async_getter: The object describing where to get the result of a computation
+        :return: None
         """
 
     @abstractmethod
@@ -243,7 +256,7 @@ class AbstractComputer(ABC):
 
     @noise.setter
     @abstractmethod
-    def noise(self, noise):
+    def noise(self, noise: NoiseModel | None):
         pass
 
     @property
