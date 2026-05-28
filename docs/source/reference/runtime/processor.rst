@@ -64,6 +64,7 @@ The input state can be:
 - A :code:`LogicalState` if ports have been defined, in which case the noise is computed.
 - A :code:`StateVector`
 - A :code:`SVDistribution`
+- A :code:`CoherentState` if there is no noise nor logical selection. In this case, the output will be another :code:`CoherentState`.
 
 If a :code:`BasicState` has polarization, the method to use is :code:`p.with_polarized_input`,
 and no noise from the source will be applied.

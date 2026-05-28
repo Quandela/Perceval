@@ -31,7 +31,8 @@ from __future__ import annotations  # Python 3.11 : Replace using Self typing
 from abc import ABC, abstractmethod
 
 from .platform_specs import PlatformSpecs
-from perceval.utils import BasicState, FockState, Parameter, PostSelect, LogicalState, NoiseModel, SVDistribution, StateVector, ProcessorType
+from perceval.utils import (BasicState, FockState, Parameter, PostSelect, LogicalState, NoiseModel, SVDistribution,
+                            StateVector, CoherentState, ProcessorType)
 from perceval.components.abstract_component import AComponent
 from perceval.components.detector import DetectionType
 from perceval.components.experiment import Experiment
@@ -332,6 +333,8 @@ class AProcessor(ABC):
         self.experiment.check_input(input_state)
 
     def check_min_detected_photons_filter(self):
+        if isinstance(self.input_state, CoherentState):
+            return
         if self._min_detected_photons_filter is None:
             if (not self.is_remote and self._source is not None and self._source.is_perfect()
                     and isinstance(self.input_state, BasicState)):
@@ -341,7 +344,7 @@ class AProcessor(ABC):
                 raise ValueError("The value of min_detected_photons is not set."
                                  " Use the method processor.min_detected_photons_filter(value).")
 
-    def with_input(self, input_state: BasicState | LogicalState | StateVector | SVDistribution):
+    def with_input(self, input_state: BasicState | LogicalState | StateVector | SVDistribution | CoherentState):
         """
         Simulates plugging the photonic source on certain modes and turning it on.
         Computes the input probability distribution

@@ -99,6 +99,16 @@ It is an alias of exqalibur :ref:`SVDistribution` class.
 .. WARNING::
     ``BSDistribution``, ``SVDistribution`` and ``BSCount`` are NOT ordered data structures and must NOT be indexed with integers.
 
+Coherent State
+--------------
+
+The :code:`CoherentState` is a class that represents a classical laser split on several modes of an interferometer.
+It has most of the :code:`BasicState` methods, as long as they make sense.
+
+.. autoclass:: perceval.utils.coherent_state.CoherentState
+  :members:
+  :inherited-members:
+
 States generators
 -----------------
 
