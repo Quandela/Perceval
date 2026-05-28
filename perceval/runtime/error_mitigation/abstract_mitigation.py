@@ -57,7 +57,7 @@ class AbstractMitigation(ABC):
         Parses the results obtained from an iterator obtained through extend_computation().
         :param results: The results for the list of computations obtained through extend_computation()
         :param noise: The Computer noise with which the results were obtained
-        :return: A dict with the fields "results", "global_perf", "n_shots", "n_samples"
+        :return: A dict with the fields "results", "global_perf", "nb_shots_used"
         """
         pass
 

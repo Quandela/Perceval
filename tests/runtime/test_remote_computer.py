@@ -30,23 +30,20 @@
 import time
 
 from perceval import RunningStatus, AbstractComputer, SimulatedComputer, Experiment, FockState, Computation, \
-    CommandFactory, BSDistribution
+    CommandFactory, BSDistribution, JobStatus
 from perceval.runtime.computation_iterator import ComputationIterator
 from perceval.runtime.platform_specs import PlatformSpecs
-from perceval.runtime.remote_computer import CommunicationLayer, RemoteComputer
+from perceval.runtime.remote_computer import CommunicationLayer, RemoteComputer, RemoteId
 from tests._test_utils import assert_bsd_close
 
 
 class ComputerProxy(CommunicationLayer):
+
     def __init__(self, computer: AbstractComputer) -> None:
         self.computer = computer
 
     def get_specs(self) -> PlatformSpecs:
         return self.computer.specs
-
-    @property
-    def is_available(self) -> bool:
-        return True  # TODO: make something better/more versatile ? (e.g. test whether reserve_resource() is on ?)
 
     def send(self, payload: dict) -> list:
         computation = payload['computation']
@@ -58,11 +55,24 @@ class ComputerProxy(CommunicationLayer):
             self.computer.reset_parameters()
         return [computation, *self.computer.execute_async(computation)]
 
-    def get_results(self, async_getter: list) -> dict:
-        return self.computer.get_results(*async_getter)
+    def get_results(self, remote_id: list) -> dict:
+        while not all(self.computer.is_complete(getter) for getter in remote_id[-1]):
+            time.sleep(0.1)
+        return self.computer.get_results(*remote_id)
 
-    def get_status(self, async_getter: list) -> RunningStatus:
-        for getter in async_getter[-1]:
+    def get_job_status(self, remote_id: RemoteId, refresh_errors: int = 0) -> JobStatus | None:
+        # TODO: account better for progress and times
+        for getter in remote_id[-1]:
+            status = getter.status
+            if not status.completed:
+                return status
+        return status
+
+    def get_remote_status(self) -> str:
+        return "available"
+
+    def get_status(self, remote_id: list) -> RunningStatus:
+        for getter in remote_id[-1]:
             if not self.computer.is_complete(getter):
                 return RunningStatus.RUNNING
         return RunningStatus.SUCCESS
@@ -73,8 +83,8 @@ class ComputerProxy(CommunicationLayer):
     def get_commands(self) -> list[str]:
         return self.computer.available_commands
 
-    def cancel(self, async_getter: list) -> None:
-        for getter in async_getter[-1]:
+    def cancel(self, remote_id: list) -> None:
+        for getter in remote_id[-1]:
             self.computer.cancel(getter)
 
 
@@ -121,9 +131,9 @@ def test_remote_computer_execute_async():
         time.sleep(0.1)
 
     res = remote_computer.get_results(computation, mitigations, noise, getter)
-    assert res["result"] == BSDistribution(FockState([1, 0]))
+    assert res["results"] == BSDistribution(FockState([1, 0]))
 
-    assert remote_computer.is_complete(getter)
+    assert remote_computer.is_complete(getter[0])
 
 
 def test_remote_computer_execute_iterator():

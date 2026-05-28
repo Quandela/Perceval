@@ -30,19 +30,24 @@
 import time
 from abc import ABC, abstractmethod
 from copy import copy, deepcopy
+from typing import TypeVar
 
 from .computation import Computation
-from .abstract_computer import AbstractComputer, AsyncGetter
+from .abstract_computer import AbstractComputer
 from .computation_iterator import ComputationIterator
 from .platform_specs import PlatformSpecs
 from .error_mitigation import AbstractMitigation
-from .job_status import RunningStatus
+from .job_status import JobStatus, RunningStatus
 from .simulated_computer import SimulatedComputer
 from .command import CommandFactory
+from .async_getter import AsyncGetter
 
 from perceval.utils import perf_dict_to_noise, ProgressCallback, ProcessorType, NoiseModel, PostSelect
 from perceval.utils.logging import channel, get_logger
 from perceval.components import PortLocation
+
+
+RemoteId = TypeVar("RemoteId")
 
 
 class CommunicationLayer(ABC):
@@ -57,24 +62,25 @@ class CommunicationLayer(ABC):
         """
         pass
 
-    @property
     @abstractmethod
-    def is_available(self) -> bool:
+    def send(self, payload: dict) -> RemoteId:
+        pass
+
+    @abstractmethod
+    def get_results(self, remote_id: RemoteId) -> dict:
+        pass
+
+    @abstractmethod
+    def get_job_status(self, remote_id: RemoteId, refresh_errors: int = 0) -> JobStatus | None:
         """
-        :return: True if jobs can be sent to the target platform (queue is not full), False otherwise
+        :param remote_id:
+        :param refresh_errors: The number of times in a row where this method returned None
+        :return: The Job Status if it was available, None otherwise
         """
         pass
 
     @abstractmethod
-    def send(self, payload: dict) -> AsyncGetter:
-        pass
-
-    @abstractmethod
-    def get_results(self, async_getter: AsyncGetter) -> dict:
-        pass
-
-    @abstractmethod
-    def get_status(self, async_getter: AsyncGetter) -> RunningStatus:
+    def get_remote_status(self) -> str:
         pass
 
     @abstractmethod
@@ -86,11 +92,54 @@ class CommunicationLayer(ABC):
         pass
 
     @abstractmethod
-    def cancel(self, async_getter: AsyncGetter) -> None:
+    def cancel(self, remote_id: RemoteId) -> None:
         pass
 
 
+class _RemoteGetter(AsyncGetter):
+    STATUS_REFRESH_DELAY = 1  # minimum job status refresh period (in s)
+    _MAX_ERROR = 5
+
+    def __init__(self, communication_layer: CommunicationLayer, remote_id: RemoteId):
+        super().__init__()
+        # TODO: Communication layer must NOT be serialized. It should be reinserted back when deserializing a Job
+        self._communication_layer = communication_layer  # Not serialized
+        self._remote_id = remote_id
+        self._last_status_refresh = 0.  # Not serialized
+        self._job_status_errors = 0  # Not serialized
+
+    def cancel(self):
+        if self.status.status in (RunningStatus.RUNNING, RunningStatus.WAITING, RunningStatus.SUSPENDED):
+            get_logger().info(f"Programmatically request job {self._remote_id} cancellation", channel.general)
+            self._communication_layer.cancel(self._remote_id)
+            self._status.stop_run(RunningStatus.CANCEL_REQUESTED, 'Cancellation requested by user')
+        else:
+            raise RuntimeError('Job is not waiting or running, cannot cancel it')
+
+    def _update_status(self) -> None:
+        if self._status.completed:  # static status - retrieving from the cloud unnecessary.
+            return
+
+        now = time.time()
+        if now - self._last_status_refresh > self.STATUS_REFRESH_DELAY:
+            self._previous_status_refresh = now
+            status = self._communication_layer.get_job_status(self._remote_id, self._job_status_errors)
+            if status is not None:
+                self._job_status_errors = 0
+                self._status.steal_from(status)
+            else:
+                self._job_status_errors += 1
+
+    def _get_results(self) -> dict | None:
+        if self._results and self.status.completed:
+            return self._results
+        self._results = self._communication_layer.get_results(self._remote_id)
+        return self._results
+
+
 class RemoteComputer(AbstractComputer):
+
+    DEFAULT_JOB_NAME = None
 
     def __init__(self, communication_layer: CommunicationLayer):
         super().__init__()
@@ -154,11 +203,10 @@ class RemoteComputer(AbstractComputer):
         # TODO: find a way to use the progress callback in load_async_result or the wait function
         return self._load_async_result(async_getter)
 
-    def _execute_command_async(self, computation: Computation) -> int:
+    def _execute_command_async(self, computation: Computation) -> _RemoteGetter:
+        # Subclasses may implement something here to ask for availability before sending to the cloud
         payload = self.prepare_payload(computation)
-        while not self._communication_layer.is_available:
-            time.sleep(1)
-        return self._communication_layer.send(payload)
+        return _RemoteGetter(self._communication_layer, self._communication_layer.send(payload))
 
     def prepare_payload(self, computation: Computation) -> dict:
         # if self.specs.perceval_version < 1.2.0:
@@ -166,28 +214,11 @@ class RemoteComputer(AbstractComputer):
 
         # TODO: call a new PayloadGenerator
         payload: dict = {"computation": computation,
-                         "mitigations": self._remote_mitigations}
+                         "mitigations": self._remote_mitigations,
+                         "job_name": self.DEFAULT_JOB_NAME or computation.command.name}
         if len(self._parameters):
             payload["parameters"] = self._parameters
         return payload
-
-    # Only the most basic features should exist here - More advanced features can be added for specific remotes
-    def _load_async_result(self, async_getter: AsyncGetter) -> dict:
-        while not self.is_complete(async_getter):
-            time.sleep(1)
-        res = self._communication_layer.get_results(async_getter)
-
-        # if ancient format (with converters):
-        #      return convert(res)
-
-        return res
-
-    def is_complete(self, async_getter: AsyncGetter) -> bool:
-        # TODO: make this better
-        return self._communication_layer.get_status(async_getter) in [RunningStatus.SUCCESS, RunningStatus.ERROR, RunningStatus.CANCELED]
-
-    def cancel(self, async_getter: AsyncGetter) -> None:
-        self._communication_layer.cancel(async_getter)
 
     @property
     def is_remote(self) -> bool:
@@ -258,7 +289,7 @@ class RemoteComputer(AbstractComputer):
                 p_above_filter_ns += prob
         return p_above_filter_ns
 
-    def estimate_required_shots(self, computation: Computation | ComputationIterator, nsamples: int, param_values: dict = None) -> int:
+    def estimate_required_shots(self, computation: Computation | ComputationIterator, nsamples: int, param_values: dict = None) -> int | None:
         """
         Compute an estimate number of required shots given the platform and the user request.
         The circuit, input state, minimum photon filter, and error mitigations are taken into account.
@@ -267,7 +298,8 @@ class RemoteComputer(AbstractComputer):
         :param nsamples: Number of expected samples of interest
         :param param_values: Key/value pairs for variable parameters inside the circuit. All parameters need to be fixed
             for this computation to run.
-        :return: Estimate of the number of shots the user needs to acquire enough samples of interest
+        :return: Estimate of the number of shots the user needs to acquire enough samples of interest,
+            or None if no sample of interest can be acquired
         """
         p_interest = self._compute_sample_of_interest_probability(computation, param_values=param_values)
         if p_interest == 0:

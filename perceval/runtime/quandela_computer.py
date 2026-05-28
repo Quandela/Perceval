@@ -26,29 +26,29 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-from time import time
-from typing import TypeAlias
+import json
+import time
 
 from requests import HTTPError
 
 from .platform_specs import PlatformSpecs
-from .remote_computer import RemoteComputer, CommunicationLayer
+from .remote_computer import RemoteComputer, CommunicationLayer, RemoteId
 from .remote_config import RemoteConfig
-from .job_status import RunningStatus
+from .job_status import RunningStatus, JobStatus
+from .remote_job import _retrieve_from_response
 from .remote_processor import PERFS_KEY
 from .rpc_handler import RPCHandler
+from .computation import Computation
 
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import deserialize, serialize
+from perceval.utils import ContextManager
 
-AsyncGetter: TypeAlias = str
 
-
-# TODO: add robustness to communication failures
 class QuandelaCommunicationLayer(CommunicationLayer):
 
-    MINIMUM_FETCH_INTERVAL_SECONDS = 5
+    MINIMUM_FETCH_INTERVAL = 5
+    _MAX_ERROR = 5
 
     def __init__(self, name: str, token: str, url: str, proxies: dict[str, str]):
         self.name = name
@@ -56,7 +56,7 @@ class QuandelaCommunicationLayer(CommunicationLayer):
         self.url = url
         self.proxies = proxies
         self._specs = PlatformSpecs()
-        self._status: str = None
+        self._status: str = ""
         self._perfs: dict[str, str] = {}
         self._last_fetch_time = None
         self._rpc_handler = RPCHandler(name, url, token, proxies)
@@ -66,7 +66,7 @@ class QuandelaCommunicationLayer(CommunicationLayer):
 
     def fetch_data(self):
         # Quandela specific: the same endpoint gives the specs, perfs and platform status
-        if self._last_fetch_time is None or time() - self._last_fetch_time > self.MINIMUM_FETCH_INTERVAL_SECONDS:
+        if self._last_fetch_time is None or time.time() - self._last_fetch_time > self.MINIMUM_FETCH_INTERVAL:
             try:
                 platform_details = self._rpc_handler.fetch_platform_details()
             except HTTPError as e:
@@ -83,28 +83,93 @@ class QuandelaCommunicationLayer(CommunicationLayer):
             if PERFS_KEY in platform_details:
                 self._perfs.update(platform_details[PERFS_KEY])
 
-            self._last_fetch_time = time()
+            self._last_fetch_time = time.time()
 
     def get_specs(self) -> PlatformSpecs:
         return self._specs
 
-    @property
-    def is_available(self) -> bool:
+    def send(self, payload: dict) -> RemoteId:
+        # TODO: add the other fields
+        return self._rpc_handler.create_job(serialize({"payload": payload}))
+
+    def get_results(self, remote_id: RemoteId) -> dict:
         try:
-            availability = self._rpc_handler.get_job_availability()
-            return availability["max_jobs_in_queue"] > availability["num_jobs_in_queue"]
-        except HTTPError:
-            get_logger().warn("Impossible to determine whether there is room for a new job")
-            return False
+            response = self._rpc_handler.get_job_results(remote_id)
+        except HTTPError as e:
+            raise HTTPError(f"Error while retrieving job results: {e}") from None
+        results = deserialize(json.loads(response['results']), strict=False)
+        if not isinstance(results, dict):
+            return {}
 
-    def send(self, payload: dict) -> AsyncGetter:
-        return self._rpc_handler.create_job(serialize(payload))
+        # TODO: remove (deprecated since 1.3, old return format)
+        if "job_context" in results and 'result_mapping' in results["job_context"]:
+            path_parts = results["job_context"]["result_mapping"]
+            get_logger().info(f"Converting job {remote_id} results with {path_parts[1]}", channel.general)
+            module = __import__(path_parts[0], fromlist=path_parts[1])
+            result_mapping_function = getattr(module, path_parts[1])
+            # retrieve delta parameters from the response
+            delta_parameters = results["job_context"].get("mapping_delta_parameters", {})
+            if "results_list" in results:
+                for res in results["results_list"]:
+                    mapping_args = {key: res["iteration"].get(key, val) for key, val in delta_parameters.items()}
+                    res["results"] = result_mapping_function(res['results'], **mapping_args)
+            else:
+                results["results"] = result_mapping_function(results["results"], **delta_parameters)
+        return results
 
-    def get_results(self, async_getter: AsyncGetter) -> dict:
-        return self._rpc_handler.get_job_results(async_getter)
+    def _handle_status_error(self, error: Exception, remote_id: RemoteId, refresh_errors: int):
+        """
+        Handle a potentially non-blocking error
+        After _MAX_ERROR errors in a row, the exception is raised
+        """
+        if refresh_errors + 1 == self._MAX_ERROR:
+            get_logger().error(f"Reached max number of HTTP errors in a row when updating job {remote_id} status.",
+                               channel.general)
+            raise error
+        if isinstance(error, HTTPError):
+            error_code = error.response.status_code
+            if error_code in [
+                408,  # Time-out
+                409,  # Conflict in the current state of the resource
+                421,  # Misdirected request
+                423,  # Resource locked
+                429   # Too many requests
+            ]:
+                get_logger().error(f"Got HTTP error {error_code} when updating job {remote_id} status. Ignoring...",
+                                   channel.general)
+            else:  # If the status code is any other error, it is considered unrecoverable
+                raise error
 
-    def get_status(self, async_getter: AsyncGetter) -> RunningStatus:
-        return RunningStatus.from_server_response(self._rpc_handler.get_job_status(async_getter)["TODO"])
+    def get_job_status(self, remote_id: RemoteId, refresh_errors: int = 0) -> JobStatus | None:
+        try:
+            response = self._rpc_handler.get_job_status(remote_id)
+        except (HTTPError, ConnectionError) as error:
+            self._handle_status_error(error, remote_id, refresh_errors)
+            return None
+
+        job_status = JobStatus()
+        job_status.status = RunningStatus.from_server_response(_retrieve_from_response(response, 'status'))
+        if job_status.running:
+            job_status.update_progress(_retrieve_from_response(response, 'progress', 0., float),
+                                       _retrieve_from_response(response, 'progress_message'))
+        elif job_status.failed:
+            job_status._stop_message = _retrieve_from_response(response, 'status_message')
+
+        self._extract_job_times(job_status, response)
+        return job_status
+
+    @staticmethod
+    def _extract_job_times(status: JobStatus, response: dict) -> None:
+        creation_datetime = _retrieve_from_response(response, 'creation_datetime', 0., float)
+
+        start_datetime = 0.
+        if not status.waiting:
+            start_datetime = _retrieve_from_response(response, 'start_time', start_datetime, float)
+
+        duration = 0
+        if status.completed:
+            duration = _retrieve_from_response(response, 'duration', duration, int)
+        status.update_times(creation_datetime, start_datetime, duration)
 
     def get_performances(self) -> dict:
         self.fetch_data()
@@ -113,12 +178,39 @@ class QuandelaCommunicationLayer(CommunicationLayer):
     def get_commands(self) -> list[str]:
         return self._specs.available_commands
 
-    def cancel(self, async_getter: AsyncGetter) -> None:
-        self._rpc_handler.cancel_job(async_getter)
+    def get_remote_status(self) -> str:
+        self.fetch_data()
+        return self._status
+
+    def cancel(self, remote_id: RemoteId) -> None:
+        try:
+            self._rpc_handler.cancel_job(remote_id)
+        except HTTPError as e:
+            raise HTTPError(f"Error while trying to cancel job: {e}") from None
+
+    def get_availability(self) -> int:
+        """
+        :return: The number of jobs available in the queue
+        """
+        try:
+            availability = self._rpc_handler.get_job_availability()
+            return availability["max_jobs_in_queue"] - availability["num_jobs_in_queue"]
+        except HTTPError:
+            get_logger().warn("Impossible to determine whether there is room for a new job")
+            return 0
+
+    def _check_max_shots_samples_validity(self):
+        # TODO: this should be moved to the Computer
+        p = self._request_data['payload']
+        if "max_samples" in p and "max_shots" in p:
+            if p["max_samples"] > p["max_shots"]:
+                get_logger().warn(f"Lowered 'max_samples' from user defined value ({p['max_samples']}) to 'max_shots' value ({p['max_shots']}) for consistency.",
+                                  channel.user)
+                p["max_samples"] = p["max_shots"]
 
 
-# Make this a simple method ? Answer will depend on if we need to add/modify methods for quandela
 class QuandelaComputer(RemoteComputer):
+    _communication_layer: QuandelaCommunicationLayer  # Used for type hinting only
 
     def __init__(self,
                  name: str = None,
@@ -148,3 +240,21 @@ class QuandelaComputer(RemoteComputer):
             communication_layer = QuandelaCommunicationLayer(name, url, token, proxies)
 
         super().__init__(communication_layer)
+        self._available_jobs = communication_layer.get_availability()
+
+    def _take_resource(self):
+        while self._available_jobs == 0:
+            self._available_jobs = self._communication_layer.get_availability()
+            time.sleep(1)
+        self._available_jobs -= 1
+
+    def _release_resource(self):
+        self._available_jobs += 1
+
+    def _reserve_resource(self) -> ContextManager:
+        return ContextManager(self._take_resource, self._release_resource)
+
+    def _execute_command_async(self, computation: Computation) -> int:
+        payload = self.prepare_payload(computation)
+        self._take_resource()
+        return self._communication_layer.send(payload)
