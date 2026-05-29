@@ -45,3 +45,5 @@ from .error_mitigation import *
 from .abstract_computer import AbstractComputer
 from .local_computer import LocalComputer
 from .simulated_computer import SimulatedComputer
+from .remote_computer import RemoteComputer, CommunicationLayer
+from .quandela_computer import QuandelaComputer
