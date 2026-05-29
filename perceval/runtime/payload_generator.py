@@ -32,6 +32,8 @@ import uuid
 from perceval.components import Experiment
 from perceval.serialization import serialize
 from perceval.utils import PMetadata
+from perceval.utils.constants import KEY_COMMAND, KEY_PARAMETERS, KEY_EXPERIMENT, KEY_VERSION, KEY_PROCESS_ID, \
+    KEY_PAYLOAD, KEY_PLATFORM_NAME
 
 __process_id__ = uuid.uuid4()
 
@@ -74,25 +76,40 @@ class PayloadGenerator:
             experiment = Experiment()
 
         payload = {
-            'command': command,
+            KEY_COMMAND: command,
             **kwargs
         }
 
         if params:
-            payload['parameters'] = params
-        payload['experiment'] = serialize(experiment)
+            payload[KEY_PARAMETERS] = params
+        payload[KEY_EXPERIMENT] = serialize(experiment)
 
-        return PayloadGenerator.generate_global_data(payload, platform_name=platform_name)
+        global_kwargs = {KEY_PLATFORM_NAME: platform_name} if platform_name else None
+        return PayloadGenerator.generate_global_data(payload, global_kwargs)
 
     @staticmethod
-    def generate_global_data(payload: dict, **kwargs) -> dict:
-        global_data = {
-            'pcvl_version': PMetadata.short_version(),
-            'process_id': str(__process_id__),
-            'payload': payload,
+    def generate_global_data(payload: dict, kwargs: dict = None) -> dict:
+        r"""
+        Generate a simple payload containing the experiment, with the following template:
+        {
+            'pcvl_version': str
+            'process_id': str
+            'payload': payload
+            **kwargs
         }
 
-        for key, value in kwargs.items():
-            if value is not None:
+        :param payload: The payload to insert
+        :param kwargs: other arguments to insert
+
+        Other parameters can be added to the payload via **kwargs.
+        """
+        global_data = {
+            KEY_VERSION: PMetadata.short_version(),
+            KEY_PROCESS_ID: str(__process_id__),
+            KEY_PAYLOAD: payload,
+        }
+
+        if kwargs is not None:
+            for key, value in kwargs.items():
                 global_data[key] = value
         return global_data

@@ -41,9 +41,11 @@ from .rpc_handler import RPCHandler
 from .computation import Computation
 from .payload_generator import PayloadGenerator
 
-from perceval.utils.logging import get_logger, channel
 from perceval.serialization import deserialize, serialize
 from perceval.utils import ContextManager
+from perceval.utils.logging import get_logger, channel
+from perceval.utils.constants import KEY_JOB_CONTEXT, KEY_RESULT_MAPPING, KEY_RESULTS_LIST, KEY_MAPPING_PARAMETERS, \
+    KEY_ITERATION, KEY_RESULTS, KEY_COMPUTATION, KEY_PLATFORM_NAME, KEY_JOB_NAME, KEY_JOB_GROUP_NAME
 
 
 class QuandelaCommunicationLayer(CommunicationLayer):
@@ -91,12 +93,12 @@ class QuandelaCommunicationLayer(CommunicationLayer):
 
     def send(self, payload: dict) -> RemoteId:
         # TODO: how to be compatible with old format to receive names?
-        computation = payload["computation"]
+        computation = payload[KEY_COMPUTATION]
 
         global_data = PayloadGenerator.generate_global_data(payload,
-                                                            platform_name=self._rpc_handler.name,
-                                                            job_name=computation.job_name,
-                                                            job_group_name=computation.job_group_name)
+                                                            {KEY_PLATFORM_NAME: self._rpc_handler.name,
+                                                             KEY_JOB_NAME: computation.job_name,
+                                                             KEY_JOB_GROUP_NAME: computation.job_group_name})
 
         return self._rpc_handler.create_job(serialize(global_data))
 
@@ -105,24 +107,24 @@ class QuandelaCommunicationLayer(CommunicationLayer):
             response = self._rpc_handler.get_job_results(remote_id)
         except HTTPError as e:
             raise HTTPError(f"Error while retrieving job results: {e}") from None
-        results = deserialize(json.loads(response['results']), strict=False)
+        results = deserialize(json.loads(response[KEY_RESULTS]), strict=False)
         if not isinstance(results, dict):
             return {}
 
         # TODO: remove (deprecated since 1.3, old return format)
-        if "job_context" in results and 'result_mapping' in results["job_context"]:
-            path_parts = results["job_context"]["result_mapping"]
+        if KEY_JOB_CONTEXT in results and KEY_RESULT_MAPPING in results[KEY_JOB_CONTEXT]:
+            path_parts = results[KEY_JOB_CONTEXT][KEY_RESULT_MAPPING]
             get_logger().info(f"Converting job {remote_id} results with {path_parts[1]}", channel.general)
             module = __import__(path_parts[0], fromlist=path_parts[1])
             result_mapping_function = getattr(module, path_parts[1])
             # retrieve delta parameters from the response
-            delta_parameters = results["job_context"].get("mapping_delta_parameters", {})
-            if "results_list" in results:
-                for res in results["results_list"]:
-                    mapping_args = {key: res["iteration"].get(key, val) for key, val in delta_parameters.items()}
-                    res["results"] = result_mapping_function(res['results'], **mapping_args)
+            delta_parameters = results[KEY_JOB_CONTEXT].get(KEY_MAPPING_PARAMETERS, {})
+            if KEY_RESULTS_LIST in results:
+                for res in results[KEY_RESULTS_LIST]:
+                    mapping_args = {key: res[KEY_ITERATION].get(key, val) for key, val in delta_parameters.items()}
+                    res[KEY_RESULTS] = result_mapping_function(res[KEY_RESULTS], **mapping_args)
             else:
-                results["results"] = result_mapping_function(results["results"], **delta_parameters)
+                results[KEY_RESULTS] = result_mapping_function(results[KEY_RESULTS], **delta_parameters)
         return results
 
     def _handle_status_error(self, error: Exception, remote_id: RemoteId, refresh_errors: int):
@@ -206,15 +208,6 @@ class QuandelaCommunicationLayer(CommunicationLayer):
         except HTTPError:
             get_logger().warn("Impossible to determine whether there is room for a new job")
             return 0
-
-    def _check_max_shots_samples_validity(self):
-        # TODO: this should be moved to the Computer
-        p = self._request_data['payload']
-        if "max_samples" in p and "max_shots" in p:
-            if p["max_samples"] > p["max_shots"]:
-                get_logger().warn(f"Lowered 'max_samples' from user defined value ({p['max_samples']}) to 'max_shots' value ({p['max_shots']}) for consistency.",
-                                  channel.user)
-                p["max_samples"] = p["max_shots"]
 
 
 class QuandelaComputer(RemoteComputer):

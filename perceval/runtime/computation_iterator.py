@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from typing import Any
 
 from .parameter_iterator import ParameterIterator
 from .command import Command
@@ -52,6 +53,10 @@ class ComputationIterator:
     @property
     def command(self) -> Command:
         return self.base_computation.command
+
+    @property
+    def parameters(self) -> dict[str, Any]:
+        return self.base_computation.parameters
 
     @property
     def experiment(self) -> Experiment:

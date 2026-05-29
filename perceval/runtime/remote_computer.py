@@ -44,6 +44,7 @@ from .async_getter import AsyncGetter
 
 from perceval.utils import perf_dict_to_noise, ProgressCallback, ProcessorType, NoiseModel, PostSelect
 from perceval.utils.logging import channel, get_logger
+from perceval.utils.constants import KEY_COMPUTATION, KEY_MITIGATIONS, KEY_PARAMETERS, KEY_NOISE
 from perceval.components import PortLocation, Experiment
 
 RemoteId = TypeVar("RemoteId")
@@ -177,6 +178,14 @@ class RemoteComputer(AbstractComputer):
         super().validate_single(computation)
         self.check_experiment(computation.experiment)
 
+        params = computation.parameters
+        if "max_samples" in params and "max_shots" in params:
+            if params["max_samples"] > params["max_shots"]:
+                get_logger().warn(f"Lowered 'max_samples' from user defined value ({params['max_samples']}) to"
+                                  f" 'max_shots' value ({params['max_shots']}) for consistency.",
+                                  channel.user)
+                params["max_samples"] = params["max_shots"]
+
     @staticmethod
     def check_min_detected_photons_filter(experiment: Experiment) -> None:
         # TODO: if we have an iterator, the min_photons_filter can be set only by each iteration
@@ -238,10 +247,12 @@ class RemoteComputer(AbstractComputer):
         #     return self._prepare_old_payload(computation)
 
         # TODO: call a new PayloadGenerator?
-        payload: dict = {"computation": computation,
-                         "mitigations": self._remote_mitigations}
+        payload: dict = {KEY_COMPUTATION: computation,
+                         KEY_MITIGATIONS: self._remote_mitigations}
         if len(self._parameters):
-            payload["parameters"] = self._parameters
+            payload[KEY_PARAMETERS] = self._parameters
+        if self._custom_noise is not None:
+            payload[KEY_NOISE] = self._custom_noise
         return payload
 
     @property
