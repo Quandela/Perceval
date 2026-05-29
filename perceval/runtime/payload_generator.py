@@ -43,7 +43,7 @@ class PayloadGenerator:
     def generate_payload(command: str,
                          experiment: Experiment = None,
                          params: dict[str, any] = None,
-                         platform_name: str = "",
+                         platform_name: str = None,
                          **kwargs
                          ) -> dict[str, any]:
         r"""
@@ -73,13 +73,6 @@ class PayloadGenerator:
         if experiment is None:
             experiment = Experiment()
 
-        j = {
-            'pcvl_version': PMetadata.short_version(),
-            'process_id': str(__process_id__)
-        }
-        if platform_name:
-            j['platform_name'] = platform_name
-
         payload = {
             'command': command,
             **kwargs
@@ -87,8 +80,19 @@ class PayloadGenerator:
 
         if params:
             payload['parameters'] = params
-
         payload['experiment'] = serialize(experiment)
-        j['payload'] = payload
 
-        return j
+        return PayloadGenerator.generate_global_data(payload, platform_name=platform_name)
+
+    @staticmethod
+    def generate_global_data(payload: dict, **kwargs) -> dict:
+        global_data = {
+            'pcvl_version': PMetadata.short_version(),
+            'process_id': str(__process_id__),
+            'payload': payload,
+        }
+
+        for key, value in kwargs.items():
+            if value is not None:
+                global_data[key] = value
+        return global_data

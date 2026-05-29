@@ -57,6 +57,22 @@ class ComputationIterator:
     def experiment(self) -> Experiment:
         return self.base_computation.experiment
 
+    @property
+    def job_name(self) -> str:
+        return self.base_computation.job_name
+
+    @job_name.setter
+    def job_name(self, value: str):
+        self.base_computation.job_name = value
+
+    @property
+    def job_group_name(self) -> str | None:
+        return self.base_computation.job_group_name
+
+    @job_group_name.setter
+    def job_group_name(self, value: str):
+        self.base_computation.job_group_name = value
+
     def __iter__(self):
         if len(self._parameter_iterator) == 0:
             yield self.base_computation

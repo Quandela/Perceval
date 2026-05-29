@@ -126,7 +126,7 @@ class _RemoteGetter(AsyncGetter):
             status = self._communication_layer.get_job_status(self._remote_id, self._job_status_errors)
             if status is not None:
                 self._job_status_errors = 0
-                self._status.steal_from(status)
+                self._status.copy_from(status)
             else:
                 self._job_status_errors += 1
 
@@ -138,8 +138,6 @@ class _RemoteGetter(AsyncGetter):
 
 
 class RemoteComputer(AbstractComputer):
-
-    DEFAULT_JOB_NAME = None
 
     def __init__(self, communication_layer: CommunicationLayer):
         super().__init__()
@@ -209,13 +207,12 @@ class RemoteComputer(AbstractComputer):
         return _RemoteGetter(self._communication_layer, self._communication_layer.send(payload))
 
     def prepare_payload(self, computation: Computation) -> dict:
-        # if self.specs.perceval_version < 1.2.0:
+        # if self.specs.perceval_version < 1.3.0:
         #     return self._prepare_old_payload(computation)
 
-        # TODO: call a new PayloadGenerator
+        # TODO: call a new PayloadGenerator?
         payload: dict = {"computation": computation,
-                         "mitigations": self._remote_mitigations,
-                         "job_name": self.DEFAULT_JOB_NAME or computation.command.name}
+                         "mitigations": self._remote_mitigations}
         if len(self._parameters):
             payload["parameters"] = self._parameters
         return payload
@@ -228,6 +225,7 @@ class RemoteComputer(AbstractComputer):
     def type(self):
         return self._specs.type
 
+    # TODO: test all these
     def _compute_sample_of_interest_probability(self, computation: Computation | ComputationIterator, param_values: dict = None) -> float:
         # Simulation with a noisy source (only losses)
         computation.validate()

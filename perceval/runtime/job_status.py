@@ -282,7 +282,7 @@ class JobStatus:
     def __str__(self) -> str:
         return self._status.name
 
-    def steal_from(self, status: JobStatus):
+    def copy_from(self, status: JobStatus):
         self._status = status._status
         if status._init_time_start:
             self._init_time_start = status._init_time_start

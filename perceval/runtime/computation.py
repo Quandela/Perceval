@@ -29,6 +29,8 @@
 
 from typing import Any
 
+from pybtex.style.sorting import none
+
 from perceval.components import Experiment
 from .command import Command
 
@@ -46,6 +48,8 @@ class Computation:
         self.command = command
         self.experiment = experiment
         self.parameters: dict[str, Any] = dict()
+        self.job_name = command.name
+        self.job_group_name: str | None = None
 
     def add_params(self, *args, **kwargs) -> None:
         """

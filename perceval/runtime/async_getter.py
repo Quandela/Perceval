@@ -49,20 +49,6 @@ class AsyncGetter(ABC):
     def __init__(self):
         self._results = None
         self._status = JobStatus()
-        self._name: str = "Job"
-
-    @property
-    def name(self) -> str:
-        """
-        The job name
-        """
-        return self._name
-
-    @name.setter
-    def name(self, new_name: str):
-        if not isinstance(new_name, str):
-            raise TypeError("A job name must be a string")
-        self._name = new_name if len(new_name) > 0 else "unnamed"
 
     @property
     def status(self) -> JobStatus:

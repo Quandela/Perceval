@@ -39,6 +39,7 @@ from .remote_job import _retrieve_from_response
 from .remote_processor import PERFS_KEY
 from .rpc_handler import RPCHandler
 from .computation import Computation
+from .payload_generator import PayloadGenerator
 
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import deserialize, serialize
@@ -89,8 +90,15 @@ class QuandelaCommunicationLayer(CommunicationLayer):
         return self._specs
 
     def send(self, payload: dict) -> RemoteId:
-        # TODO: add the other fields
-        return self._rpc_handler.create_job(serialize({"payload": payload}))
+        # TODO: how to be compatible with old format to receive names?
+        computation = payload["computation"]
+
+        global_data = PayloadGenerator.generate_global_data(payload,
+                                                            platform_name=self._rpc_handler.name,
+                                                            job_name=computation.job_name,
+                                                            job_group_name=computation.job_group_name)
+
+        return self._rpc_handler.create_job(serialize(global_data))
 
     def get_results(self, remote_id: RemoteId) -> dict:
         try:
