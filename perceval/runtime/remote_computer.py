@@ -44,8 +44,7 @@ from .async_getter import AsyncGetter
 
 from perceval.utils import perf_dict_to_noise, ProgressCallback, ProcessorType, NoiseModel, PostSelect
 from perceval.utils.logging import channel, get_logger
-from perceval.components import PortLocation
-
+from perceval.components import PortLocation, Experiment
 
 RemoteId = TypeVar("RemoteId")
 
@@ -176,14 +175,42 @@ class RemoteComputer(AbstractComputer):
 
     def validate_single(self, computation: Computation) -> None:
         super().validate_single(computation)
-        self.check_min_detected_photons_filter(computation)
+        self.check_experiment(computation.experiment)
 
     @staticmethod
-    def check_min_detected_photons_filter(computation: Computation) -> None:
+    def check_min_detected_photons_filter(experiment: Experiment) -> None:
         # TODO: if we have an iterator, the min_photons_filter can be set only by each iteration
-        if computation.experiment.min_photons_filter is None:
+        if experiment.min_photons_filter is None:
             raise ValueError("The value of min_detected_photons is not set."
                              " Use the method experiment.min_detected_photons_filter(value).")
+
+    def check_experiment(self, experiment: Experiment) -> None:
+        self.check_min_detected_photons_filter(experiment)
+
+        # TODO: move this to QuandelaRemote ?
+        constraints = self.specs.constraints
+        if constraints:
+            input_state = experiment.input_state
+            n_heralds = sum(experiment.in_heralds.values())
+            n_photons = input_state.n + n_heralds
+            # Checks on state
+            if 'max_photon_count' in constraints and n_photons > constraints['max_photon_count']:
+                raise RuntimeError(
+                    f"Too many photons in input state ({input_state.n} + {n_heralds} heralds > {constraints['max_photon_count']})")
+            if 'min_photon_count' in constraints and n_photons < constraints['min_photon_count']:
+                raise RuntimeError(
+                    f"Not enough photons in input state ({n_photons} < {constraints['min_photon_count']})")
+            if ('support_multi_photon' in constraints and not constraints['support_multi_photon']
+                    and not all(mode_photon_cnt <= 1 for mode_photon_cnt in input_state)):
+                raise RuntimeError(f"Input state ({input_state}) is not permitted."
+                                   " QPU/QPU simulators doesn't accept more than 1 photon per mode")
+
+            # Checks on circuit
+            m = experiment.circuit_size
+            if 'max_mode_count' in constraints and m > constraints['max_mode_count']:
+                raise RuntimeError(f"Circuit too big ({m} modes > {constraints['max_mode_count']})")
+            if 'min_mode_count' in constraints and m < constraints['min_mode_count']:
+                raise RuntimeError(f"Circuit too small ({m} < {constraints['min_mode_count']})")
 
     def _handle_iterator(self, comp: Computation | ComputationIterator, emts: list[AbstractMitigation] = None) -> tuple[Computation, list[AbstractMitigation | ComputationIterator]]:
         # Avoids sending separate jobs if there is an Iterator but no local mitigations
