@@ -29,8 +29,6 @@
 
 from typing import Any
 
-from pybtex.style.sorting import none
-
 from perceval.components import Experiment
 from .command import Command
 
