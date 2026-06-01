@@ -65,3 +65,6 @@ class Computation:
         :raises ValueError: if parameters are not correct
         """
         self.command.check(self.parameters)
+
+    def __iter__(self):
+        yield self

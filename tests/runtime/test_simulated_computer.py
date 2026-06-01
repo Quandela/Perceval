@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import time
 
 import pytest
 from exqalibur import BSCount, BSSamples
@@ -145,11 +146,15 @@ def test_execute_async():
     *access, getters = computer.execute_async(computation)
 
     assert len(getters) == 1
+    assert len(getters[0]) == 1
 
-    res = computer.get_results(computation, *access, getters)
+    while not computer.is_complete(getters[0][0]):
+        time.sleep(0.01)
+
+    res_out = dict()
+    res = computer.get_results(computation, *access, getters, res_out)
+    assert res is res_out
     assert res["results"] == BSDistribution({FockState([1, 0]): 1.})
-
-    assert computer.is_complete(getters[0])
 
 
 def test_execute_iterator():
@@ -162,7 +167,11 @@ def test_execute_iterator():
     computation.add_iteration(input_state = FockState([0, 1]))
 
     computer = SimulatedComputer("SLOS")
-    res = computer.execute(computation)
+
+    res_out = dict()
+    res = computer.execute(computation, res_out)
+
+    assert res is res_out
 
     assert isinstance(res, dict)
     assert "results_list" in res

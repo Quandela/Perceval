@@ -26,8 +26,16 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from perceval.utils import ProgressCallback
+
 
 def cancel_requested(exec_request: dict | bool = None):
     if isinstance(exec_request, dict):
         return exec_request.get('cancel_requested', False)
     return exec_request
+
+
+def call_and_check_cancel(progress_cb: ProgressCallback | None, progress: float, message: str) -> bool:
+    if progress_cb:
+        return cancel_requested(progress_cb(progress, message))
+    return False
