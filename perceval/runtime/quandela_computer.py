@@ -45,7 +45,8 @@ from perceval.serialization import deserialize, serialize
 from perceval.utils import ContextManager
 from perceval.utils.logging import get_logger, channel
 from perceval.utils.constants import KEY_JOB_CONTEXT, KEY_RESULT_MAPPING, KEY_RESULTS_LIST, KEY_MAPPING_PARAMETERS, \
-    KEY_ITERATION, KEY_RESULTS, KEY_COMPUTATION, KEY_PLATFORM_NAME, KEY_JOB_NAME, KEY_JOB_GROUP_NAME
+    KEY_ITERATION, KEY_RESULTS, KEY_COMPUTATION, KEY_PLATFORM_NAME, KEY_JOB_NAME, KEY_JOB_GROUP_NAME, KEY_COMMAND, \
+    KEY_MAX_SHOTS
 
 
 class QuandelaCommunicationLayer(CommunicationLayer):
@@ -94,6 +95,11 @@ class QuandelaCommunicationLayer(CommunicationLayer):
     def send(self, payload: dict) -> RemoteId:
         # TODO: how to be compatible with old format to receive names?
         computation = payload[KEY_COMPUTATION]
+
+        # Needed for display - Should not be used anywhere else
+        payload[KEY_COMMAND] = computation.command.name
+        if KEY_MAX_SHOTS in computation.parameters:
+            payload[KEY_MAX_SHOTS] = computation.parameters[KEY_MAX_SHOTS]
 
         global_data = PayloadGenerator.generate_global_data(payload,
                                                             {KEY_PLATFORM_NAME: self._rpc_handler.name,

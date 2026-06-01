@@ -34,6 +34,7 @@ from perceval import RunningStatus, AbstractComputer, SimulatedComputer, Experim
 from perceval.runtime.computation_iterator import ComputationIterator
 from perceval.runtime.platform_specs import PlatformSpecs
 from perceval.runtime.remote_computer import CommunicationLayer, RemoteComputer, RemoteId
+from perceval.utils.constants import KEY_NOISE, KEY_PARAMETERS, KEY_COMPUTATION, KEY_MITIGATIONS
 from tests._test_utils import assert_bsd_close
 
 
@@ -46,13 +47,15 @@ class ComputerProxy(CommunicationLayer):
         return self.computer.specs
 
     def send(self, payload: dict) -> list:
-        computation = payload['computation']
-        mitigations = payload['mitigations']
+        computation = payload[KEY_COMPUTATION]
+        mitigations = payload[KEY_MITIGATIONS]
         self.computer.set_mitigations(mitigations)
-        if "parameters" in payload:
-            self.computer.set_parameters(payload['parameters'])
+        if KEY_PARAMETERS in payload:
+            self.computer.set_parameters(payload[KEY_PARAMETERS])
         else:
             self.computer.reset_parameters()
+        if KEY_NOISE in payload:
+            self.computer.noise = payload[KEY_NOISE]
         return [computation, *self.computer.execute_async(computation)]
 
     def get_results(self, remote_id: list) -> dict:
