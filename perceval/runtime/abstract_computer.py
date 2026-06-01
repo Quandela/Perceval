@@ -97,12 +97,26 @@ class AbstractComputer(ABC):
 
         return out, lambda res: out.update(res)
 
-    def extend_computation(self, comp: Computation) -> list[Computation]:
+    def extend_computation_keep_original(self, computation: Computation | ComputationIterator) -> list[tuple[list[Computation], Computation]]:
+        computations = []
+        for comp in computation:
+            computations.append((self._extend_computation(comp), comp))
+        return computations
+
+    def extend_computation(self, computation: Computation | ComputationIterator) -> list[list[Computation]]:
+        computations = []
+        for comp in computation:
+            computations.append(self._extend_computation(comp))
+        return computations
+
+    def _extend_computation(self, comp: Computation) -> list[Computation]:
         """
         :param comp: The computation to be executed as the final step
         :return: The list of all computations to execute
         """
-        return self._prepare_sub_computations([comp], self._error_mitigations)
+        if comp.command.apply_emt:
+            return self._prepare_sub_computations([comp], self._error_mitigations)
+        return [comp]
 
     def _prepare_sub_computations(self, computations: list[Computation], emts: list[AbstractMitigation]) -> list[Computation]:
         if len(emts) == 0:
@@ -119,8 +133,9 @@ class AbstractComputer(ABC):
                      results: list[dict | AsyncGetter],
                      noise: NoiseModel,
                      emts: list[AbstractMitigation] = None,
-                     progress_callback: ProgressCallback = None):
-
+                     progress_callback: ProgressCallback = None) -> dict:
+        if original_computation.command.apply_emt:
+            emts = None
         return self._post_process(original_computation, emts or [], results, noise, progress_callback)[0]
 
     def _post_process(self, computation: Computation, emts: list[AbstractMitigation], results: list,
@@ -156,11 +171,7 @@ class AbstractComputer(ABC):
         computation.validate()
 
         res, inserter = self._handle_iterator(computation, out)
-
-        computations: list[tuple[list[Computation], Computation]] = []
-        for comp in computation:
-            computations.append((self.extend_computation(comp), comp))
-
+        computations = self.extend_computation_keep_original(computation)
         self._execute_all(computations, inserter, progress_callback)
         return res
 
@@ -210,11 +221,7 @@ class AbstractComputer(ABC):
         :return: The Error mitigations with which the computation is executed, and the list of objects that can be used to get the results
         """
         computation.validate()
-
-        computations: list[list[Computation]] = []
-        for comp in computation:
-            computations.append(self.extend_computation(comp))
-
+        computations = self.extend_computation(computation)
         return copy(self._error_mitigations), self.noise, self._execute_all_async(computations)  # deepcopy?
 
     def get_results(self, computation: Computation | ComputationIterator,
@@ -231,8 +238,8 @@ class AbstractComputer(ABC):
         :param out: A dictionary where to place the results.
         """
         res, inserter = self._handle_iterator(computation, out)
-        for i, comp in enumerate(computation):
-            inserter(self.post_process(comp, async_getters[i], noise, mitigations))
+        for getters, comp in zip(async_getters, computation):
+            inserter(self.post_process(comp, getters, noise, mitigations))
 
         return res
 

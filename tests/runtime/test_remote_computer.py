@@ -59,26 +59,21 @@ class ComputerProxy(CommunicationLayer):
         return [computation, *self.computer.execute_async(computation)]
 
     def get_results(self, remote_id: list) -> dict:
-        while not all(self.computer.is_complete(getter) for getter in remote_id[-1]):
+        while not all(self.computer.is_complete(getter) for getters in remote_id[-1] for getter in getters):
             time.sleep(0.1)
         return self.computer.get_results(*remote_id)
 
     def get_job_status(self, remote_id: RemoteId, refresh_errors: int = 0) -> JobStatus | None:
         # TODO: account better for progress and times
-        for getter in remote_id[-1]:
-            status = getter.status
-            if not status.completed:
-                return status
+        for getters in remote_id[-1]:
+            for getter in getters:
+                status = getter.status
+                if not status.completed:
+                    return status
         return status
 
     def get_remote_status(self) -> str:
         return "available"
-
-    def get_status(self, remote_id: list) -> RunningStatus:
-        for getter in remote_id[-1]:
-            if not self.computer.is_complete(getter):
-                return RunningStatus.RUNNING
-        return RunningStatus.SUCCESS
 
     def get_performances(self) -> dict:
         return self.computer.performance
@@ -130,13 +125,13 @@ def test_remote_computer_execute_async():
     computation = Computation(CommandFactory.probs, e)
     mitigations, noise, getter = remote_computer.execute_async(computation)
 
-    while not remote_computer.is_complete(getter[0]):
+    while not remote_computer.is_complete(getter[0][0]):
         time.sleep(0.1)
 
     res = remote_computer.get_results(computation, mitigations, noise, getter)
     assert res["results"] == BSDistribution(FockState([1, 0]))
 
-    assert remote_computer.is_complete(getter[0])
+    assert remote_computer.is_complete(getter[0][0])
 
 
 def test_remote_computer_execute_iterator():
@@ -180,8 +175,9 @@ def test_remote_computer_execute_async_iterator():
     mitigations, noise, getter = remote_computer.execute_async(computation)
 
     assert len(getter) == 1, "Iterator must not be decomposed when there is no local mitigations"
+    assert len(getter[0]) == 1, "Iterator must not be decomposed when there is no local mitigations"
 
-    while not remote_computer.is_complete(getter[0]):
+    while not remote_computer.is_complete(getter[0][0]):
         time.sleep(0.1)
 
     res = remote_computer.get_results(computation, mitigations, noise, getter)

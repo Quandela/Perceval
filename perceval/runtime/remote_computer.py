@@ -30,7 +30,7 @@
 import time
 from abc import ABC, abstractmethod
 from copy import copy, deepcopy
-from typing import TypeVar
+from typing import TypeVar, Callable
 
 from .computation import Computation
 from .abstract_computer import AbstractComputer
@@ -221,20 +221,35 @@ class RemoteComputer(AbstractComputer):
             if 'min_mode_count' in constraints and m < constraints['min_mode_count']:
                 raise RuntimeError(f"Circuit too small ({m} < {constraints['min_mode_count']})")
 
-    def _handle_iterator(self, comp: Computation | ComputationIterator, emts: list[AbstractMitigation] = None) -> tuple[Computation, list[AbstractMitigation | ComputationIterator]]:
-        # Avoids sending separate jobs if there is an Iterator but no local mitigations
-        if comp.command.apply_emt:
-            emts = emts if emts is not None else self._error_mitigations
-        else:
-            emts = []
-        if not len(emts):
-            return comp, []
+    def _handle_iterator(self, comp: Computation | ComputationIterator, out: dict | None)\
+            -> tuple[dict, Callable[[dict], None]]:
+        if out is None:
+            out = dict()
 
-        return super()._handle_iterator(comp, emts)
+        # Avoids sending separate jobs if there is an Iterator but no local mitigations
+        if isinstance(comp, ComputationIterator) and len(self._error_mitigations) > 0:
+            return out, comp.make_inserter(out)
+
+        return out, lambda res: out.update(res)
+
+    def extend_computation_keep_original(self, computation: Computation | ComputationIterator) -> list[tuple[list[Computation], Computation]]:
+        if len(self._error_mitigations) > 0:
+            return super().extend_computation_keep_original(computation)
+        else:
+            # Avoids sending separate jobs if there is an Iterator but no local mitigations
+            # This is doable here because execute_command was made so that it supports ComputationIterator
+            return [([computation], computation)]
+
+    def extend_computation(self, computation: Computation | ComputationIterator) -> list[list[Computation]]:
+        if len(self._error_mitigations) > 0:
+            return super().extend_computation(computation)
+        else:
+            # Avoids sending separate jobs if there is an Iterator but no local mitigations
+            # This is doable here because execute_command was made so that it supports ComputationIterator
+            return [[computation]]
 
     def _execute_command(self, computation: Computation, progress_cb: ProgressCallback = None) -> dict:
         async_getter = self._execute_single_async(computation)
-        # TODO: find a way to use the progress callback in load_async_result or the wait function
         return self._load_async_result(async_getter)
 
     def _execute_command_async(self, computation: Computation) -> _RemoteGetter:
