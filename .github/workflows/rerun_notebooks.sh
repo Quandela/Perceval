@@ -1,20 +1,25 @@
-my_function () {
+#!/usr/bin/env bash
+
+run_notebook () {
     echo converting $notebook
     jupyter nbconvert --clear-output --inplace "$notebook"
     jupyter nbconvert --execute --to notebook --inplace "$notebook"
     jupyter nbconvert --ClearMetadataPreprocessor.enabled=True --inplace "$notebook"
 }
+
+# apply patch to notebooks which allows execution
+SCRIPT_DIR=$(dirname "$(realpath $0)")
+GIT_ROOT_DIR=$(git rev-parse --show-toplevel)
+(cd $GIT_ROOT_DIR && git apply "$SCRIPT_DIR/notebooks.patch")
+
 nb_dir="docs/source/notebooks"
 for entry in `ls $nb_dir | grep \.ipynb`; do
     notebook=$nb_dir/$entry
     if [[ $notebook =~ ".ipynb" ]]
     then
-        if [ "$notebook" = "docs/source/notebooks/BS-based_implementation.ipynb" ]
+        if [ $ENABLE_CLOUD_NOTEBOOKS = "True" ]
         then
-            echo $notebook is ignore
-        elif [ "$notebook" = "docs/source/notebooks/Boson_sampling.ipynb" ]
-        then
-            echo $notebook is ignore
+            run_notebook
         elif [ "$notebook" = "docs/source/notebooks/Gedik_qudit.ipynb" ]
         then
             echo $notebook is ignore
@@ -22,7 +27,7 @@ for entry in `ls $nb_dir | grep \.ipynb`; do
         then
             echo $notebook is ignore
         else
-            my_function
+            run_notebook
         fi
     fi
 done
