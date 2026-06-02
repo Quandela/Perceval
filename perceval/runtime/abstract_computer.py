@@ -39,6 +39,7 @@ from .platform_specs import PlatformSpecs
 from .check_cancel import call_and_check_cancel
 
 from perceval.utils import ProgressCallback, partial_progress_callable, ContextManager, NoiseModel
+from perceval.utils.constants import KEY_RESULTS
 
 
 class AbstractComputer(ABC):
@@ -168,11 +169,15 @@ class AbstractComputer(ABC):
          If the computation is an iterator, it can receive be used to retrieve partial results.
         :param progress_callback: A ProgressCallback to monitor the progress and potentially cancel the execution.
         """
-        computation.validate()
-
         res, inserter = self._handle_iterator(computation, out)
-        computations = self.extend_computation_keep_original(computation)
-        self._execute_all(computations, inserter, progress_callback)
+
+        try:
+            computation.validate()
+            computations = self.extend_computation_keep_original(computation)
+            self._execute_all(computations, inserter, progress_callback)
+        except Exception as e:
+            inserter({KEY_RESULTS: str(e)})
+            raise
         return res
 
     def _execute_all(self,
@@ -238,8 +243,13 @@ class AbstractComputer(ABC):
         :param out: A dictionary where to place the results.
         """
         res, inserter = self._handle_iterator(computation, out)
-        for getters, comp in zip(async_getters, computation):
-            inserter(self.post_process(comp, getters, noise, mitigations))
+
+        try:
+            for getters, comp in zip(async_getters, computation):
+                inserter(self.post_process(comp, getters, noise, mitigations))
+        except Exception as e:
+            inserter({KEY_RESULTS: str(e)})
+            raise
 
         return res
 
