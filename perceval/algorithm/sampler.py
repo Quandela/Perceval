@@ -121,7 +121,7 @@ class Sampler(AAlgorithm):
                 job_context = {"result_mapping": ['perceval.utils', converter.__name__]}
             payload = self._processor.prepare_job_payload(primitive)
             if self._iterator:
-                payload['payload']['iterator'] = self._iterator
+                payload['payload']['iterator'] = self._iterator.iterations
             payload['payload']['max_shots'] = self._max_shots
             job_name = self.default_job_name if self.default_job_name is not None else method
             job = RemoteJob(payload, self._processor.get_rpc_handler(), job_name,
