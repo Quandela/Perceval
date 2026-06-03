@@ -37,6 +37,7 @@ from .computation import Computation
 from .computation_iterator import ComputationIterator
 from .platform_specs import PlatformSpecs
 from .check_cancel import call_and_check_cancel
+from .command import Command
 
 from perceval.utils import ProgressCallback, partial_progress_callable, ContextManager, NoiseModel
 from perceval.utils.constants import KEY_RESULTS
@@ -47,11 +48,23 @@ class AbstractComputer(ABC):
     EMT_POST_PROGRESS_START = 0.8
 
     def __init__(self):
-        self._commands = []  # Commands can be added after this __init__ by subclasses
+        self._commands: dict[str, Command] = {}
         # TODO: link to method to make command parameters checking automatic ?
         self._error_mitigations: list[AbstractMitigation] = []
         self._parameters: dict[str, Any] = {}
         self.reset_parameters()
+
+    def _register_command(self, command: Command) -> None:
+        """
+        :param command: A Command to add to the possible commands of this Computer.
+            The associated method must be able to handle **kwargs
+        """
+        self._commands[command.name] = command
+
+    def get_command(self, command_name: str) -> Command:
+        if command_name not in self._commands:
+            raise ValueError(f"Command '{command_name}' doesn't exist in {self.__class__.__name__}")
+        return self._commands[command_name]
 
     def set_mitigations(self, error_mitigations: list[AbstractMitigation]):
         # TODO: The interface to set the mitigation is still to be defined

@@ -37,6 +37,7 @@ from perceval.components import Experiment
 from .abstract_computer import AbstractComputer
 from .computation import Computation
 from .async_getter import AsyncGetter
+from .command import CommandFactory
 
 
 class _ThreadedExecution(AsyncGetter):
@@ -92,7 +93,9 @@ class LocalComputer(AbstractComputer, ABC):
 
     def __init__(self):
         super().__init__()
-        self._commands = ["probs", "samples", "sample_count"]
+        self._register_command(CommandFactory.probs)
+        self._register_command(CommandFactory.samples)
+        self._register_command(CommandFactory.sample_count)
 
     def _execute_command(self, computation: Computation, progress_callback: ProgressCallback = None) -> Computation:
         return getattr(self, computation.command.name)(computation.experiment, progress_callback, **computation.parameters)
