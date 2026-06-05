@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 from abc import ABC, abstractmethod
-from copy import copy
+from copy import deepcopy
 from typing import Any, TypeVar
 
 from .error_mitigation import AbstractMitigation
@@ -59,8 +59,10 @@ class AbstractComputer(ABC):
     def available_commands(self) -> list[str]:
         return list(self._commands)  # Makes a copy
 
-    def set_parameters(self, parameters):
-        self._parameters.update(parameters)
+    def set_parameters(self, parameters: dict[str, Any]):
+        for parameter, value in parameters.items():
+            assert parameter in self.available_parameters, f"Unknown parameter '{parameter}'"
+            self._parameters[parameter] = value
 
     @property
     def available_parameters(self) -> dict[str, str]:
@@ -168,7 +170,7 @@ class AbstractComputer(ABC):
         computation.validate()
         computations = self.extend_computation(computation)
 
-        return copy(self._error_mitigations), self.noise, self._execute_all_async(computations)  # deepcopy?
+        return deepcopy(self._error_mitigations), deepcopy(self.noise), self._execute_all_async(computations)
 
     def get_results(self, computation: Computation, mitigations: list[AbstractMitigation], noise: NoiseModel, async_getters: list[AsyncGetter]) -> dict[str, Any]:
         """
