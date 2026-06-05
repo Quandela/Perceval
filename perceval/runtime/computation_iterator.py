@@ -134,7 +134,7 @@ class ComputationIterator:
             i = len(out[KEY_RESULTS_LIST])
             res[KEY_ITERATION] = self._parameter_iterator.iterations[i]
             if KEY_SHOTS_USED in res:
-                out[KEY_SHOTS_USED] = res[KEY_SHOTS_USED] if KEY_SHOTS_USED in out else out[KEY_SHOTS_USED] + res[KEY_SHOTS_USED]
+                out[KEY_SHOTS_USED] = out[KEY_SHOTS_USED] + res[KEY_SHOTS_USED] if KEY_SHOTS_USED in out else res[KEY_SHOTS_USED]
             out[KEY_RESULTS_LIST].append(res)
 
         return inserter
