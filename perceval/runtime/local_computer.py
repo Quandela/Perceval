@@ -94,7 +94,7 @@ class LocalComputer(AbstractComputer, ABC):
         super().__init__()
         self._commands = ["probs", "samples", "sample_count"]
 
-    def _execute_command(self, computation: Computation, progress_callback: ProgressCallback = None) -> Computation:
+    def _execute_command(self, computation: Computation, progress_callback: ProgressCallback = None) -> dict:
         return getattr(self, computation.command.name)(computation.experiment, progress_callback, **computation.parameters)
 
     def _execute_command_async(self, computation: Computation) -> _ThreadedExecution:

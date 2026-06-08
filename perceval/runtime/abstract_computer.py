@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 from abc import ABC, abstractmethod
-from copy import copy
+from copy import deepcopy
 from typing import Any
 
 from .async_getter import AsyncGetter
@@ -172,7 +172,7 @@ class AbstractComputer(ABC):
         computation.validate()
         computations = self.extend_computation(computation)
 
-        return copy(self._error_mitigations), self.noise, self._execute_all_async(computations)  # deepcopy?
+        return deepcopy(self._error_mitigations), deepcopy(self.noise), self._execute_all_async(computations)
 
     def get_results(self, computation: Computation | ComputationIterator, mitigations: list[AbstractMitigation], noise: NoiseModel, async_getters: list[AsyncGetter]) -> dict[str, Any]:
         """
