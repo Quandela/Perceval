@@ -30,12 +30,14 @@
 import uuid
 from typing import Any
 
-from perceval import Computation, AbstractMitigation, NoiseModel
 from perceval.components import Experiment
 from perceval.serialization import serialize
-from perceval.utils import PMetadata
+from perceval.utils import PMetadata, NoiseModel
 from perceval.utils.constants import KEY_COMMAND, KEY_PARAMETERS, KEY_EXPERIMENT, KEY_VERSION, KEY_PROCESS_ID, \
     KEY_PAYLOAD, KEY_PLATFORM_NAME, KEY_COMPUTATION, KEY_MITIGATIONS, KEY_NOISE
+
+from .computation import Computation
+from .error_mitigation import AbstractMitigation
 
 __process_id__ = uuid.uuid4()
 
@@ -46,10 +48,10 @@ class PayloadGenerator:
     @staticmethod
     def generate_payload(command: str,
                          experiment: Experiment = None,
-                         params: dict[str, any] = None,
+                         params: dict[str, Any] = None,
                          platform_name: str = None,
                          **kwargs
-                         ) -> dict[str, any]:
+                         ) -> dict[str, Any]:
         r"""
         Generate a simple payload containing the experiment, with the following template:
         {

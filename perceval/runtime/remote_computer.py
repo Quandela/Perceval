@@ -41,12 +41,11 @@ from .job_status import JobStatus, RunningStatus
 from .simulated_computer import SimulatedComputer
 from .command import CommandFactory
 from .async_getter import AsyncGetter
+from .payload_generator import PayloadGenerator
 
 from perceval.utils import perf_dict_to_noise, ProgressCallback, ProcessorType, NoiseModel, PostSelect
 from perceval.utils.logging import channel, get_logger
-from perceval.utils.constants import KEY_COMPUTATION, KEY_MITIGATIONS, KEY_PARAMETERS, KEY_NOISE
 from perceval.components import PortLocation, Experiment
-from .. import PayloadGenerator
 
 RemoteId = TypeVar("RemoteId")
 
