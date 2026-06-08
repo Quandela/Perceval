@@ -28,12 +28,14 @@
 # SOFTWARE.
 
 import uuid
+from typing import Any
 
+from perceval import Computation, AbstractMitigation, NoiseModel
 from perceval.components import Experiment
 from perceval.serialization import serialize
 from perceval.utils import PMetadata
 from perceval.utils.constants import KEY_COMMAND, KEY_PARAMETERS, KEY_EXPERIMENT, KEY_VERSION, KEY_PROCESS_ID, \
-    KEY_PAYLOAD, KEY_PLATFORM_NAME
+    KEY_PAYLOAD, KEY_PLATFORM_NAME, KEY_COMPUTATION, KEY_MITIGATIONS, KEY_NOISE
 
 __process_id__ = uuid.uuid4()
 
@@ -113,3 +115,17 @@ class PayloadGenerator:
             for key, value in kwargs.items():
                 global_data[key] = value
         return global_data
+
+    @staticmethod
+    def from_computation(computation: Computation,
+                         mitigations: list[AbstractMitigation] = None,
+                         parameters: dict[str, Any] = None,
+                         noise: NoiseModel = None):
+        payload: dict = {KEY_COMPUTATION: computation}
+        if mitigations is not None:
+            payload[KEY_MITIGATIONS] = mitigations
+        if parameters is not None and len(parameters):
+            payload[KEY_PARAMETERS] = parameters
+        if noise is not None:
+            payload[KEY_NOISE] = noise
+        return payload

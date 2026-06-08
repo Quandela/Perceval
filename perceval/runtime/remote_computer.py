@@ -46,6 +46,7 @@ from perceval.utils import perf_dict_to_noise, ProgressCallback, ProcessorType, 
 from perceval.utils.logging import channel, get_logger
 from perceval.utils.constants import KEY_COMPUTATION, KEY_MITIGATIONS, KEY_PARAMETERS, KEY_NOISE
 from perceval.components import PortLocation, Experiment
+from .. import PayloadGenerator
 
 RemoteId = TypeVar("RemoteId")
 
@@ -246,14 +247,10 @@ class RemoteComputer(AbstractComputer):
         # if self.specs.perceval_version < 1.3.0:
         #     return self._prepare_old_payload(computation)
 
-        # TODO: call a new PayloadGenerator?
-        payload: dict = {KEY_COMPUTATION: computation,
-                         KEY_MITIGATIONS: self._remote_mitigations}
-        if len(self._parameters):
-            payload[KEY_PARAMETERS] = self._parameters
-        if self._custom_noise is not None:
-            payload[KEY_NOISE] = self._custom_noise
-        return payload
+        return PayloadGenerator.from_computation(computation,
+                                                 self._remote_mitigations,
+                                                 self._parameters,
+                                                 self._custom_noise)
 
     @property
     def is_remote(self) -> bool:

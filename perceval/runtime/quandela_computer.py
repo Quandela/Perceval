@@ -32,7 +32,7 @@ import time
 from requests import HTTPError
 
 from .platform_specs import PlatformSpecs
-from .remote_computer import RemoteComputer, CommunicationLayer, RemoteId
+from .remote_computer import RemoteComputer, CommunicationLayer, RemoteId, _RemoteGetter
 from .remote_config import RemoteConfig
 from .job_status import RunningStatus, JobStatus
 from .remote_job import _retrieve_from_response
@@ -261,7 +261,6 @@ class QuandelaComputer(RemoteComputer):
     def _reserve_resource(self) -> ContextManager:
         return ContextManager(self._take_resource, self._release_resource)
 
-    def _execute_command_async(self, computation: Computation) -> int:
-        payload = self.prepare_payload(computation)
+    def _execute_command_async(self, computation: Computation) -> _RemoteGetter:
         self._take_resource()
-        return self._communication_layer.send(payload)
+        return super()._execute_command_async(computation)
