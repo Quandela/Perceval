@@ -49,7 +49,6 @@ class AbstractComputer(ABC):
 
     def __init__(self):
         self._commands: dict[str, Command] = {}
-        # TODO: link to method to make command parameters checking automatic ?
         self._error_mitigations: list[AbstractMitigation] = []
         self._parameters: dict[str, Any] = {}
         self.reset_parameters()

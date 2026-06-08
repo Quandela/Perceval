@@ -32,6 +32,7 @@ from abc import ABC, abstractmethod
 from copy import copy, deepcopy
 from typing import TypeVar, Callable
 
+from perceval import Command
 from .computation import Computation
 from .abstract_computer import AbstractComputer
 from .computation_iterator import ComputationIterator
@@ -39,12 +40,10 @@ from .platform_specs import PlatformSpecs
 from .error_mitigation import AbstractMitigation
 from .job_status import JobStatus, RunningStatus
 from .simulated_computer import SimulatedComputer
-from .command import CommandFactory
 from .async_getter import AsyncGetter
 
 from perceval.utils import perf_dict_to_noise, ProgressCallback, ProcessorType, NoiseModel, PostSelect
 from perceval.utils.logging import channel, get_logger
-from perceval.utils.constants import KEY_COMPUTATION, KEY_MITIGATIONS, KEY_PARAMETERS, KEY_NOISE
 from perceval.components import PortLocation, Experiment
 from .. import PayloadGenerator
 
@@ -89,7 +88,7 @@ class CommunicationLayer(ABC):
         pass
 
     @abstractmethod
-    def get_commands(self) -> list[str]:
+    def get_commands(self) -> list[Command]:
         pass
 
     @abstractmethod
@@ -143,7 +142,7 @@ class RemoteComputer(AbstractComputer):
     def __init__(self, communication_layer: CommunicationLayer):
         super().__init__()
         self._communication_layer = communication_layer  # cloud_access is the communication layer
-        self._commands = communication_layer.get_commands()
+        self._commands = {command.name: command for command in communication_layer.get_commands()}
         self._specs = communication_layer.get_specs()
         self._perfs = communication_layer.get_performances()
         self._custom_noise: NoiseModel | None = None
@@ -280,20 +279,19 @@ class RemoteComputer(AbstractComputer):
         # Simulation with a noisy source (only losses)
         computation.validate()
 
+        lc = SimulatedComputer("SLOS")  # TODO: replace by "best" when available
+
         computation = deepcopy(computation)
-        computation.command = CommandFactory.probs
+        exp = computation.experiment
+        if isinstance(computation, ComputationIterator):
+            # TODO: make a better interface and remove this line + Test if this is useful (i.e. test the deepcopy)
+            computation._parameter_iterator._experiment = exp
+
+        computation.command = lc.get_command("probs")
 
         nm = copy(self.noise)
         nm.g2 = 0
         nm.indistinguishability = 1
-
-        if isinstance(computation, ComputationIterator):
-            exp = computation.base_computation.experiment
-
-            # TODO: make a better interface and remove this line + Test if this is useful
-            computation._parameter_iterator._experiment = exp
-        else:
-            exp = computation.experiment
 
         n = exp.input_state.n
         photon_filter = n
@@ -325,7 +323,6 @@ class RemoteComputer(AbstractComputer):
             for m in range(exp.circuit_size):
                 exp.add(m, archi.detectors[m])
 
-        lc = SimulatedComputer("SLOS")  # TODO: replace by "best" when available
         lc.noise = nm
         # TODO: how to get default mitigations ?
         lc._error_mitigations = self._error_mitigations + self._remote_mitigations  # TODO: make and use interface

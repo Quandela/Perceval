@@ -31,6 +31,7 @@ import time
 
 from requests import HTTPError
 
+from .command import CommandFactory, Command
 from .platform_specs import PlatformSpecs
 from .remote_computer import RemoteComputer, CommunicationLayer, RemoteId, _RemoteGetter
 from .remote_config import RemoteConfig
@@ -191,8 +192,9 @@ class QuandelaCommunicationLayer(CommunicationLayer):
         self.fetch_data()
         return self._perfs
 
-    def get_commands(self) -> list[str]:
-        return self._specs.available_commands
+    def get_commands(self) -> list[Command]:
+        # TODO: find a way to retrieve directly the commands
+        return [getattr(CommandFactory, name) for name in self._specs.available_commands]
 
     def get_remote_status(self) -> str:
         self.fetch_data()

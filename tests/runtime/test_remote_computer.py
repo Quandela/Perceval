@@ -29,8 +29,7 @@
 
 import time
 
-from perceval import RunningStatus, AbstractComputer, SimulatedComputer, Experiment, FockState, Computation, \
-    CommandFactory, BSDistribution, JobStatus
+from perceval import AbstractComputer, SimulatedComputer, Experiment, FockState, Computation, BSDistribution, JobStatus
 from perceval.runtime.computation_iterator import ComputationIterator
 from perceval.runtime.platform_specs import PlatformSpecs
 from perceval.runtime.remote_computer import CommunicationLayer, RemoteComputer, RemoteId
@@ -109,7 +108,7 @@ def test_remote_computer_execute():
     e.with_input(FockState([1, 0]))
     e.min_detected_photons_filter(1)
 
-    computation = Computation(CommandFactory.probs, e)
+    computation = Computation(remote_computer.get_command("probs"), e)
     res = remote_computer.execute(computation)
 
     assert res["results"] == BSDistribution(FockState([1, 0]))
@@ -122,7 +121,7 @@ def test_remote_computer_execute_async():
     e.with_input(FockState([1, 0]))
     e.min_detected_photons_filter(1)
 
-    computation = Computation(CommandFactory.probs, e)
+    computation = Computation(remote_computer.get_command("probs"), e)
     mitigations, noise, getter = remote_computer.execute_async(computation)
 
     while not remote_computer.is_complete(getter[0][0]):
@@ -140,7 +139,7 @@ def test_remote_computer_execute_iterator():
     experiment = Experiment(2)
     experiment.min_detected_photons_filter(1)
 
-    computation = Computation(CommandFactory.probs, experiment)
+    computation = Computation(remote_computer.get_command("probs"), experiment)
     computation = ComputationIterator(computation)
 
     computation.add_iteration(input_state=FockState([1, 0]))
@@ -166,7 +165,7 @@ def test_remote_computer_execute_async_iterator():
     experiment = Experiment(2)
     experiment.min_detected_photons_filter(1)
 
-    computation = Computation(CommandFactory.probs, experiment)
+    computation = Computation(remote_computer.get_command("probs"), experiment)
     computation = ComputationIterator(computation)
 
     computation.add_iteration(input_state=FockState([1, 0]))
