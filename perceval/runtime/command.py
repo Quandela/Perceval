@@ -30,6 +30,7 @@
 from typing import Any
 
 from perceval.utils.constants import KEY_MAX_SAMPLES, KEY_MAX_SHOTS
+from perceval.serialization import register_to_serialization
 
 
 class Command:
@@ -94,6 +95,9 @@ class Command:
 
         return res
 
+    def __repr__(self):
+        return f"Command '{self.name}', expected parameters: {self.signature}{f', compatible with error mitigation' if self.apply_emt else ''}"
+
 
 class CommandFactoryClass:
 
@@ -107,3 +111,6 @@ class CommandFactoryClass:
         return Command(name=name, signature=[(KEY_MAX_SAMPLES, int, True), (KEY_MAX_SHOTS, int, False)], apply_emt=True)
 
 CommandFactory = CommandFactoryClass()
+
+
+register_to_serialization(Command)

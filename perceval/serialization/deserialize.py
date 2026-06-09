@@ -54,10 +54,12 @@ from ._constants import (
     NOISE_TAG,
     POSTSELECT_TAG,
     BS_LAYERED_DETECTOR_TAG,
-    DETECTOR_TAG, COMPONENT_TAG, HERALD_TAG, PORT_TAG, VALUE_NOT_SET, EXPERIMENT_TAG, COMPILED_CIRCUIT_TAG, COMPILED_CIRCUIT_VERSION_TAG,
+    DETECTOR_TAG, COMPONENT_TAG, HERALD_TAG, PORT_TAG, VALUE_NOT_SET, EXPERIMENT_TAG, COMPILED_CIRCUIT_TAG,
+    COMPILED_CIRCUIT_VERSION_TAG, TYPE_TAG,
 )
 from ._state_serialization import deserialize_statevector, deserialize_bssamples
 from . import _component_deserialization as _cd
+from ._type_deserialization import deserialize_type
 from exqalibur.serialization import circuit_pb2 as pb
 
 
@@ -241,6 +243,7 @@ DESERIALIZER = {
     EXPERIMENT_TAG: deserialize_experiment,
     COMPILED_CIRCUIT_TAG: deserialize_compiled_circuit,
     COMPILED_CIRCUIT_VERSION_TAG: deserialize_compiled_circuit_version,
+    TYPE_TAG: deserialize_type,
 }
 
 
@@ -270,7 +273,7 @@ def deserialize(obj, strict=True):
 
         def serializer_not_implemented(_: str):
             if strict:
-                raise NotImplementedError(f"No serializer found for {class_obj}")
+                raise NotImplementedError(f"No deserializer found for {class_obj}")
             get_logger().warn(f"Unknown perceval class {class_obj}, leaving it serialized; Consider upgrading perceval",
                               channel.user)
             return obj

@@ -255,6 +255,15 @@ def serialize(obj: Detector, compress=None):
                                do_compress=compress)
 
 
+@dispatch(type, compress=(list, bool))
+def serialize(obj: type, compress=None):
+    if compress is None:
+        compress = False
+    tag = TYPE_TAG
+    compress = _handle_compress_parameter(compress, tag)
+    return _handle_compression(f"{PCVL_PREFIX}{tag}{SEP}{obj.__name__}", do_compress=compress)
+
+
 @dispatch(dict, compress=(list, bool))
 def serialize(obj, compress=None) -> dict:
     r = {}
@@ -269,6 +278,14 @@ def serialize(obj, compress=None) -> list:
     for k in obj:
         r.append(serialize(k, compress=compress))
     return r
+
+
+@dispatch(tuple, compress=(list, bool))
+def serialize(obj, compress=None) -> tuple:
+    r = []
+    for k in obj:
+        r.append(serialize(k, compress=compress))
+    return tuple(r)
 
 
 @dispatch(object, compress=(list, bool))

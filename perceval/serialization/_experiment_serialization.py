@@ -46,15 +46,15 @@ class ExperimentSerializer:
         self._serialized = pb.Experiment()
 
         if experiment.input_state is not None:
-            self._serialized.input_state = serialize.serialize(experiment.input_state)
+            self._serialized.input_state = serialize(experiment.input_state)
 
         self._serialized.name = experiment.name
 
         if experiment.noise is not None:
-            self._serialized.noise_model = serialize.serialize(experiment.noise)
+            self._serialized.noise_model = serialize(experiment.noise)
 
         if experiment.post_select_fn is not None:
-            self._serialized.post_select = serialize.serialize(experiment.post_select_fn)
+            self._serialized.post_select = serialize(experiment.post_select_fn)
 
         self._serialized.n_mode = experiment.circuit_size
 

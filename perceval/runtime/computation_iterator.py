@@ -34,6 +34,7 @@ from .computation import Computation
 
 from perceval.utils.constants import KEY_SHOTS_USED, KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_RESULTS_LIST, KEY_ITERATION
 from perceval.components import Experiment
+from perceval.serialization import register_to_serialization
 
 
 class ComputationIterator:
@@ -138,3 +139,5 @@ class ComputationIterator:
             out[KEY_RESULTS_LIST].append(res)
 
         return inserter
+
+register_to_serialization(ComputationIterator, default_compress=False)

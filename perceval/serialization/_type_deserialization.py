@@ -1,3 +1,5 @@
+
+
 # MIT License
 #
 # Copyright (c) 2022 Quandela
@@ -27,28 +29,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-SEP = ":"
-PCVL_PREFIX = f"{SEP}PCVL{SEP}"
-ZIP_PREFIX = f"{PCVL_PREFIX}zip{SEP}"
+KNOWN_TYPES: dict[str, type] = {}
 
-MATRIX_TAG = "Matrix"
-CIRCUIT_TAG = "ACircuit"
-COMPONENT_TAG = "Component"
-EXPERIMENT_TAG = "Experiment"
-COMPILED_CIRCUIT_TAG = "CompiledCircuit"
-COMPILED_CIRCUIT_VERSION_TAG = "CompiledCircuitVersion"
-HERALD_TAG = "Herald"
-PORT_TAG = "Port"
-BS_TAG = "BasicState"
-SV_TAG = "StateVector"
-SVD_TAG = "SVDistribution"
-BSD_TAG = "BSDistribution"
-BSC_TAG = "BSCount"
-BSS_TAG = "BSSamples"
-NOISE_TAG = "NoiseModel"
-POSTSELECT_TAG = "PostSelect"
-BS_LAYERED_DETECTOR_TAG = "BSLayeredDetector"
-DETECTOR_TAG = "Detector"
-TYPE_TAG = "Type"
+for t in [int, float, complex, str, bool, list, dict, tuple]:
+    KNOWN_TYPES[t.__name__] = t
 
-VALUE_NOT_SET = 0x0fffffff  # Maximum writable value
+
+def add_type_deserializer(t: type):
+    global KNOWN_TYPES
+    KNOWN_TYPES[t.__name__] = t
+
+
+def deserialize_type(serialized_type: str) -> type:
+    if serialized_type in KNOWN_TYPES:
+        return KNOWN_TYPES[serialized_type]
+    raise TypeError(f"Unknown type {serialized_type}")

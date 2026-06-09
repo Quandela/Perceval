@@ -32,3 +32,4 @@ from ._state_serialization import deserialize_state, deserialize_state_list
 from .deserialize import deserialize, deserialize_circuit, circuit_from_file, deserialize_matrix, matrix_from_file, \
       deserialize_float, deserialize_file
 from .serialize_binary import serialize_binary
+from ._serialization_registrator import register_to_serialization
