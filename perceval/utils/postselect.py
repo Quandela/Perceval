@@ -29,7 +29,8 @@
 from typing import TypeAlias
 
 import exqalibur as xq
-from exqalibur import BSCount, BSSamples, BSDistribution, StateVector
+from exqalibur import BSCount, BSSamples, StateVector
+from .bsdistribution import BSDistribution
 from multipledispatch import dispatch
 
 PostSelect: TypeAlias = xq.PostSelect

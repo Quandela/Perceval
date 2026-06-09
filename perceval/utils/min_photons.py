@@ -27,7 +27,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from exqalibur import BSDistribution, BSCount, BSSamples
+from exqalibur import BSCount, BSSamples
+from .bsdistribution import BSDistribution
 from multipledispatch import dispatch
 
 

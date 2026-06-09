@@ -293,8 +293,8 @@ def test_empty_output():
     p.min_detected_photons_filter(2)
     p.with_input(FockState([0, 1, 0]))
 
-    res = p.probs()["results"]
-    assert res == BSDistribution()
+    with pytest.raises(RuntimeError, match=r".*empty distribution.*"):
+        res = p.probs()["results"]
 
 
 def test_mask_distinguishability():

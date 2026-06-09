@@ -68,7 +68,7 @@ class SLOSExqaliburBackend(AStrongSimulationBackend, ExqaliburBackendWrapper):
         return abs(self.prob_amplitude(output_state)) ** 2
 
     def prob_distribution(self) -> BSDistribution:
-        return self._slos.distribution()
+        return BSDistribution(self._slos.distribution())
 
     def all_prob_ampli(self) -> list[complex]:
         return self._slos.all_amplitudes()

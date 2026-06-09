@@ -29,11 +29,11 @@
 
 from abc import abstractmethod, ABC
 
-from exqalibur import BSDistribution, BSCount, BSSamples
+from exqalibur import BSCount, BSSamples
 
 from ..computation import Computation
 
-from perceval.utils import NoiseModel, ConversionHelper, apply_min_photons, apply_post_select
+from perceval.utils import NoiseModel, ConversionHelper, apply_min_photons, apply_post_select, BSDistribution
 from perceval.components import Experiment
 
 

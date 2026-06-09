@@ -62,7 +62,7 @@ class SLAPBackend(AStrongSimulationBackend, IFFBackend, ExqaliburBackendWrapper)
 
     def prob_distribution(self) -> BSDistribution:
         self._slap.set_input_state(self._input_state)
-        return self._slap.distribution()
+        return BSDistribution(self._slap.distribution())
 
     def all_prob_ampli(self) -> list[complex]:
         self._slap.set_input_state(self._input_state)
