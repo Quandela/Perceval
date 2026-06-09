@@ -86,12 +86,6 @@ class SimulatedComputer(LocalComputer):
         self.check_min_detected_photons_filter(computation)
 
     @property
-    def specs(self) -> PlatformSpecs:
-        res = PlatformSpecs()
-        res.parameters = self.available_parameters
-        return res
-
-    @property
     def available_parameters(self) -> dict[str, str]:
         return {"compute_physical_logical_perf": "bool. If True, physical and logical performances will be returned."
                                                  "Else, only a global performance will be returned."}

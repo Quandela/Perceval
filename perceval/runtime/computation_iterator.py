@@ -140,4 +140,4 @@ class ComputationIterator:
 
         return inserter
 
-register_to_serialization(ComputationIterator, default_compress=False)
+register_to_serialization(ComputationIterator, default_compress=True)

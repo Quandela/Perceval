@@ -52,14 +52,14 @@ from perceval.utils.constants import KEY_JOB_CONTEXT, KEY_RESULT_MAPPING, KEY_RE
 
 class QuandelaCommunicationLayer(CommunicationLayer):
 
-    MINIMUM_FETCH_INTERVAL = 5
+    STATUS_REFRESH_DELAY = 1
     _MAX_ERROR = 5
 
-    def __init__(self, name: str, token: str, url: str, proxies: dict[str, str]):
+    def __init__(self, name: str, token: str, url: str, proxies: dict[str, str] = None):
         self.name = name
         self.token = token
         self.url = url
-        self.proxies = proxies
+        self.proxies: dict[str, str] = proxies if proxies is not None else {}
         self._specs = PlatformSpecs()
         self._status: str = ""
         self._perfs: dict[str, str] = {}
@@ -71,7 +71,7 @@ class QuandelaCommunicationLayer(CommunicationLayer):
 
     def fetch_data(self):
         # Quandela specific: the same endpoint gives the specs, perfs and platform status
-        if self._last_fetch_time is None or time.time() - self._last_fetch_time > self.MINIMUM_FETCH_INTERVAL:
+        if self._last_fetch_time is None or time.time() - self._last_fetch_time > self.STATUS_REFRESH_DELAY:
             try:
                 platform_details = self._rpc_handler.fetch_platform_details()
             except HTTPError as e:
@@ -97,10 +97,9 @@ class QuandelaCommunicationLayer(CommunicationLayer):
         # TODO: how to be compatible with old format to receive names?
         computation = payload[KEY_COMPUTATION]
 
-        # Needed for display - Should not be used anywhere else
+        # Needed for display - Should not be used anywhere else. The cloud expects these so they must be filled
         payload[KEY_COMMAND] = computation.command.name
-        if KEY_MAX_SHOTS in computation.parameters:
-            payload[KEY_MAX_SHOTS] = computation.parameters[KEY_MAX_SHOTS]
+        payload[KEY_MAX_SHOTS] = computation.parameters[KEY_MAX_SHOTS]
 
         global_data = PayloadGenerator.generate_global_data(payload,
                                                             {KEY_PLATFORM_NAME: self._rpc_handler.name,
@@ -114,7 +113,8 @@ class QuandelaCommunicationLayer(CommunicationLayer):
             response = self._rpc_handler.get_job_results(remote_id)
         except HTTPError as e:
             raise HTTPError(f"Error while retrieving job results: {e}") from None
-        results = deserialize(json.loads(response[KEY_RESULTS]), strict=False)
+        # Note: this is not KEY_RESULTS since this is the cloud response format, not perceval response format
+        results = deserialize(json.loads(response["results"]), strict=False)
         if not isinstance(results, dict):
             return {}
 
@@ -193,8 +193,7 @@ class QuandelaCommunicationLayer(CommunicationLayer):
         return self._perfs
 
     def get_commands(self) -> list[Command]:
-        # TODO: find a way to retrieve directly the commands
-        return [getattr(CommandFactory, name) for name in self._specs.available_commands]
+        return self._specs.commands
 
     def get_remote_status(self) -> str:
         self.fetch_data()
@@ -246,10 +245,14 @@ class QuandelaComputer(RemoteComputer):
             if proxies is None:
                 proxies = remote.get_proxies()
             self.name = name
-            communication_layer = QuandelaCommunicationLayer(name, url, token, proxies)
+            communication_layer = QuandelaCommunicationLayer(name, token, url, proxies)
 
         super().__init__(communication_layer)
         self._available_jobs = communication_layer.get_availability()
+
+    def validate_single(self, computation: Computation) -> None:
+        super().validate_single(computation)
+        assert KEY_MAX_SHOTS in computation.parameters, f"Missing '{KEY_MAX_SHOTS}' parameter"
 
     def _take_resource(self):
         while self._available_jobs == 0:

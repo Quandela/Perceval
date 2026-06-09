@@ -38,6 +38,7 @@ from perceval.utils.constants import KEY_COMMAND, KEY_PARAMETERS, KEY_EXPERIMENT
 
 from .computation import Computation
 from .error_mitigation import AbstractMitigation
+from .abstract_computer import AbstractComputer
 
 __process_id__ = uuid.uuid4()
 
@@ -131,3 +132,17 @@ class PayloadGenerator:
         if noise is not None:
             payload[KEY_NOISE] = noise
         return payload
+
+    @staticmethod
+    def configure_computer_from_payload(computer: AbstractComputer, payload: dict) -> Computation:
+        if KEY_COMPUTATION not in payload:
+            raise ValueError(f"Missing key in the payload: {KEY_COMPUTATION}")
+        mitigations = payload.get(KEY_MITIGATIONS, [])
+
+        computer.set_mitigations(mitigations)
+        if KEY_PARAMETERS in payload:
+            computer.set_parameters(payload[KEY_PARAMETERS])
+        else:
+            computer.reset_parameters()
+        computer.noise = payload.get(KEY_NOISE)
+        return payload[KEY_COMPUTATION]

@@ -250,6 +250,8 @@ class RemoteComputer(AbstractComputer):
 
     def _execute_command(self, computation: Computation, progress_cb: ProgressCallback = None) -> dict:
         async_getter = self._execute_single_async(computation)
+        while not async_getter.is_complete:
+            time.sleep(1)
         return self._load_async_result(async_getter)
 
     def _execute_command_async(self, computation: Computation) -> _RemoteGetter:

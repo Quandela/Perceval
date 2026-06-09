@@ -39,7 +39,7 @@ from .platform_specs import PlatformSpecs
 from .check_cancel import call_and_check_cancel
 from .command import Command
 
-from perceval.utils import ProgressCallback, partial_progress_callable, ContextManager, NoiseModel
+from perceval.utils import ProgressCallback, partial_progress_callable, ContextManager, NoiseModel, PMetadata
 from perceval.utils.constants import KEY_RESULTS
 
 
@@ -188,7 +188,7 @@ class AbstractComputer(ABC):
             computations = self.extend_computation_keep_original(computation)
             self._execute_all(computations, inserter, progress_callback)
         except Exception as e:
-            inserter({KEY_RESULTS: str(e)})
+            inserter({KEY_RESULTS: f"{type(e).__name__}: {e}"})
             raise
         return res
 
@@ -333,7 +333,13 @@ class AbstractComputer(ABC):
 
     @property
     def specs(self) -> PlatformSpecs:
-        return PlatformSpecs()
+        specs = PlatformSpecs()
+        specs.commands = list(self._commands.values())
+        if self.available_parameters:
+            specs.parameters = self.available_parameters
+        specs.type = self.type
+        specs.pcvl_version = PMetadata.version()
+        return specs
 
     @property
     def noise(self):

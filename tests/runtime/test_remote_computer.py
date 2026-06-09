@@ -30,11 +30,10 @@ import random
 import time
 
 from perceval import AbstractComputer, SimulatedComputer, Experiment, FockState, Computation, BSDistribution, JobStatus, \
-    Unitary, BS, PS, NoiseModel, Circuit, Detector, FFCircuitProvider, Command, P
+    Unitary, BS, PS, NoiseModel, Circuit, Detector, FFCircuitProvider, Command, P, PayloadGenerator
 from perceval.runtime.computation_iterator import ComputationIterator
 from perceval.runtime.platform_specs import PlatformSpecs
 from perceval.runtime.remote_computer import CommunicationLayer, RemoteComputer, RemoteId
-from perceval.utils.constants import KEY_NOISE, KEY_PARAMETERS, KEY_COMPUTATION, KEY_MITIGATIONS
 from tests._test_utils import assert_bsd_close
 
 
@@ -47,15 +46,7 @@ class ComputerProxy(CommunicationLayer):
         return self.computer.specs
 
     def send(self, payload: dict) -> list:
-        computation = payload[KEY_COMPUTATION]
-        mitigations = payload[KEY_MITIGATIONS]
-        self.computer.set_mitigations(mitigations)
-        if KEY_PARAMETERS in payload:
-            self.computer.set_parameters(payload[KEY_PARAMETERS])
-        else:
-            self.computer.reset_parameters()
-        if KEY_NOISE in payload:
-            self.computer.noise = payload[KEY_NOISE]
+        computation = PayloadGenerator.configure_computer_from_payload(self.computer, payload)
         return [computation, *self.computer.execute_async(computation)]
 
     def get_results(self, remote_id: list) -> dict:

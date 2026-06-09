@@ -96,7 +96,11 @@ class Command:
         return res
 
     def __repr__(self):
-        return f"Command '{self.name}', expected parameters: {self.signature}{f', compatible with error mitigation' if self.apply_emt else ''}"
+        s = f"Command('{self.name}', signature: {self.signature}"
+        if self.apply_emt:
+            s += ', error mitigation compatible'
+        s += ")"
+        return s
 
 
 class CommandFactoryClass:

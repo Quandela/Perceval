@@ -28,14 +28,12 @@
 # SOFTWARE.
 
 import dataclasses
-import json
 from numbers import Number
 from typing import Any
 
 from perceval.components import Experiment
 from perceval.utils import NoiseModel, PostSelect, BasicState
 from perceval.serialization import register_to_serialization
-from serialization import deserialize
 
 
 @dataclasses.dataclass

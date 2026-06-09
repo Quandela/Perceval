@@ -71,9 +71,10 @@ class Computation:
         yield self
 
     def __repr__(self):
-        s = f"{self.command.name.capitalize()} computation"
+        s = f"Computation({self.command.name.capitalize()}"
         if len(self.parameters):
-            s += f", with parameters {self.parameters}"
+            s += f", parameters {self.parameters}"
+        s += ")"
         return s
 
 register_to_serialization(Computation)
