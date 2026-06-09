@@ -83,6 +83,9 @@ jobs:
         python -m pip install -r docs/requirements.txt -r docs/source/notebooks/requirements.txt
 
     - name: Rerun notebooks
+      env:
+        CLOUD_TOKEN: ${{ secrets.CLOUD_TOKEN }}
+        ENABLE_CLOUD_NOTEBOOKS: ${{ vars.ENABLE_CLOUD_NOTEBOOKS }}
       run: |
         ./.github/workflows/rerun_notebooks.sh
 

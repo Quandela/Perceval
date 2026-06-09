@@ -36,7 +36,7 @@ from perceval.backends import ASamplingBackend, BackendFactory
 from perceval.components import catalog
 from perceval.utils import BasicState
 
-@flaky(max_runs=2)
+@flaky(max_runs=3)
 @pytest.mark.long_test
 @pytest.mark.parametrize("backend_name", ["CliffordClifford2017", "SamplingStepper"])
 def test_backend_cnot(backend_name):

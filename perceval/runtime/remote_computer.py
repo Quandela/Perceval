@@ -41,11 +41,11 @@ from .error_mitigation import AbstractMitigation
 from .job_status import JobStatus, RunningStatus
 from .simulated_computer import SimulatedComputer
 from .async_getter import AsyncGetter
+from .payload_generator import PayloadGenerator
 
 from perceval.utils import perf_dict_to_noise, ProgressCallback, ProcessorType, NoiseModel, PostSelect
 from perceval.utils.logging import channel, get_logger
 from perceval.components import PortLocation, Experiment
-from .. import PayloadGenerator
 
 RemoteId = TypeVar("RemoteId")
 

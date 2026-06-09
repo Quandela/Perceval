@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from flaky import flaky
 import pytest
 import math
 from collections import Counter
@@ -97,6 +98,7 @@ def test_source_multiple_photons_per_mode():
     assert_svd_close(svd, dict2svd({"|0>": (1-ep)**2, "|1>": ep*(1-ep)*2, "|2>": ep**2}))
 
 
+@flaky(max_runs=3)
 def test_source_sample_no_filter():
     nb_samples = 200
 

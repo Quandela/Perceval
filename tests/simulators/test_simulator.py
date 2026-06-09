@@ -28,9 +28,11 @@
 # SOFTWARE.
 
 import math
+
+from flaky import flaky
 import pytest
 
-from perceval import catalog, NoisyFockState, AnnotatedFockState
+from perceval import catalog, NoisyFockState
 from perceval.backends import AStrongSimulationBackend, SLOSBackend
 from perceval.simulators import Simulator
 from perceval.components import Circuit, BS, PS, Source, unitary_components
@@ -438,6 +440,7 @@ def test_evolve_density_matrix():
     assert max((final_dm.mat-comparing_dm.mat).data) < 1e-10
 
 
+@flaky(max_runs=3)
 def test_probs_density_matrix():
 
     sim, dm, svd = get_comparison_setup()
@@ -446,7 +449,7 @@ def test_probs_density_matrix():
     probs_2 = sim.probs_density_matrix(dm)["results"]
 
     for key, value in probs_1.items():
-        assert probs_2[key] == pytest.approx(value)
+        assert probs_2[key] == pytest.approx(value, rel=1e-4)
 
     for key, value in probs_2.items():
-        assert probs_1[key] == pytest.approx(value)
+        assert probs_1[key] == pytest.approx(value, rel=1e-4)

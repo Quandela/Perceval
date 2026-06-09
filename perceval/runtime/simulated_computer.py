@@ -62,10 +62,10 @@ class SimulatedComputer(LocalComputer):
 
     def _init_backend(self, backend):
         if isinstance(backend, str):
-            assert backend in BACKEND_LIST, f"Simulation backend '{backend}' does not exist"
+            assert backend in BACKEND_LIST, f"Unknown simulation backend '{backend}'. Possible backends: {BACKEND_LIST}"
             self._backend = BACKEND_LIST[backend]()
         else:
-            assert isinstance(backend, ABackend), f"'backend' must be an ABackend (got {type(backend)})"
+            assert isinstance(backend, ABackend), f"'backend' must be an ABackend (got {type(backend).__name__})"
             self._backend = backend
 
     @property
@@ -96,7 +96,7 @@ class SimulatedComputer(LocalComputer):
         return {"compute_physical_logical_perf": "bool. If True, physical and logical performances will be returned."
                                                  "Else, only a global performance will be returned."}
 
-    def _make_source(self, experiment: Experiment) -> Source:
+    def _create_source(self, experiment: Experiment) -> Source:
         if self._has_custom_noise or experiment.noise is None:
             return Source.from_noise_model(self.noise)
         return Source.from_noise_model(experiment.noise)
@@ -104,7 +104,7 @@ class SimulatedComputer(LocalComputer):
     def check_min_detected_photons_filter(self, computation: Computation) -> None:
         experiment = computation.experiment
         if experiment.min_photons_filter is None:
-            source = self._make_source(experiment)
+            source = self._create_source(experiment)
             # Automatically set the min_photons_filter for perfect sources if not set
             if source.is_perfect() and isinstance(experiment.input_state, BasicState):
                 experiment.min_detected_photons_filter(experiment.input_state.n - sum(experiment.heralds.values()))
@@ -152,7 +152,7 @@ class SimulatedComputer(LocalComputer):
             precision = self._parse_precision(precision, max_shots, max_samples)
             if precision is not None:
                 simulator.set_precision(precision)
-            source = self._make_source(experiment)
+            source = self._create_source(experiment)
             get_logger().info(f"Start a local {'perfect' if source.is_perfect() else 'noisy'} strong simulation",
                               channel.general)
             simulator.keep_heralds(False)
@@ -187,7 +187,7 @@ class SimulatedComputer(LocalComputer):
         simulator.compute_physical_logical_perf(self._parameters.get("compute_physical_logical_perf", False))
         simulator.set_detectors(experiment.detectors)
 
-        source = self._make_source(experiment)
+        source = self._create_source(experiment)
         get_logger().info(f"Start a local {'perfect' if source.is_perfect() else 'noisy'} sampling", channel.general)
         return simulator, self._make_input(experiment, source)
 

@@ -1,0 +1,87 @@
+--- a/docs/source/notebooks/BS-based_implementation.ipynb
++++ b/docs/source/notebooks/BS-based_implementation.ipynb
+@@ -85,13 +85,13 @@
+    "metadata": {},
+    "outputs": [],
+    "source": [
+-    "N=5\n",
++    "N=3\n",
+     "n_try=10\n",
+     "n_iter=3\n",
+     "n_process=8\n",
+     "angle_min=-15\n",
+     "angle_max=30\n",
+-    "angle_step=2\n",
+-    "n_unitary=300\n",
++    "angle_step=45\n",
++    "n_unitary=3\n",
+     "logfilebs=f'bsbasednotebook-opt-{N}.log'\n",
+     "logfilemzi=f'mzibasednotebook-opt-{N}.log'"
+    ]
+--- a/docs/source/notebooks/Boson_sampling.ipynb
++++ b/docs/source/notebooks/Boson_sampling.ipynb
+@@ -54,9 +54,9 @@
+    "metadata": {},
+    "outputs": [],
+    "source": [
+-    "n = 14       #number of photons at the input\n",
+-    "m = 60       #number of modes\n",
+-    "N = 5000000  #number of samplings"
++    "n = 10       #number of photons at the input\n",
++    "m = 20       #number of modes\n",
++    "N = 1000  #number of samplings"
+    ]
+   },
+   {
+--- a/docs/source/notebooks/Gedik_qudit.ipynb
++++ b/docs/source/notebooks/Gedik_qudit.ipynb
+@@ -48,6 +48,7 @@
+    "outputs": [],
+    "source": [
+     "from time import sleep\n",
++    "import os\n",
+     "import numpy as np\n",
+     "import matplotlib.pyplot as plt\n",
+     "import perceval as pcvl\n",
+@@ -404,8 +405,8 @@
+    "outputs": [],
+    "source": [
+     "# Save your token and proxies into Perceval persistent data, you only need to do it once.\n",
+-    "pcvl.RemoteConfig.set_token(\"MY_TOKEN\")\n",
+-    "pcvl.RemoteConfig.set_proxies({\"https\": \"socks5h://USER:PASSWORD@HOST:PORT\"})\n",
++    "pcvl.RemoteConfig.set_token(os.environ.get(\"CLOUD_TOKEN\"))\n",
++    "pcvl.RemoteConfig.set_proxies({})\n",
+     "pcvl.RemoteConfig().save()\n",
+     "\n",
+     "remote_pr = pcvl.RemoteProcessor(\"sim:belenos\")"
+--- a/docs/source/notebooks/Remote_Computation_Tutorial.ipynb
++++ b/docs/source/notebooks/Remote_Computation_Tutorial.ipynb
+@@ -37,6 +37,7 @@
+    "source": [
+     "import time\n",
+     "import math\n",
++    "import os\n",
+     "from pprint import pprint\n",
+     "from tqdm.notebook import tqdm\n",
+     "\n",
+@@ -82,7 +83,7 @@
+     "# - The 2nd parameter is an authentication token to the Cloud provider we're using (by default, the Quandela Cloud).\n",
+     "#    Let's assume we have a valid token, for now. We'll see how to generate one, later on, in this tutorial.\n",
+     "# - Noise parameters can still be set\n",
+-    "processor = RemoteProcessor(\"sim:slos\", \"a valid authentication token\", noise=noise_model)\n",
++    "processor = RemoteProcessor(\"sim:slos\", os.environ.get(\"CLOUD_TOKEN\"), noise=noise_model)\n",
+     "processor.add(0, circuit)  # Add the circuit to the remote processor\n",
+     "\n",
+     "# Starting from here, Processor and RemoteProcessor are fully interchangeable\n",
+@@ -130,9 +131,9 @@
+     "# You only need to do this once per machine, data will be shared among different Perceval installs on the same machine.\n",
+     "# If your token changes, you'll need to redo this step once.\n",
+     "remote_config = RemoteConfig()\n",
+-    "remote_config.set_token(\"MY_TOKEN\")\n",
++    "remote_config.set_token(os.environ.get(\"CLOUD_TOKEN\"))\n",
+     "remote_config.set_url(\"https://api.cloud.quandela.com\") # Optional, by default the url is https://api.cloud.quandela.com\n",
+-    "remote_config.set_proxies({\"https\": \"socks5h://USER:PASSWORD@HOST:PORT\"})  # Optional proxy configuration\n",
++    "remote_config.set_proxies({})\n",
+     "remote_config.save()"
+    ]
+   },

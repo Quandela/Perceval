@@ -28,6 +28,6 @@
 # SOFTWARE.
 from perceval.utils import get_logger
 
-get_logger().warn("Importing the perceval.error_mitigation module is deprecated since version 1.3.0 - Import it from perceval.runtime.error_mitigation instead")
+get_logger().warn("Importing the perceval.error_mitigation module is deprecated since version 1.2.2 - Import it from perceval.runtime.error_mitigation instead")
 
 from perceval.runtime.error_mitigation import photon_recycling
