@@ -26,10 +26,11 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+import random
 import time
 
-from perceval import AbstractComputer, SimulatedComputer, Experiment, FockState, Computation, BSDistribution, JobStatus
+from perceval import AbstractComputer, SimulatedComputer, Experiment, FockState, Computation, BSDistribution, JobStatus, \
+    Unitary, BS, PS, NoiseModel, Circuit, Detector, FFCircuitProvider, Command, P
 from perceval.runtime.computation_iterator import ComputationIterator
 from perceval.runtime.platform_specs import PlatformSpecs
 from perceval.runtime.remote_computer import CommunicationLayer, RemoteComputer, RemoteId
@@ -77,8 +78,8 @@ class ComputerProxy(CommunicationLayer):
     def get_performances(self) -> dict:
         return self.computer.performance
 
-    def get_commands(self) -> list[str]:
-        return self.computer.available_commands
+    def get_commands(self) -> list[Command]:
+        return [self.computer.get_command(command) for command in self.computer.available_commands]
 
     def cancel(self, remote_id: list) -> None:
         for getter in remote_id[-1]:
@@ -191,3 +192,75 @@ def test_remote_computer_execute_async_iterator():
     assert "iteration" in res["results_list"][0]
     assert res["results_list"][0]["iteration"] == {"input_state": FockState([1, 0])}
     assert res["results_list"][1]["iteration"] == {"input_state": FockState([0, 1])}
+
+
+def test_shots_estimate_trivial_filter_values():
+    e = Experiment()
+    e.set_circuit(Unitary.random(10))
+    e.with_input(FockState([1]*5 + [0]*5))
+    e.min_detected_photons_filter(1)
+
+    ANY_VALUE = random.randint(1000, 9999999999)
+
+    remote_computer = RemoteComputer(ComputerProxy(SimulatedComputer("SLOS")))
+    computation = Computation(remote_computer.get_command("probs"), e)
+
+    # with min_detected_photons_filter set to 1, shots and samples are the same
+    assert remote_computer.estimate_expected_samples(computation, ANY_VALUE) == ANY_VALUE
+    assert remote_computer.estimate_required_shots(computation, ANY_VALUE) == ANY_VALUE
+
+    e.min_detected_photons_filter(0)
+    # same with 0
+    assert remote_computer.estimate_expected_samples(computation, ANY_VALUE) == ANY_VALUE
+    assert remote_computer.estimate_required_shots(computation, ANY_VALUE) == ANY_VALUE
+
+    # with a filter too high, there's no estimate
+    e.min_detected_photons_filter(6)  # = input_state.n + 1
+    assert remote_computer.estimate_expected_samples(computation, ANY_VALUE) == 0
+    assert remote_computer.estimate_required_shots(computation, ANY_VALUE) is None
+
+
+def test_shots_estimate_regular_use_case():
+    computer = SimulatedComputer("SLOS")
+    computer.noise = NoiseModel(transmittance=0.06)
+    remote_computer = RemoteComputer(ComputerProxy(computer))
+
+    c = BS() // PS(phi=0.2) // BS()
+    e = Experiment(c)
+    e.with_input(FockState([1, 1]))
+    computation = Computation(remote_computer.get_command("probs"), e)
+    assert 28 < remote_computer.estimate_expected_samples(computation, 1000) < 32
+    assert 32000 < remote_computer.estimate_required_shots(computation, 1000) < 33000
+
+
+def test_shots_estimate_circuit_with_variables():
+    computer = SimulatedComputer("SLOS")
+    computer.noise = NoiseModel(transmittance=0.06)
+    remote_computer = RemoteComputer(ComputerProxy(computer))
+
+    c = BS() // PS(phi=P("my_phase")) // BS()
+    e = Experiment(c)
+    e.with_input(FockState([1, 1]))
+
+    computation = Computation(remote_computer.get_command("probs"), e)
+    assert 28 < remote_computer.estimate_expected_samples(computation, 1000, {"my_phase": 0.2}) < 32
+    assert 32000 < remote_computer.estimate_required_shots(computation, 1000, {"my_phase": 0.2}) < 33000
+
+
+def test_shots_estimate_feed_forward():
+    exp_ff = Experiment(4)
+    exp_ff.add(0, BS.H())
+    for i in range(2):
+        exp_ff.add(i, Detector.pnr())
+    ffc = FFCircuitProvider(2, 0, BS.H())
+    ffc.add_configuration((0, 1), Circuit(2))
+    exp_ff.add(0, ffc)
+    exp_ff.with_input(FockState([1, 0, 1, 0]))
+
+    computer = SimulatedComputer("SLOS")
+    computer.noise = NoiseModel(transmittance=0.06)
+    remote_computer = RemoteComputer(ComputerProxy(computer))
+    computation = Computation(remote_computer.get_command("probs"), exp_ff)
+
+    assert 28 < remote_computer.estimate_expected_samples(computation, 1000) < 32
+    assert 32000 < remote_computer.estimate_required_shots(computation, 1000) < 33000

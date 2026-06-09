@@ -32,7 +32,7 @@ from abc import ABC, abstractmethod
 from copy import copy, deepcopy
 from typing import TypeVar, Callable
 
-from perceval import Command
+from .command import Command
 from .computation import Computation
 from .abstract_computer import AbstractComputer
 from .computation_iterator import ComputationIterator
@@ -274,7 +274,6 @@ class RemoteComputer(AbstractComputer):
     def type(self):
         return self._specs.type
 
-    # TODO: test all these
     def _compute_sample_of_interest_probability(self, computation: Computation | ComputationIterator, param_values: dict = None) -> float:
         # Simulation with a noisy source (only losses)
         computation.validate()
@@ -282,17 +281,9 @@ class RemoteComputer(AbstractComputer):
         lc = SimulatedComputer("SLOS")  # TODO: replace by "best" when available
 
         computation = deepcopy(computation)
-        exp = computation.experiment
-        if isinstance(computation, ComputationIterator):
-            # TODO: make a better interface and remove this line + Test if this is useful (i.e. test the deepcopy)
-            computation._parameter_iterator._experiment = exp
-
         computation.command = lc.get_command("probs")
 
-        nm = copy(self.noise)
-        nm.g2 = 0
-        nm.indistinguishability = 1
-
+        exp = computation.experiment
         n = exp.input_state.n
         photon_filter = n
         if exp.min_photons_filter is not None:
@@ -323,6 +314,9 @@ class RemoteComputer(AbstractComputer):
             for m in range(exp.circuit_size):
                 exp.add(m, archi.detectors[m])
 
+        nm = deepcopy(self.noise)
+        nm.g2 = 0
+        nm.indistinguishability = 1
         lc.noise = nm
         # TODO: how to get default mitigations ?
         lc._error_mitigations = self._error_mitigations + self._remote_mitigations  # TODO: make and use interface
