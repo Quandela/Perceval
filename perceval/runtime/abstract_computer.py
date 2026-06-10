@@ -127,7 +127,7 @@ class AbstractComputer(ABC):
             if is_sync:
                 return results[current_index], current_index + 1
             else:
-                return self._load_async_result(results[current_index]), current_index + 1
+                return results[current_index].get_results(), current_index + 1
 
         computations = emts[0].extend_computation(computation, noise)
         res: list[dict] = []

@@ -230,8 +230,10 @@ class RemoteComputer(AbstractComputer):
 
     def _execute_command(self, computation: Computation, progress_callback: ProgressCallback = None) -> dict:
         async_getter = self._execute_single_async(computation)
-        # TODO: find a way to use the progress callback in load_async_result or the wait function
-        return self._load_async_result(async_getter)
+        # TODO: use the progress callback in the wait function
+        while not async_getter.is_complete:
+            time.sleep(1)
+        return async_getter.get_results()
 
     def _execute_command_async(self, computation: Computation) -> _RemoteGetter:
         # Subclasses may implement something here to ask for availability before sending to the cloud

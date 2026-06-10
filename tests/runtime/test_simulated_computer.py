@@ -149,7 +149,7 @@ def test_execute_async():
     res = computer.get_results(computation, *access, getters)
     assert res["results"] == BSDistribution({FockState([1, 0]): 1.})
 
-    assert computer.is_complete(getters[0])
+    assert getters[0].is_complete
 
 
 def test_execute_iterator():
