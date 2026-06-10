@@ -205,30 +205,6 @@ class AbstractComputer(ABC):
     def _execute_command_async(self, computation: Computation) -> AsyncGetter:
         pass
 
-    @staticmethod
-    def _load_async_result(async_getter: AsyncGetter) -> dict:
-        """
-        :param async_getter: The object describing where to get the result of a computation
-        :return: The results of the computation
-        """
-        return async_getter.get_results()
-
-    @staticmethod
-    def cancel(async_getter: AsyncGetter) -> None:
-        """
-        Cancels a launched computation
-        :param async_getter: The object describing where to get the result of a computation
-        :return: None
-        """
-        async_getter.cancel()
-
-    @staticmethod
-    def is_complete(async_getter: AsyncGetter) -> bool:
-        """
-        :param async_getter: The object describing where to get the result of a computation
-        :return: Whether the computation is complete or not
-        """
-        return async_getter.status.completed
 
     @property
     @abstractmethod

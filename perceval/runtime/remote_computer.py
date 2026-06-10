@@ -157,10 +157,7 @@ class RemoteComputer(AbstractComputer):
 
     @noise.setter
     def noise(self, noise: NoiseModel | None):
-        if self.type == ProcessorType.PHYSICAL:  # TODO: Not sure this is how we should decide (for example: sim:belenos)
-            get_logger().warn("Can't set noise to a physical computer", channel.user)
-        else:
-            self._custom_noise = noise
+        self._custom_noise = noise
 
     @property
     def specs(self) -> PlatformSpecs:
@@ -196,7 +193,6 @@ class RemoteComputer(AbstractComputer):
     def check_experiment(self, experiment: Experiment) -> None:
         self.check_min_detected_photons_filter(experiment)
 
-        # TODO: move this to QuandelaRemote ?
         constraints = self.specs.constraints
         if constraints:
             input_state = experiment.input_state
@@ -232,7 +228,7 @@ class RemoteComputer(AbstractComputer):
 
         return super()._handle_iterator(comp, emts)
 
-    def _execute_command(self, computation: Computation, progress_cb: ProgressCallback = None) -> dict:
+    def _execute_command(self, computation: Computation, progress_callback: ProgressCallback = None) -> dict:
         async_getter = self._execute_single_async(computation)
         # TODO: find a way to use the progress callback in load_async_result or the wait function
         return self._load_async_result(async_getter)
@@ -260,7 +256,7 @@ class RemoteComputer(AbstractComputer):
         return self._specs.type
 
     # TODO: test all these
-    def _compute_sample_of_interest_probability(self, computation: Computation | ComputationIterator, param_values: dict = None) -> float:
+    def _estimate_sample_probability(self, computation: Computation | ComputationIterator, param_values: dict = None) -> float:
         # Simulation with a noisy source (only losses)
         computation.validate()
 
@@ -333,7 +329,7 @@ class RemoteComputer(AbstractComputer):
         :return: Estimate of the number of shots the user needs to acquire enough samples of interest,
             or None if no sample of interest can be acquired
         """
-        p_interest = self._compute_sample_of_interest_probability(computation, param_values=param_values)
+        p_interest = self._estimate_sample_probability(computation, param_values=param_values)
         if p_interest == 0:
             return None
         return round(nsamples / p_interest)
@@ -349,5 +345,5 @@ class RemoteComputer(AbstractComputer):
             for this computation to run.
         :return: Estimate of the number of samples of interest the user can expect back
         """
-        p_interest = self._compute_sample_of_interest_probability(computation, param_values=param_values)
+        p_interest = self._estimate_sample_probability(computation, param_values=param_values)
         return round(nshots * p_interest)

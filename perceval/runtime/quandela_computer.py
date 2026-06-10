@@ -52,7 +52,7 @@ from perceval.utils.constants import KEY_JOB_CONTEXT, KEY_RESULT_MAPPING, KEY_RE
 class QuandelaCommunicationLayer(CommunicationLayer):
 
     MINIMUM_FETCH_INTERVAL = 5
-    _MAX_ERROR = 5
+    _MAX_ERROR = 6
 
     def __init__(self, name: str, token: str, url: str, proxies: dict[str, str]):
         self.name = name
@@ -82,7 +82,7 @@ class QuandelaCommunicationLayer(CommunicationLayer):
 
             self._status = platform_details.get("status")
             platform_specs = deserialize(platform_details['specs'], strict=False)
-            self._specs.update(platform_specs)  # No verification here, we suppose every check was made by the platform
+            self._specs = PlatformSpecs(platform_specs)
             self._specs["type"] = platform_details.get('type', "simulator")
             if PERFS_KEY in platform_details:
                 self._perfs.update(platform_details[PERFS_KEY])
@@ -138,7 +138,7 @@ class QuandelaCommunicationLayer(CommunicationLayer):
         Handle a potentially non-blocking error
         After _MAX_ERROR errors in a row, the exception is raised
         """
-        if refresh_errors + 1 == self._MAX_ERROR:
+        if refresh_errors == self._MAX_ERROR:
             get_logger().error(f"Reached max number of HTTP errors in a row when updating job {remote_id} status.",
                                channel.general)
             raise error
@@ -219,40 +219,55 @@ class QuandelaCommunicationLayer(CommunicationLayer):
 class QuandelaComputer(RemoteComputer):
     _communication_layer: QuandelaCommunicationLayer  # Used for type hinting only
 
+    WARN_INTERVAL = 1800
+    INFO_INTERVAL = 10
+
     def __init__(self,
-                 name: str = None,
+                 name: str,
+                 *,
                  token: str = None,
                  url: str = None,
-                 proxies: dict[str,str] = None,
-                 communication_layer: QuandelaCommunicationLayer = None):
+                 proxies: dict[str,str] = None):
+        """
+        A Computer meant to access Quandela remote services.
 
-        if communication_layer is not None:  # When a com_layer object is passed, name, token and url are expected to be None
-            self.name = communication_layer.name  # Here, we are mixing the experiment name and the Processor name
-            if name is not None and name != communication_layer.name:
-                get_logger().warn(
-                    f"Initialised a RemoteProcessor with two different platform names ({self.name} vs {name})", channel.user)
-        else:
-            remote = RemoteConfig()
-            if name is None:
-                raise ValueError("Parameter 'name' must have a value")
-            if token is None:
-                token = remote.get_token()
-            if not token:
-                raise ConnectionError("No token found")
-            if url is None:
-                url = remote.get_url()
-            if proxies is None:
-                proxies = remote.get_proxies()
-            self.name = name
-            communication_layer = QuandelaCommunicationLayer(name, url, token, proxies)
+        All parameters but the name of the target platform have to be explicitly named to be set.
+
+        :param name: Platform name.
+        :param token: Token value to authenticate the user. If not provided, it is taken from the stored RemoteConfig
+        :param url: Base URL for the Cloud API to connect to
+        :param proxies: Dictionary mapping protocol to the URL of the proxy
+        """
+
+        remote = RemoteConfig()
+        if token is None:
+            token = remote.get_token()
+        if not token:
+            raise ConnectionError("No token found")
+        if url is None:
+            url = remote.get_url()
+        if proxies is None:
+            proxies = remote.get_proxies()
+        self.name = name
+        communication_layer = QuandelaCommunicationLayer(name, url, token, proxies)
 
         super().__init__(communication_layer)
         self._available_jobs = communication_layer.get_availability()
 
     def _take_resource(self):
-        while self._available_jobs == 0:
+        start = time.time()
+        start_warn = time.time()
+        start_info = start_warn
+        while self._available_jobs <= 0:
             self._available_jobs = self._communication_layer.get_availability()
             time.sleep(1)
+            if time.time() - start_warn > self.WARN_INTERVAL:
+                start_warn = time.time()
+                get_logger().warn(f"Couldn't find a way to send any job for {int(start_warn - start)} seconds - queue is full")
+            elif time.time() - start_info > self.INFO_INTERVAL:
+                start_info = time.time()
+                get_logger().info(f"Couldn't find a way to send any job for {int(start_info - start)} seconds - queue is full")
+
         self._available_jobs -= 1
 
     def _release_resource(self):

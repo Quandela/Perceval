@@ -46,7 +46,7 @@ class _ThreadedExecution(AsyncGetter):
         super().__init__()
         self._thread = Thread(target=self._encapsulate(method), args=args, kwargs=kwargs)
         self._canceled = False
-        self._user_cb = None  # Do we want to pass a user callback if this is async ?
+        self._user_callback = None  # Do we want to pass a user callback if this is async ?
         self._thread.start()
 
     def _update_status(self) -> None:
@@ -55,7 +55,7 @@ class _ThreadedExecution(AsyncGetter):
     def _encapsulate(self, method: Callable):
         def custom_method(*args, **kwargs):
             try:
-                self._results = method(*args, **kwargs, progress_callback = self._progress_cb)
+                self._results = method(*args, **kwargs, progress_callback = self._progress_callback)
             except TypeError as e:
                 if "progress_callback" in str(e):
                     self._results = method(*args, **kwargs)
@@ -76,12 +76,12 @@ class _ThreadedExecution(AsyncGetter):
     def get_progress(self):
         return self._status.progress
 
-    def _progress_cb(self, progress: float, message: str) -> bool:
+    def _progress_callback(self, progress: float, message: str) -> bool:
         self._status.update_progress(progress, message)
         if self._canceled:
             return True
-        if self._user_cb is not None:
-            return self._user_cb(progress, message)
+        if self._user_callback is not None:
+            return self._user_callback(progress, message)
         return self._canceled
 
     def is_complete(self) -> bool:
