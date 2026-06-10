@@ -32,6 +32,7 @@ from __future__ import annotations  # Python 3.11 : Replace using Self typing
 import copy
 from typing import Iterator, SupportsFloat
 from collections.abc import Mapping, Sequence
+from .globals import global_params
 
 import exqalibur
 
@@ -84,7 +85,7 @@ class BSDistribution():
                         return
                     elif isinstance(args[0], Mapping):
                         self._function = exqalibur.FSFunction(args[0])
-                        self._function.trim(1e-16)
+                        self._function.trim(global_params["min_p"])
                         return
                     elif isinstance(args[0], BSDistribution):
                         self._function = args[0]._function
@@ -92,16 +93,16 @@ class BSDistribution():
                         return
                     elif isinstance(args[0], exqalibur.FSFunction):
                         self._function = args[0]
-                        self._function.trim(1e-16)
+                        self._function.trim(global_params["min_p"])
                         return
                     elif isinstance(args[0], exqalibur.FSDistribution):
                         self._distribution = args[0]
-                        self._distribution.trim(1e-16)
+                        self._distribution.trim(global_params["min_p"])
                         return
                 case 2:
                     if isinstance(args[0], exqalibur.FSArray) and isinstance(args[1], Sequence):
                         self._function = exqalibur.FSFunction(args[0], args[1])
-                        self._function.trim(1e-16)
+                        self._function.trim(global_params["min_p"])
                         return
         except TypeError:
             pass
@@ -124,6 +125,17 @@ class BSDistribution():
             return self._distribution
         else:
             return self._function
+
+    @_container.setter
+    def _container(self, value: exqalibur.FSFunction | exqalibur.FSDistribution) -> None:
+        if isinstance(value, exqalibur.FSFunction):
+            self._value = value
+            self._distribution = None
+        elif isinstance(value, exqalibur.FSDistribution):
+            self._value = None
+            self._distribution = value
+        else:
+            raise TypeError(f"{type(value).__name__} is neither FSFunction nor FSDistribution")
 
     def normalize(self) -> None:
         """
@@ -151,10 +163,8 @@ class BSDistribution():
         return self._container.__getitem__(key)
 
     def __setitem__(self, key: exqalibur.FockState, value: float) -> None:
-        if value < 1e-16:
-            return
         self._unnormalize()
-        return self._function.__setitem__(key, value)
+        self._function.__setitem__(key, value)
 
     def __contains__(self, key: exqalibur.FockState) -> bool:
         return self._container.__contains__(key)
@@ -181,7 +191,6 @@ class BSDistribution():
         """
         return self._container.values()
 
-    ## non-sense!
     def get(self, key: exqalibur.FockState, default: float) -> float:
         """
         Retrieve the probability for a given state, with a default value if the state doesn't exist in the distribution.
@@ -190,12 +199,8 @@ class BSDistribution():
         :param default: Default probability value (defaults to None)
         :return: The state probability if found, the default value otherwise
         """
-        if key in self:
-            return self.__getitem__(key)
-        else:
-            return default
+        return self[key] if key in self else default
 
-    ## non-sense!
     def add(self, key: exqalibur.FockState, value: float) -> None:
         """
         Increment the probability of a given state. If the state doesn't exist beforehand, use the given probability. Probabilities that are too low (1e-16) are discarded.
@@ -203,10 +208,9 @@ class BSDistribution():
         :param fs: Fock state
         :param value: Probability
         """
-        if value < 1e-16:
+        if abs(value) < global_params["min_p"]:
             return
-        return self.__setitem__(key, self.__getitem__(key) + value)
-
+        self[key] += value
 
     def __eq__(self, other: BSDistribution) -> bool:
         return self._container.__eq__(other._container)
@@ -217,7 +221,7 @@ class BSDistribution():
     def __len__(self) -> int:
         return self._container.__len__()
 
-    def __iter__(self) -> Iterator[exqalibur.FockState, float]:
+    def __iter__(self) -> Iterator[exqalibur.FockState]:
         return self._container.__iter__()
 
     def __repr__(self) -> str:
@@ -225,7 +229,6 @@ class BSDistribution():
 
     def __str__(self) -> str:
         return self._container.__str__()
-
 
     @property
     def m(self) -> int:
@@ -236,7 +239,7 @@ class BSDistribution():
 
     def __add__(self, arg :BSDistribution) -> BSDistribution:
         if isinstance(arg, BSDistribution):
-            result = copy(self)
+            result = copy.copy(self)
             result._unnormalize()
             arg._unnormalize()
             result._function += arg._function
@@ -251,9 +254,15 @@ class BSDistribution():
             return self
         raise NotImplemented()
 
+    def __neg__(self):
+        result = copy.copy(self)
+        result._unnormalize()
+        result._function *= -1
+        return result
+
     def __sub__(self, arg: BSDistribution) -> BSDistribution:
         if isinstance(arg, BSDistribution):
-            result = copy(self)
+            result = copy.copy(self)
             result._unnormalize()
             arg._unnormalize()
             result._function -= arg._function
@@ -270,17 +279,11 @@ class BSDistribution():
 
     def __mul__(self, arg: exqalibur.FockState | BSDistribution | float) -> BSDistribution:
         if isinstance(arg, exqalibur.FockState):
-            if self._normalized:
-                return BSDistribution(self._distribution * arg)
-            else:
-                return BSDistribution(self._function * arg)
+            return BSDistribution(self._container * arg)
         elif isinstance(arg, BSDistribution):
-            if self._normalized and arg._normalized:
-                return BSDistribution(self._distribution * arg._distribution)
-            else:
-                return BSDistribution(self._container * arg._container)
+            return BSDistribution(self._container * arg._container)
         elif isinstance(arg, SupportsFloat):
-            result = copy(self)
+            result = copy.copy(self)
             result._unnormalize()
             result._function *= arg
             return result
@@ -288,12 +291,9 @@ class BSDistribution():
 
     def __rmul__(self, arg: exqalibur.FockState | float) -> BSDistribution:
         if isinstance(arg, exqalibur.FockState):
-            if self._normalized:
-                return BSDistribution(arg * self._distribution)
-            else:
-                return BSDistribution(BSDistribution(), arg * self._function)
+            return BSDistribution(arg * self._container)
         elif isinstance(arg, SupportsFloat):
-            result = copy(self)
+            result = copy.copy(self)
             result._unnormalize()
             result._function *= arg
             return result
@@ -301,16 +301,10 @@ class BSDistribution():
 
     def __imul__(self, arg: exqalibur.FockState | BSDistribution | float) -> BSDistribution:
         if isinstance(arg, exqalibur.FockState):
-            if self._normalized:
-                self._distribution = self._distribution * arg
-            else:
-                self._function *= arg
+            self._container = self._container * arg
             return self
         elif isinstance(arg, BSDistribution):
-            if self._normalized and arg._normalized:
-                self._distribution = BSDistribution(self._distribution * arg._distribution)
-            else:
-                self._function = BSDistribution(self._container * arg._container)
+            self._container = self._container * arg._container
             return self
         elif isinstance(arg, SupportsFloat):
             self._unnormalize()
@@ -318,15 +312,14 @@ class BSDistribution():
             return self
         raise NotImplemented()
 
-    def __div__(self, arg: float) -> BSDistribution:
+    def __truediv__(self, arg: float) -> BSDistribution:
         if isinstance(arg, SupportsFloat):
-            result = copy(self)
-            result._unnormalize()
+            result = copy.copy(self)
             result /= arg
             return result
         raise NotImplemented()
 
-    def __idiv__(self, arg: float) -> BSDistribution:
+    def __itruediv__(self, arg: float) -> BSDistribution:
         if isinstance(arg, SupportsFloat):
             self._unnormalize()
             self._function /= arg
@@ -334,10 +327,7 @@ class BSDistribution():
         raise NotImplemented()
 
     def __pow__(self, other: BSDistribution) -> BSDistribution:
-        if self._normalized:
-            return BSDistribution(self._distribution.__pow__(other))
-        else:
-            return BSDistribution(self._function.__pow__(other))
+        return BSDistribution(self._container.__pow__(other))
 
     def sample(self, count: int, non_null: bool = True) -> exqalibur.BSSamples:
         """
@@ -372,7 +362,7 @@ class BSDistribution():
         self.normalize()
         return BSDistribution(self._distribution.photon_threshold_simplification(photon_threshold))
 
-
+    @staticmethod
     def list_tensor_product(distributions: Sequence[BSDistribution], merge_modes: bool = False, prob_threshold: SupportsFloat = 0.0) -> exqalibur.BSDistribution:
         """
         Compute a series of tensor product between distributions
@@ -393,6 +383,7 @@ class BSDistribution():
             # TODO renormalize ?
             return BSDistribution(result)
 
+    @staticmethod
     def tensor_product(bsd1: BSDistribution, bsd2: BSDistribution, merge_modes: bool = False, prob_threshold: SupportsFloat = 0.0) -> exqalibur.BSDistribution:
         """
         Compute the tensor product of two distributions
