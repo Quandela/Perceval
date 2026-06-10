@@ -95,26 +95,26 @@ class RPCHandler:
             get_logger().debug(error_info, channel.general)
             raise requests.HTTPError(f"Could not read json response from url: {endpoint}. \n{e}")
 
-    def post_request(self, endpoint: str, payload: dict | None, with_json_response: bool) -> None | dict:
+    def post_request(self, endpoint: str, payload: dict | None) -> None | dict:
         # requests may throw an IO Exception, let the user deal with it
         try:
-            request = requests.post(endpoint, headers=self.headers, json=payload, timeout=self.request_timeout, proxies=self.proxies)
+            response = requests.post(endpoint, headers=self.headers, json=payload, timeout=self.request_timeout, proxies=self.proxies)
         except Exception as e:
             error_info = ''.join(traceback.format_stack()[:-1])
             get_logger().debug(error_info, channel.general)
             raise e
 
         json_res = None
-        if with_json_response:
-            try:
-                json_res = request.json()
-            except Exception as e:
-                json_res = {'error': f'{e}'}
+        try:
+            json_res = response.json()
+        except Exception as e:
+            json_res = {'error': f'{e}'}
 
-        if request.status_code != 200:
+        if response.status_code != 200:
             error_info = ''.join(traceback.format_stack())
             get_logger().debug(error_info, channel.general)
-            raise requests.HTTPError(f"Url: {endpoint} answered with status code {request.status_code}.")
+            # raise requests.HTTPError(json_res.get('error', 'Unspecified error'))
+            raise requests.HTTPError(f"Url: {endpoint} answered with status code {response.status_code} [{json_res}]")
 
         return json_res
 
@@ -145,7 +145,7 @@ class RPCHandler:
         :return: job id
         """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_CREATE)
-        json_res = self.post_request(endpoint, payload, True)
+        json_res = self.post_request(endpoint, payload)
         assert _JOB_ID_KEY in json_res, f'Missing {_JOB_ID_KEY} field in create_job response'
         return json_res[_JOB_ID_KEY]
 
@@ -155,7 +155,7 @@ class RPCHandler:
         :param job_id: id of the job to cancel
         """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_CANCEL, job_id)
-        self.post_request(endpoint, None, False)
+        self.post_request(endpoint, None)
 
     def rerun_job(self, job_id: str) -> str:
         """Rerun a job as a another freshly created job
@@ -164,7 +164,7 @@ class RPCHandler:
         :return: id of the new job
         """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_RERUN, job_id)
-        json_res = self.post_request(endpoint, None, True)
+        json_res = self.post_request(endpoint, None)
         assert _JOB_ID_KEY in json_res, f'Missing {_JOB_ID_KEY} field in rerun_job response'
         return json_res[_JOB_ID_KEY]
 
