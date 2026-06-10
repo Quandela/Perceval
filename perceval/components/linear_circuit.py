@@ -830,3 +830,7 @@ class Circuit(ACircuit):
             if match is None:
                 return None
         return match
+
+    def apply_phase_noise(self, phase_error = 0, phase_imprecision = 0, rng: random.Random = None):
+        for _, c in self:
+            c.apply_phase_noise(phase_error, phase_imprecision, rng)

@@ -123,6 +123,7 @@ class SimulatedComputer(LocalComputer):
         :return:
         """
         if isinstance(self._backend, AStrongSimulationBackend):
+            experiment = experiment.use_phase_noise(self.noise, kwargs.get("compilation_seed"))
             simulator = SimulatorFactory.build(experiment, self._backend)
 
             precision = self._parse_precision(kwargs)
@@ -147,13 +148,14 @@ class SimulatedComputer(LocalComputer):
         res["results"] = ConversionHelper.convert_to("probs", res["results"])
         return res
 
-    def _setup_sampling_simulator(self, experiment: Experiment) -> ASamplingSimulator:
+    def _setup_sampling_simulator(self, experiment: Experiment, compilation_seed: int | None) -> ASamplingSimulator:
         if isinstance(self._backend, ExqaliburBackendWrapper):
             simulator = ExqaliburNoisySamplingSimulator(self._backend)
         else:
             simulator = NoisySamplingSimulator(self._backend)
         simulator.sleep_between_batches = 0  # Remove sleep time between batches of samples in local simulation
         # TODO: solve discrepancy for phase noise (SimulatorFactory.build)
+        experiment = experiment.use_phase_noise(self.noise, compilation_seed)
         simulator.set_circuit(experiment.unitary_circuit())
         simulator.set_selection(
             min_detected_photons_filter=experiment.min_photons_filter,
@@ -172,7 +174,7 @@ class SimulatedComputer(LocalComputer):
 
         max_samples = kwargs["max_samples"]
         max_shots = kwargs.get("max_shots", None)
-        simulator = self._setup_sampling_simulator(experiment)
+        simulator = self._setup_sampling_simulator(experiment, kwargs.get("compilation_seed"))
         self.log_resources(sys._getframe().f_code.co_name, experiment, {'max_samples': max_samples, 'max_shots': max_shots})
         source = self._create_source(experiment)
         get_logger().info(f"Start a local {'perfect' if source.is_perfect() else 'noisy'} sampling", channel.general)
@@ -189,7 +191,7 @@ class SimulatedComputer(LocalComputer):
 
         max_samples = kwargs["max_samples"]
         max_shots = kwargs.get("max_shots", None)
-        simulator = self._setup_sampling_simulator(experiment)
+        simulator = self._setup_sampling_simulator(experiment, kwargs.get("compilation_seed"))
         self.log_resources(sys._getframe().f_code.co_name, experiment,
                            {'max_samples': max_samples, 'max_shots': max_shots})
         source = self._create_source(experiment)

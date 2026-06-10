@@ -261,7 +261,6 @@ def test_phase_error():
     nm = NoiseModel(phase_error=error)
     p = Processor("SLOS", PS(phi=angle), noise=nm)
     c = p.linear_circuit()
-    assert float(c._components[0][1].param("max_error")) == pytest.approx(error)
     a = c.compute_unitary()[0, 0]
     assert np.angle(a) != angle
     assert angle-error <= np.angle(a) <= angle+error

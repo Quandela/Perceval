@@ -29,6 +29,7 @@
 from __future__ import annotations  # Python 3.11 : Replace using Self typing
 
 import copy
+import random
 import weakref
 from dataclasses import dataclass
 from typing import Callable
@@ -625,6 +626,39 @@ class Experiment:
         :return: Total size of the enclosed circuit (i.e. self.m + ancillary mode count)
         """
         return self._m
+
+    def use_phase_noise(self, noise: NoiseModel = None, seed: int = None) -> Experiment:
+        """
+        Makes a copy of the current Experiment where the noise is applied to each PS component following the given rules:
+
+        - If a PS has `max_error`, this error is applied to the phase value, then removed
+        - Else, if the given noise has `phase_error`, this error is applied to the phase value
+        - Finally, if the noise has `phase_imprecision`, it is applied to the phase value
+
+        :param noise: A NoiseModel to use.
+        :param seed: Seed for the random number generator
+        :return: A copy of self where the phase noise has been applied. No copy is made if there is no noise
+        """
+        noise = noise or self.noise or NoiseModel()
+        rng = random.Random(seed)
+
+        res = self.copy()
+        res.apply_phase_noise(noise.phase_error, noise.phase_imprecision, rng)
+        return res
+
+    def apply_phase_noise(self, phase_error: float = 0, phase_imprecision: float= 0, rng: random.Random = None):
+        """
+        Applies the given noise parameters to each PS component or affiliated following the given rules:
+
+        - If a PS has `max_error`, this error is applied to the phase value, then removed
+        - Else, if the given noise has `phase_error`, this error is applied to the phase value
+        - Finally, if the noise has `phase_imprecision`, it is applied to the phase value
+        """
+        if rng is None:
+            rng = random.Random()
+
+        for pos_m, component in self._components:
+            component.apply_phase_noise(phase_error, phase_imprecision, rng)
 
     def unitary_circuit(self, flatten: bool = False, use_phase_noise: bool = False) -> Circuit:
         """

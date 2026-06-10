@@ -28,9 +28,13 @@
 # SOFTWARE.
 
 import dataclasses
+import random
+
 from packaging.version import Version
 
-from perceval.components.linear_circuit import ACircuit
+from .linear_circuit import ACircuit
+from .unitary_components import PS
+
 from perceval.utils.matrix import Matrix
 from perceval.utils.states import FockState
 
@@ -90,3 +94,12 @@ class CompiledCircuit(ACircuit):
 
     def is_composite(self) -> bool:
         return self.template is not None and self.template.is_composite()
+
+    def apply_phase_noise(self, phase_error = 0, phase_imprecision = 0, rng: random.Random = None):
+        if phase_error > 0:
+            if rng is None:
+                rng = random.Random()
+            self.parameters = [phase + PS.get_random(rng, phase_error) for phase in self.parameters]
+
+        if phase_imprecision > 0:
+            self.parameters = [phase_imprecision * round(phase / phase_imprecision) for phase in self.parameters]

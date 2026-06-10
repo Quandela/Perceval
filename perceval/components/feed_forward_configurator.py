@@ -28,10 +28,11 @@
 # SOFTWARE.
 from __future__ import annotations  # Python 3.11 : Replace using Self typing
 
+import random
 from abc import ABC, abstractmethod
 
-from .unitary_components import Unitary
-from .abstract_component import AParametrizedComponent
+from .unitary_components import Unitary, PS
+from .abstract_component import AParametrizedComponent, AComponent
 from .linear_circuit import ACircuit
 from perceval.utils import BasicState, Matrix
 
@@ -192,6 +193,11 @@ class FFCircuitProvider(AFFConfigurator):
     def circuit_template(self) -> ACircuit:
         return Unitary(Matrix.eye(self.default_circuit.m), f"U({self.name})")
 
+    def apply_phase_noise(self, phase_error = 0, phase_imprecision = 0, rng: random.Random = None):
+        self.default_circuit.apply_phase_noise(phase_error, phase_imprecision, rng)
+        for c in self.circuit_map.values():
+            c.apply_phase_noise(phase_error, phase_imprecision, rng)
+
 
 class FFConfigurator(AFFConfigurator):
     DEFAULT_NAME = "FFC"
@@ -256,3 +262,28 @@ class FFConfigurator(AFFConfigurator):
 
     def circuit_template(self) -> ACircuit:
         return self._controlled
+
+    @staticmethod
+    def _apply_phase_noise_on_one_config(config: dict[str, float],
+                                         phase_error: float,
+                                         phase_imprecision: float,
+                                         rng: random.Random):
+        # TODO: We have a problem here: the parameters could be anything and not just phases
+        for name, val in config.items():
+            if phase_error > 0:
+                val += PS.get_random(rng, phase_error)
+
+            if phase_imprecision > 0:
+                val = phase_imprecision * round(val / phase_imprecision)
+
+            config[name] = val
+
+    def apply_phase_noise(self, phase_error = 0, phase_imprecision = 0, rng: random.Random = None):
+        if rng is None:
+            rng = random.Random()
+
+        self._apply_phase_noise_on_one_config(self._default_config, phase_error, phase_imprecision, rng)
+        self.default_circuit.assign(self._default_config)
+
+        for config in self._configs.values():
+            self._apply_phase_noise_on_one_config(config, phase_error, phase_imprecision, rng)
