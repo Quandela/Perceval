@@ -78,8 +78,10 @@ def _register_deserializer(deserialize_method : Callable[[str], T], tag: str) ->
     DESERIALIZER[tag] = deserialize_method
 
 
-def register_to_serialization(cls: type,
+def register_to_serialization(cls: Type[T],
                               tag: str = None,
+                              serialize_method: Callable[[T], str] | None = None,
+                              deserialize_method: Callable[[str], T] | None = None,
                               default_compress=False) -> None:
     """
     Adds a class as a valid argument type for the `serialize` and `deserialize` methods.
@@ -89,27 +91,23 @@ def register_to_serialization(cls: type,
         - "class_version": int class attribute, that is serialized in any instance of the class if present.
         - "get_version_deserializer": Callable[[int], Callable[[dict], cls]] method. Gives a method to call to deserialize an object with another "class_version". It receives the __dict__ attribute of the serialized object
 
-    If the default serialization doesn't correspond to the needs, the class may implement methods to replace the default serialization.
-        - "serialize": Callable[[cls], str] method, that is used to produce a string representation of the class instance.
-        - "deserialize": Callable[[str], cls] static method, that is used to produce a class instance from the result of "serialize".
+    If the default serialization doesn't correspond to the needs, custom serialize and deserialize methods can be given.
 
     :param cls: The class to register in serialization.
     :param tag: The tag to use as an identifier for this class. Defaults to the class name.
+    :param serialize_method: A method used to produce a string representation of the class instance. By default, serializes as described above
+    :param deserialize_method: A method used to produce a class instance from the result of the "serialize_method". By default, deserializes as described above
     :param default_compress: Whether to compress the resulting string by default.
     """
     if tag is None:
         tag = cls.__name__
 
-    if hasattr(cls, "serialize"):  # Use a more reserved name (perceval_serialize ?)
-        serialize_method = cls.serialize
-    else:
+    if serialize_method is None:
         serialize_method = default_serializer
 
     _register_serializer(cls, serialize_method, tag, default_compress)
 
-    if hasattr(cls, "deserialize"):
-        deserialize_method = cls.deserialize
-    else:
+    if deserialize_method is None:
         deserialize_method = lambda serial: default_deserializer(cls, serial)
 
     _register_deserializer(deserialize_method, tag)
