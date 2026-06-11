@@ -31,7 +31,8 @@ import time
 from typing import TypeAlias
 
 from perceval import AbstractComputer, SimulatedComputer, Experiment, FockState, Computation, BSDistribution, JobStatus, \
-    Unitary, BS, PS, NoiseModel, Circuit, Detector, FFCircuitProvider, Command, P, PayloadGenerator, AbstractMitigation
+    Unitary, BS, PS, NoiseModel, Circuit, Detector, FFCircuitProvider, Command, P, PayloadGenerator, AbstractMitigation, \
+    payload_applier
 from perceval.runtime.computation_iterator import ComputationIterator
 from perceval.runtime.platform_specs import PlatformSpecs
 from perceval.runtime.remote_computer import CommunicationLayer, RemoteComputer
@@ -50,8 +51,9 @@ class ComputerProxy(CommunicationLayer):
         return self.computer.specs
 
     def send(self, payload: dict) -> RemoteId:
-        computation = PayloadGenerator.configure_computer_from_payload(self.computer, payload)
-        return computation, self.computer.execute_async(computation)
+        with PayloadGenerator.payload_applier(self.computer, payload):
+            computation = PayloadGenerator.read_computation(payload)
+            return computation, self.computer.execute_async(computation)
 
     def get_results(self, remote_id: RemoteId) -> dict:
         while not all(getter.is_complete for getter_list in remote_id[1][-1] for getter in getter_list):

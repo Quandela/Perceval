@@ -74,11 +74,15 @@ class AbstractComputer(ABC):
         return list(self._commands)  # Makes a copy
 
     def set_parameters(self, parameters):
-        self._parameters.update(parameters)
+        self._parameters = parameters
 
     def reset_parameters(self):
         # May be overloaded to have default parameters
         self._parameters.clear()
+
+    @property
+    def parameters(self) -> dict[str, Any]:
+        return self._parameters
 
     @property
     def available_parameters(self) -> dict[str, str]:
