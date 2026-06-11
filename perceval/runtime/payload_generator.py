@@ -28,10 +28,16 @@
 # SOFTWARE.
 
 import uuid
+from typing import Any
 
 from perceval.components import Experiment
 from perceval.serialization import serialize
-from perceval.utils import PMetadata
+from perceval.utils import PMetadata, NoiseModel
+from perceval.utils.constants import KEY_COMMAND, KEY_PARAMETERS, KEY_EXPERIMENT, KEY_VERSION, KEY_PROCESS_ID, \
+    KEY_PAYLOAD, KEY_PLATFORM_NAME, KEY_COMPUTATION, KEY_MITIGATIONS, KEY_NOISE
+
+from .computation import Computation
+from .error_mitigation import AbstractMitigation
 
 __process_id__ = uuid.uuid4()
 
@@ -42,10 +48,10 @@ class PayloadGenerator:
     @staticmethod
     def generate_payload(command: str,
                          experiment: Experiment = None,
-                         params: dict[str, any] = None,
-                         platform_name: str = "",
+                         params: dict[str, Any] = None,
+                         platform_name: str = None,
                          **kwargs
-                         ) -> dict[str, any]:
+                         ) -> dict[str, Any]:
         r"""
         Generate a simple payload containing the experiment, with the following template:
         {
@@ -73,22 +79,55 @@ class PayloadGenerator:
         if experiment is None:
             experiment = Experiment()
 
-        j = {
-            'pcvl_version': PMetadata.short_version(),
-            'process_id': str(__process_id__)
-        }
-        if platform_name:
-            j['platform_name'] = platform_name
-
         payload = {
-            'command': command,
+            KEY_COMMAND: command,
             **kwargs
         }
 
         if params:
-            payload['parameters'] = params
+            payload[KEY_PARAMETERS] = params
+        payload[KEY_EXPERIMENT] = serialize(experiment)
 
-        payload['experiment'] = serialize(experiment)
-        j['payload'] = payload
+        global_kwargs = {KEY_PLATFORM_NAME: platform_name} if platform_name else None
+        return PayloadGenerator.generate_global_data(payload, global_kwargs)
 
-        return j
+    @staticmethod
+    def generate_global_data(payload: dict, kwargs: dict = None) -> dict:
+        r"""
+        Generate a simple payload containing the experiment, with the following template:
+        {
+            'pcvl_version': str
+            'process_id': str
+            'payload': payload
+            **kwargs
+        }
+
+        :param payload: The payload to insert
+        :param kwargs: other arguments to insert
+
+        Other parameters can be added to the payload via **kwargs.
+        """
+        global_data = {
+            KEY_VERSION: PMetadata.short_version(),
+            KEY_PROCESS_ID: str(__process_id__),
+            KEY_PAYLOAD: payload,
+        }
+
+        if kwargs is not None:
+            for key, value in kwargs.items():
+                global_data[key] = value
+        return global_data
+
+    @staticmethod
+    def from_computation(computation: Computation,
+                         mitigations: list[AbstractMitigation] = None,
+                         parameters: dict[str, Any] = None,
+                         noise: NoiseModel = None):
+        payload: dict = {KEY_COMPUTATION: computation}
+        if mitigations is not None:
+            payload[KEY_MITIGATIONS] = mitigations
+        if parameters is not None and len(parameters):
+            payload[KEY_PARAMETERS] = parameters
+        if noise is not None:
+            payload[KEY_NOISE] = noise
+        return payload

@@ -36,35 +36,37 @@ from perceval.components import Experiment
 
 from .abstract_computer import AbstractComputer
 from .computation import Computation
+from .async_getter import AsyncGetter
 
 
-class ThreadedExecution:
-    """AsyncGetter - Private class"""
+class _ThreadedExecution(AsyncGetter):
+    """Async execution for local computer - Private class"""
 
     def __init__(self, method: Callable, args: tuple=(), kwargs: dict = None):
+        super().__init__()
         self._thread = Thread(target=self._encapsulate(method), args=args, kwargs=kwargs)
-        self._results = None
-        self._current_progress = 0
-        self._progress_message = ""
         self._canceled = False
+        self._user_callback = None  # Do we want to pass a user callback if this is async ?
         self._thread.start()
+
+    def _update_status(self) -> None:
+        pass  # Do nothing, everything is done in the other methods
 
     def _encapsulate(self, method: Callable):
         def custom_method(*args, **kwargs):
             try:
-                self._results = method(*args, **kwargs, progress_cb = self._progress_cb)
+                self._results = method(*args, **kwargs, progress_callback = self._progress_callback)
             except TypeError as e:
-                if "progress_cb" in str(e):
+                if "progress_callback" in str(e):
                     self._results = method(*args, **kwargs)
                 else:
                     raise e
 
-            self._current_progress = 1
-            self._progress_message = "Finished!"
+            self._status.stop_run()
 
         return custom_method
 
-    def get_results(self):
+    def _get_results(self):
         self._thread.join()
         return self._results
 
@@ -72,11 +74,14 @@ class ThreadedExecution:
         self._canceled = True
 
     def get_progress(self):
-        return self._current_progress
+        return self._status.progress
 
-    def _progress_cb(self, progress: float, message: str) -> bool:
-        self._progress_message = message
-        self._current_progress = progress
+    def _progress_callback(self, progress: float, message: str) -> bool:
+        self._status.update_progress(progress, message)
+        if self._canceled:
+            return True
+        if self._user_callback is not None:
+            return self._user_callback(progress, message)
         return self._canceled
 
     def is_complete(self) -> bool:
@@ -89,28 +94,22 @@ class LocalComputer(AbstractComputer, ABC):
         super().__init__()
         self._commands = ["probs", "samples", "sample_count"]
 
-    def _execute_command(self, computation: Computation, progress_cb: ProgressCallback = None) -> dict:
-        return getattr(self, computation.command.name)(computation.experiment, progress_cb, **computation.parameters)
+    def _execute_command(self, computation: Computation, progress_callback: ProgressCallback = None) -> dict:
+        return getattr(self, computation.command.name)(computation.experiment, progress_callback, **computation.parameters)
 
-    def _execute_command_async(self, computation: Computation) -> ThreadedExecution:
-        return ThreadedExecution(self._execute_single, args=(computation,))
-
-    def _load_async_result(self, async_getter: ThreadedExecution) -> dict:
-        return async_getter.get_results()
-
-    def is_complete(self, async_getter: ThreadedExecution) -> bool:
-        return async_getter.is_complete()
+    def _execute_command_async(self, computation: Computation) -> _ThreadedExecution:
+        return _ThreadedExecution(self._execute_single, args=(computation,))
 
     @abstractmethod
-    def probs(self, experiment: Experiment, progress_cb: ProgressCallback = None, **kwargs) -> dict:
+    def probs(self, experiment: Experiment, progress_callback: ProgressCallback = None, **kwargs) -> dict:
         pass
 
     @abstractmethod
-    def samples(self, experiment: Experiment, progress_cb: ProgressCallback = None, **kwargs) -> dict:
+    def samples(self, experiment: Experiment, progress_callback: ProgressCallback = None, **kwargs) -> dict:
         pass
 
     @abstractmethod
-    def sample_count(self, experiment: Experiment, progress_cb: ProgressCallback = None, **kwargs) -> dict:
+    def sample_count(self, experiment: Experiment, progress_callback: ProgressCallback = None, **kwargs) -> dict:
         pass
 
     @property

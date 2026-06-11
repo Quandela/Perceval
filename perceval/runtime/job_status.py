@@ -281,3 +281,24 @@ class JobStatus:
 
     def __str__(self) -> str:
         return self._status.name
+
+    def copy_from(self, status: JobStatus):
+        self._status = status._status
+        if status._init_time_start:
+            self._init_time_start = status._init_time_start
+        if status._running_time_start:
+            self._running_time_start = status._running_time_start
+        if status._duration:
+            self._duration = status._duration
+        if status._completed_time:
+            self._completed_time = status._completed_time
+        if status._running_progress:
+            self._running_progress = status._running_progress
+        if status._running_phase:
+            self._running_phase = status._running_phase
+        if status._stop_message:
+            self._stop_message = status._stop_message
+        if status._waiting_progress:
+            self._waiting_progress = status._waiting_progress
+        if status._last_progress_time:
+            self._last_progress_time = status._last_progress_time

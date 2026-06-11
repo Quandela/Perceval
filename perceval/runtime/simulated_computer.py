@@ -39,6 +39,7 @@ from perceval.utils.logging import get_logger, channel
 
 from .local_computer import LocalComputer
 from .computation import Computation
+from .platform_specs import PlatformSpecs
 
 
 class SimulatedComputer(LocalComputer):
@@ -79,6 +80,12 @@ class SimulatedComputer(LocalComputer):
         self.check_min_detected_photons_filter(computation)
 
     @property
+    def specs(self) -> PlatformSpecs:
+        res = PlatformSpecs()
+        res.parameters = self.available_parameters
+        return res
+
+    @property
     def available_parameters(self) -> dict[str, str]:
         return {"compute_physical_logical_perf": "bool. If True, physical and logical performances will be returned."
                                                  "Else, only a global performance will be returned."}
@@ -115,7 +122,7 @@ class SimulatedComputer(LocalComputer):
         nb_shots = kwargs.get("max_shots", kwargs.get("max_samples", None))
         return None if nb_shots is None else min(1e-6, 1 / nb_shots)
 
-    def probs(self, experiment: Experiment, progress_cb: ProgressCallback = None, **kwargs) -> dict:
+    def probs(self, experiment: Experiment, progress_callback: ProgressCallback = None, **kwargs) -> dict:
         """
         Computes the probabilities for a given experiment. Does not apply error mitigations
         :param experiment:
@@ -135,7 +142,7 @@ class SimulatedComputer(LocalComputer):
             simulator.keep_heralds(False)
             simulator.compute_physical_logical_perf(self._parameters.get("compute_physical_logical_perf", False))
             svd = self._make_input(experiment, source)
-            res = simulator.probs_svd(svd, experiment.detectors, progress_cb)
+            res = simulator.probs_svd(svd, experiment.detectors, progress_callback)
             get_logger().info("Local strong simulation complete!", channel.general)
 
             self.log_resources(sys._getframe().f_code.co_name, experiment, {'precision': precision})
@@ -144,7 +151,7 @@ class SimulatedComputer(LocalComputer):
         if "max_samples" not in kwargs:
             kwargs["max_samples"] = self.PROBS_DEFAULT_SAMPLES
 
-        res = self.sample_count(experiment, progress_cb, **kwargs)
+        res = self.sample_count(experiment, progress_callback, **kwargs)
         res["results"] = ConversionHelper.convert_to("probs", res["results"])
         return res
 
@@ -166,9 +173,9 @@ class SimulatedComputer(LocalComputer):
         simulator.set_detectors(experiment.detectors)
         return simulator
 
-    def samples(self, experiment: Experiment, progress_cb: ProgressCallback = None, **kwargs) -> dict:
+    def samples(self, experiment: Experiment, progress_callback: ProgressCallback = None, **kwargs) -> dict:
         if isinstance(self._backend, AStrongSimulationBackend):
-            res = self.probs(experiment, progress_cb, **kwargs)
+            res = self.probs(experiment, progress_callback, **kwargs)
             res["results"] = ConversionHelper.convert_to("samples", res["results"], **kwargs)
             return res
 
@@ -179,13 +186,13 @@ class SimulatedComputer(LocalComputer):
         source = self._create_source(experiment)
         get_logger().info(f"Start a local {'perfect' if source.is_perfect() else 'noisy'} sampling", channel.general)
         sample_provider = self._make_input(experiment, source)
-        res = simulator.samples(sample_provider, max_samples, max_shots, progress_cb)
+        res = simulator.samples(sample_provider, max_samples, max_shots, progress_callback)
         get_logger().info("Local sampling complete!", channel.general)
         return res
 
-    def sample_count(self, experiment: Experiment, progress_cb: ProgressCallback = None, **kwargs) -> dict:
+    def sample_count(self, experiment: Experiment, progress_callback: ProgressCallback = None, **kwargs) -> dict:
         if isinstance(self._backend, AStrongSimulationBackend):
-            res = self.probs(experiment, progress_cb, **kwargs)
+            res = self.probs(experiment, progress_callback, **kwargs)
             res["results"] = ConversionHelper.convert_to("sample_count", res["results"], **kwargs)
             return res
 
@@ -197,7 +204,7 @@ class SimulatedComputer(LocalComputer):
         source = self._create_source(experiment)
         get_logger().info(f"Start a local {'perfect' if source.is_perfect() else 'noisy'} sampling", channel.general)
         sample_provider = self._make_input(experiment, source)
-        res = simulator.sample_count(sample_provider, max_samples, max_shots, progress_cb)
+        res = simulator.sample_count(sample_provider, max_samples, max_shots, progress_callback)
         get_logger().info("Local sampling complete!", channel.general)
         return res
 

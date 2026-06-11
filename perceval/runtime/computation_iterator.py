@@ -26,13 +26,14 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-from typing import Generator
+from typing import Any
 
 from .parameter_iterator import ParameterIterator
 from .command import Command
 from .computation import Computation
+
 from perceval.utils.constants import KEY_SHOTS_USED, KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_RESULTS_LIST, KEY_ITERATION
+from perceval.components import Experiment
 
 
 class ComputationIterator:
@@ -52,6 +53,30 @@ class ComputationIterator:
     @property
     def command(self) -> Command:
         return self.base_computation.command
+
+    @property
+    def parameters(self) -> dict[str, Any]:
+        return self.base_computation.parameters
+
+    @property
+    def experiment(self) -> Experiment:
+        return self.base_computation.experiment
+
+    @property
+    def job_name(self) -> str:
+        return self.base_computation.job_name
+
+    @job_name.setter
+    def job_name(self, value: str):
+        self.base_computation.job_name = value
+
+    @property
+    def job_group_name(self) -> str | None:
+        return self.base_computation.job_group_name
+
+    @job_group_name.setter
+    def job_group_name(self, value: str):
+        self.base_computation.job_group_name = value
 
     def __iter__(self):
         if len(self._parameter_iterator) == 0:

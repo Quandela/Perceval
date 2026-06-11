@@ -30,6 +30,8 @@ from __future__ import annotations  # Python 3.11 : Replace using Self typing
 
 import json
 import time
+from typing import TypeVar, Type
+
 from requests.exceptions import HTTPError, ConnectionError
 
 from .job import Job
@@ -39,8 +41,9 @@ from perceval.serialization._serialized_containers import make_serialized, Seria
 from perceval.utils.logging import get_logger, channel
 from .rpc_handler import RPCHandler
 
+T = TypeVar('T')
 
-def _retrieve_from_response(response: dict, field: str, default_value: any = '', value_type: type = str) -> any:
+def _retrieve_from_response(response: dict, field: str, default_value: T = '', value_type: Type[T] = str) -> T:
     if field not in response:
         get_logger().error(f"Missing field '{field}' from server response. Using default value {default_value}.", channel.general)
         return default_value
@@ -180,7 +183,7 @@ class RemoteJob(Job):
         """
         self._status_refresh_error += 1
         if self._status_refresh_error == self._MAX_ERROR:
-            get_logger().error("Reached max number of HTTP errors in a row when updating job {self._id} status.",
+            get_logger().error(f"Reached max number of HTTP errors in a row when updating job {self._id} status.",
                                channel.general)
             raise error
         if isinstance(error, HTTPError):

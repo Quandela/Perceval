@@ -1,5 +1,3 @@
-
-
 # MIT License
 #
 # Copyright (c) 2022 Quandela
@@ -34,6 +32,38 @@ KEY_MAX_SHOTS = "max_shots"
 KEY_MAX_SAMPLES = "max_samples"
 
 # Results keys
+KEY_RESULTS = "results"
 KEY_SHOTS_USED = "nb_shots_used"
 KEY_RESULTS_LIST = "results_list"
 KEY_ITERATION = "iteration"
+
+# Result legacy keys
+KEY_JOB_CONTEXT = "job_context"
+KEY_RESULT_MAPPING = "result_mapping"
+KEY_MAPPING_PARAMETERS = "mapping_delta_parameters"
+
+# Payload keys
+KEY_COMPUTATION = "computation"
+KEY_MITIGATIONS = "mitigations"
+KEY_PARAMETERS = "parameters"
+KEY_NOISE = "noise"
+
+# Payload legacy keys
+KEY_COMMAND = "command"
+KEY_ITERATOR = "iterator"
+KEY_CIRCUIT = "circuit"
+KEY_CIRCUIT_PARAMS = "circuit_params"
+KEY_INPUT_STATE = "input_state"
+KEY_COUNT = "count"
+KEY_EXPERIMENT = "experiment"
+KEY_POSTSELECT = "postselect"
+KEY_HERALDS = "heralds"
+KEY_MIN_DETECTED_PHOTONS = "min_detected_photons"
+
+# Global data keys
+KEY_VERSION = "pcvl_version"
+KEY_PROCESS_ID = "process_id"
+KEY_PAYLOAD = "payload"
+KEY_PLATFORM_NAME = "platform_name"
+KEY_JOB_NAME = "job_name"
+KEY_JOB_GROUP_NAME = "job_group_name"

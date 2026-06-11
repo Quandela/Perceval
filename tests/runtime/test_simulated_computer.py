@@ -149,7 +149,7 @@ def test_execute_async():
     res = computer.get_results(computation, *access, getters)
     assert res["results"] == BSDistribution({FockState([1, 0]): 1.})
 
-    assert computer.is_complete(getters[0])
+    assert getters[0].is_complete
 
 
 def test_execute_iterator():
@@ -168,8 +168,8 @@ def test_execute_iterator():
     assert "results_list" in res
     assert len(res["results_list"]) == 2
 
-    assert_bsd_close(res["results_list"][0]["results"], BSDistribution({FockState([1, 0]): 1.}))
-    assert_bsd_close(res["results_list"][1]["results"], BSDistribution({FockState([0, 1]): 1.}))
+    assert_bsd_close(res["results_list"][0]["results"], BSDistribution(FockState([1, 0])))
+    assert_bsd_close(res["results_list"][1]["results"], BSDistribution(FockState([0, 1])))
 
     assert "iteration" in res["results_list"][0]
     assert res["results_list"][0]["iteration"] == {"input_state": FockState([1, 0])}

@@ -40,8 +40,11 @@ from .job_group import JobGroup
 from .check_cancel import cancel_requested
 from .payload_generator import PayloadGenerator
 from .computation import Computation
+from .computation_iterator import ComputationIterator
 from .command import Command, CommandFactory
 from .error_mitigation import *
 from .abstract_computer import AbstractComputer
 from .local_computer import LocalComputer
 from .simulated_computer import SimulatedComputer
+from .remote_computer import RemoteComputer, CommunicationLayer
+from .quandela_computer import QuandelaComputer
