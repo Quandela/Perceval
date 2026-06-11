@@ -51,7 +51,12 @@ class _ThreadedExecution(AsyncGetter):
         self._thread.start()
 
     def _update_status(self) -> None:
-        pass  # Do nothing, everything is done in the other methods
+        if self._status.running and not self._thread.is_alive():
+            if self._canceled:
+                self._status.stop_run(RunningStatus.CANCELED, "Canceled")
+            else:
+                self._status.stop_run()
+        return self._status
 
     def _encapsulate(self, method: Callable):
         def custom_method(*args, **kwargs):
