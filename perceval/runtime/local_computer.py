@@ -85,7 +85,7 @@ class _ThreadedExecution(AsyncGetter):
         return self._canceled
 
     def is_complete(self) -> bool:
-        return not self._thread.is_alive()
+        return self.status.completed
 
 
 class LocalComputer(AbstractComputer, ABC):
