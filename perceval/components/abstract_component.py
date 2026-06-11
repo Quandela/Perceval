@@ -66,6 +66,7 @@ class AComponent(ABC):
 
     def apply_phase_noise(self, phase_error = 0, phase_imprecision = 0, rng: random.Random = None):
         """Applies a noise on phases. Acts in-place"""
+        pass
 
 
 class AParametrizedComponent(AComponent):

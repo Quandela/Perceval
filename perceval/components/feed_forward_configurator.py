@@ -232,6 +232,7 @@ class FFConfigurator(AFFConfigurator):
         self._configs: dict[BasicState, dict[str, float]] = {}
         self._check_configuration(default_config)
         self._default_config = default_config
+        self._cache_circuits: dict[BasicState, ACircuit] = {}
         default_circuit = controlled_circuit.copy()
         default_circuit.assign(default_config)
         super().__init__(m, offset, default_circuit, name)
@@ -249,41 +250,28 @@ class FFConfigurator(AFFConfigurator):
         if detections.m != self.m:
             raise ValueError(f"Wrong size for detections; got {len(detections)}, expected the number of modes plugged-in, i.e. {self.m}")
         self._check_configuration(config)
+
+        circuit = self._controlled.copy()
+        circuit.assign(config)
+        self._cache_circuits[detections] = circuit
         self._configs[detections] = config
+
         return self
 
     def configure(self, measured_state: BasicState) -> ACircuit:
         if measured_state not in self._configs:
             return self.default_circuit
 
-        circuit = self._controlled.copy()
-        circuit.assign(self._configs[measured_state])
-        return circuit
+        return self._cache_circuits[measured_state]
 
     def circuit_template(self) -> ACircuit:
         return self._controlled
 
-    @staticmethod
-    def _apply_phase_noise_on_one_config(config: dict[str, float],
-                                         phase_error: float,
-                                         phase_imprecision: float,
-                                         rng: random.Random):
-        # TODO: We have a problem here: the parameters could be anything and not just phases
-        for name, val in config.items():
-            if phase_error > 0:
-                val += PS.get_random(rng, phase_error)
-
-            if phase_imprecision > 0:
-                val = phase_imprecision * round(val / phase_imprecision)
-
-            config[name] = val
-
     def apply_phase_noise(self, phase_error = 0, phase_imprecision = 0, rng: random.Random = None):
+        """We don't change the use-given parameters - We only change the cached circuits"""
         if rng is None:
             rng = random.Random()
 
-        self._apply_phase_noise_on_one_config(self._default_config, phase_error, phase_imprecision, rng)
-        self.default_circuit.assign(self._default_config)
-
-        for config in self._configs.values():
-            self._apply_phase_noise_on_one_config(config, phase_error, phase_imprecision, rng)
+        self.default_circuit.apply_phase_noise(phase_error, phase_imprecision, rng)
+        for circuit in self._cache_circuits.values():
+            circuit.apply_phase_noise(phase_error, phase_imprecision, rng)
