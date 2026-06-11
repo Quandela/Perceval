@@ -31,6 +31,7 @@ from abc import ABC, abstractmethod
 from threading import Thread
 from typing import Callable
 
+from perceval import RunningStatus
 from perceval.utils import ProgressCallback
 from perceval.components import Experiment
 
@@ -55,14 +56,22 @@ class _ThreadedExecution(AsyncGetter):
     def _encapsulate(self, method: Callable):
         def custom_method(*args, **kwargs):
             try:
-                self._results = method(*args, **kwargs, progress_callback = self._progress_callback)
-            except TypeError as e:
-                if "progress_callback" in str(e):
-                    self._results = method(*args, **kwargs)
-                else:
-                    raise e
+                try:
+                    self._results = method(*args, **kwargs, progress_callback = self._progress_callback)
+                except TypeError as e:
+                    if "progress_callback" in str(e):
+                        self._results = method(*args, **kwargs)
+                    else:
+                        raise e
 
-            self._status.stop_run()
+                if not self._status.canceled:
+                    self._status.stop_run()
+
+            except Exception as e:
+                msg = f"{type(e).__name__}: {e}"
+                self._results = {"results": msg}
+                self._status.stop_run(RunningStatus.ERROR, e)
+                raise e
 
         return custom_method
 
@@ -71,6 +80,7 @@ class _ThreadedExecution(AsyncGetter):
         return self._results
 
     def cancel(self):
+        self._status.stop_run(RunningStatus.CANCELED, "Canceled")
         self._canceled = True
 
     def get_progress(self):
@@ -85,7 +95,7 @@ class _ThreadedExecution(AsyncGetter):
         return self._canceled
 
     def is_complete(self) -> bool:
-        return self.status.completed
+        return not self._thread.is_alive()
 
 
 class LocalComputer(AbstractComputer, ABC):
