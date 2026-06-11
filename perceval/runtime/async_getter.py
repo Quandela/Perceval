@@ -98,9 +98,6 @@ class AsyncGetter(ABC):
         """
         job_status = self.status
 
-        if not job_status.maybe_completed:
-            raise RuntimeError('The job is still running, results are not available yet.')
-
         if job_status.canceled:
             get_logger().warn("Job has been canceled, trying to get partial result.", channel.user)
 
