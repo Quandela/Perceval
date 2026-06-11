@@ -56,7 +56,6 @@ class _ThreadedExecution(AsyncGetter):
                 self._status.stop_run(RunningStatus.CANCELED, "Canceled")
             else:
                 self._status.stop_run()
-        return self._status
 
     def _encapsulate(self, method: Callable):
         def custom_method(*args, **kwargs):
