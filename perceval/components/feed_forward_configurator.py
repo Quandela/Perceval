@@ -31,10 +31,10 @@ from __future__ import annotations  # Python 3.11 : Replace using Self typing
 import random
 from abc import ABC, abstractmethod
 
-from .unitary_components import Unitary, PS
-from .abstract_component import AParametrizedComponent, AComponent
+from .unitary_components import Unitary
+from .abstract_component import AParametrizedComponent
 from .linear_circuit import ACircuit
-from perceval.utils import BasicState, Matrix
+from perceval.utils import FockState, Matrix
 
 
 class AFFConfigurator(AParametrizedComponent, ABC):
@@ -65,7 +65,7 @@ class AFFConfigurator(AParametrizedComponent, ABC):
         self._blocked_circuit_size = True
 
     @abstractmethod
-    def configure(self, measured_state: BasicState) -> ACircuit:
+    def configure(self, measured_state: FockState) -> ACircuit:
         """
         Gives the circuit or processor that must be configured given the measured state
 
@@ -131,7 +131,7 @@ class FFCircuitProvider(AFFConfigurator):
             default_circuit = default_circuit.experiment
         super().__init__(m, offset, default_circuit, name)
         self._params = self._get_parameters(default_circuit, True, True)
-        self._map: dict[BasicState, ACircuit] = {}
+        self._map: dict[FockState, ACircuit] = {}
 
     @staticmethod
     def _get_parameters(circ, all_params: bool, expressions: bool) -> dict:
@@ -155,13 +155,13 @@ class FFCircuitProvider(AFFConfigurator):
         return self._map
 
     @circuit_map.setter
-    def circuit_map(self, circuit_map: dict[BasicState, ACircuit]):
+    def circuit_map(self, circuit_map: dict[FockState, ACircuit]):
         self.reset_map()
         for state, circ in circuit_map.items():
             self.add_configuration(state, circ)
 
     def add_configuration(self, state, circuit: ACircuit) -> FFCircuitProvider:
-        state = BasicState(state)
+        state = FockState(state)
         assert state.m == self.m, f"Incorrect number of modes for state {state} (expected {self.m})"
         assert not isinstance(circuit, AFFConfigurator), \
             "Can't add directly a Feed-forward configurator to a configurator (use a Processor)"
@@ -187,7 +187,7 @@ class FFCircuitProvider(AFFConfigurator):
         self._map[state] = circuit
         return self
 
-    def configure(self, measured_state: BasicState) -> ACircuit:
+    def configure(self, measured_state: FockState) -> ACircuit:
         return self.circuit_map.get(measured_state, self.default_circuit)
 
     def circuit_template(self) -> ACircuit:
@@ -229,10 +229,10 @@ class FFConfigurator(AFFConfigurator):
             raise TypeError(f"controlled_circuit must be of type ACircuit")
         self._controlled = controlled_circuit
         self._linked_vars = self._controlled.vars
-        self._configs: dict[BasicState, dict[str, float]] = {}
+        self._configs: dict[FockState, dict[str, float]] = {}
         self._check_configuration(default_config)
         self._default_config = default_config
-        self._cache_circuits: dict[BasicState, ACircuit] = {}
+        self._cache_circuits: dict[FockState, ACircuit] = {}
         default_circuit = controlled_circuit.copy()
         default_circuit.assign(default_config)
         super().__init__(m, offset, default_circuit, name)
@@ -245,8 +245,8 @@ class FFConfigurator(AFFConfigurator):
             if param_name not in self._linked_vars:
                 raise NameError(f"Parameter {param_name} does not exist in the controlled circuit")
 
-    def add_configuration(self, detections: BasicState | tuple[int, ...], config: dict[str, float]) -> FFConfigurator:
-        detections = BasicState(detections)
+    def add_configuration(self, detections: FockState | tuple[int, ...], config: dict[str, float]) -> FFConfigurator:
+        detections = FockState(detections)
         if detections.m != self.m:
             raise ValueError(f"Wrong size for detections; got {len(detections)}, expected the number of modes plugged-in, i.e. {self.m}")
         self._check_configuration(config)
@@ -258,7 +258,7 @@ class FFConfigurator(AFFConfigurator):
 
         return self
 
-    def configure(self, measured_state: BasicState) -> ACircuit:
+    def configure(self, measured_state: FockState) -> ACircuit:
         if measured_state not in self._configs:
             return self.default_circuit
 
