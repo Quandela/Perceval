@@ -31,10 +31,10 @@ from abc import ABC, abstractmethod
 from threading import Thread
 from typing import Callable
 
-from perceval import RunningStatus
 from perceval.utils import ProgressCallback
 from perceval.components import Experiment
 
+from .job_status import RunningStatus
 from .abstract_computer import AbstractComputer
 from .computation import Computation
 from .async_getter import AsyncGetter
