@@ -134,21 +134,18 @@ class PayloadGenerator:
         return payload
 
     @staticmethod
-    def read_computation(payload: dict) -> Computation:
+    def get_computation(payload: dict) -> Computation:
         if KEY_COMPUTATION not in payload:
             raise ValueError(f"Missing key in the payload: {KEY_COMPUTATION}")
         return payload[KEY_COMPUTATION]
 
     @staticmethod
-    def configure_computer_from_payload(computer: AbstractComputer, payload: dict):
-        mitigations = payload.get(KEY_MITIGATIONS, [])
-
-        computer.set_mitigations(mitigations)
-        if KEY_PARAMETERS in payload:
-            computer.set_parameters(payload[KEY_PARAMETERS])
-        else:
-            computer.reset_parameters()
-        computer.noise = payload.get(KEY_NOISE)
+    def read_configuration_from_payload(payload: dict) \
+            -> tuple[list[AbstractMitigation] | None, NoiseModel | None, dict[str, Any] | None]:
+        mitigations = payload.get(KEY_MITIGATIONS)
+        noise = payload.get(KEY_NOISE)
+        parameters = payload.get(KEY_PARAMETERS)
+        return mitigations, noise, parameters
 
     @staticmethod
     def payload_applier(computer: AbstractComputer, payload: dict) -> ContextManager:
@@ -158,11 +155,5 @@ class PayloadGenerator:
         :return: A ContextManager that applies the parameters inside the payload to the computer (noise, mitigations, etc.)
           at enter and reset the parameters to the previous values at exit
         """
-        # TODO: define a public way to get the mitigations and use it
-        original_parameters = PayloadGenerator.from_computation(None,
-                                                                computer._error_mitigations,
-                                                                computer.parameters,
-                                                                computer.noise)
-
-        return ContextManager(lambda: PayloadGenerator.configure_computer_from_payload(computer, payload),
-                              lambda: PayloadGenerator.configure_computer_from_payload(computer, original_parameters))
+        mitigations, noise, parameters = PayloadGenerator.read_configuration_from_payload(payload)
+        return computer.apply_configuration(mitigations, noise, parameters)
