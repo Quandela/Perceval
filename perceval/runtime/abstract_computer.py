@@ -161,7 +161,7 @@ class AbstractComputer(ABC):
                 progress_callback((current_index + 1) / len(results), "Post processing results")
             res = results[current_index]
             if isinstance(res, AsyncGetter):
-                return self._load_async_result(results[current_index]), current_index + 1
+                return results[current_index].get_results(), current_index + 1
             else:
                 return results[current_index], current_index + 1
 
@@ -221,7 +221,7 @@ class AbstractComputer(ABC):
                 return
 
     def _execute_single(self, computation: Computation, progress_callback: ProgressCallback = None) -> dict:
-        # Most of the AbstractComputer specific implementation is in the self._execute_command
+        # Most of the AbstractComputer specific implementation is in the self._commands
         self.validate_single(computation)
         with self._reserve_resource():
             return self._execute_command(computation, progress_callback)
@@ -284,31 +284,6 @@ class AbstractComputer(ABC):
     @abstractmethod
     def _execute_command_async(self, computation: Computation) -> AsyncGetter:
         pass
-
-    @staticmethod
-    def _load_async_result(async_getter: AsyncGetter) -> dict:
-        """
-        :param async_getter: The object describing where to get the result of a computation
-        :return: The results of the computation
-        """
-        return async_getter.get_results()
-
-    @staticmethod
-    def cancel(async_getter: AsyncGetter) -> None:
-        """
-        Cancels a launched computation
-        :param async_getter: The object describing where to get the result of a computation
-        :return: None
-        """
-        async_getter.cancel()
-
-    @staticmethod
-    def is_complete(async_getter: AsyncGetter) -> bool:
-        """
-        :param async_getter: The object describing where to get the result of a computation
-        :return: Whether the computation is complete or not
-        """
-        return async_getter.status.completed
 
     @property
     @abstractmethod

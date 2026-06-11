@@ -28,14 +28,18 @@
 # SOFTWARE.
 import random
 import time
+from typing import TypeAlias
 
 from perceval import AbstractComputer, SimulatedComputer, Experiment, FockState, Computation, BSDistribution, JobStatus, \
-    Unitary, BS, PS, NoiseModel, Circuit, Detector, FFCircuitProvider, Command, P, PayloadGenerator
+    Unitary, BS, PS, NoiseModel, Circuit, Detector, FFCircuitProvider, Command, P, PayloadGenerator, AbstractMitigation
 from perceval.runtime.computation_iterator import ComputationIterator
 from perceval.runtime.platform_specs import PlatformSpecs
-from perceval.runtime.remote_computer import CommunicationLayer, RemoteComputer, RemoteId
+from perceval.runtime.remote_computer import CommunicationLayer, RemoteComputer
+from perceval.runtime.async_getter import AsyncGetter
 from tests._test_utils import assert_bsd_close
 
+
+RemoteId: TypeAlias = tuple[Computation | ComputationIterator, tuple[list[AbstractMitigation], NoiseModel, list[list[AsyncGetter]]]]
 
 class ComputerProxy(CommunicationLayer):
 
@@ -45,18 +49,18 @@ class ComputerProxy(CommunicationLayer):
     def get_specs(self) -> PlatformSpecs:
         return self.computer.specs
 
-    def send(self, payload: dict) -> list:
+    def send(self, payload: dict) -> RemoteId:
         computation = PayloadGenerator.configure_computer_from_payload(self.computer, payload)
-        return [computation, *self.computer.execute_async(computation)]
+        return computation, self.computer.execute_async(computation)
 
-    def get_results(self, remote_id: list) -> dict:
-        while not all(self.computer.is_complete(getter) for getters in remote_id[-1] for getter in getters):
+    def get_results(self, remote_id: RemoteId) -> dict:
+        while not all(getter.is_complete for getter_list in remote_id[1][-1] for getter in getter_list):
             time.sleep(0.1)
-        return self.computer.get_results(*remote_id)
+        return self.computer.get_results(remote_id[0], *remote_id[1])
 
     def get_job_status(self, remote_id: RemoteId, refresh_errors: int = 0) -> JobStatus | None:
         # TODO: account better for progress and times
-        for getters in remote_id[-1]:
+        for getters in remote_id[1][-1]:
             for getter in getters:
                 status = getter.status
                 if not status.completed:
@@ -72,9 +76,10 @@ class ComputerProxy(CommunicationLayer):
     def get_commands(self) -> list[Command]:
         return [self.computer.get_command(command) for command in self.computer.available_commands]
 
-    def cancel(self, remote_id: list) -> None:
-        for getter in remote_id[-1]:
-            self.computer.cancel(getter)
+    def cancel(self, remote_id: RemoteId) -> None:
+        for getter_list in remote_id[1][-1]:
+            for getter in getter_list:
+                getter.cancel()
 
 
 def test_remote_computer_basic():
@@ -116,13 +121,13 @@ def test_remote_computer_execute_async():
     computation = Computation(remote_computer.get_command("probs"), e)
     mitigations, noise, getter = remote_computer.execute_async(computation)
 
-    while not remote_computer.is_complete(getter[0][0]):
+    while not getter[0][0].is_complete:
         time.sleep(0.1)
 
     res = remote_computer.get_results(computation, mitigations, noise, getter)
     assert res["results"] == BSDistribution(FockState([1, 0]))
 
-    assert remote_computer.is_complete(getter[0][0])
+    assert getter[0][0].is_complete
 
 
 def test_remote_computer_execute_iterator():
@@ -168,7 +173,7 @@ def test_remote_computer_execute_async_iterator():
     assert len(getter) == 1, "Iterator must not be decomposed when there is no local mitigations"
     assert len(getter[0]) == 1, "Iterator must not be decomposed when there is no local mitigations"
 
-    while not remote_computer.is_complete(getter[0][0]):
+    while not getter[0][0].is_complete:
         time.sleep(0.1)
 
     res = remote_computer.get_results(computation, mitigations, noise, getter)

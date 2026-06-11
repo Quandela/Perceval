@@ -30,9 +30,9 @@
 from typing import Any
 
 from .command import Command, CommandFactory
-from ..utils import FockState, deprecated, ProcessorType
-from ..utils.logging import channel, get_logger
-from ..components import Experiment, ACircuit, Detector
+from perceval.utils import FockState, deprecated, ProcessorType
+from perceval.utils.logging import channel, get_logger
+from perceval.components import Experiment, ACircuit, Detector
 
 DEFAULT_MIN_VERSION = "0.10.0"
 

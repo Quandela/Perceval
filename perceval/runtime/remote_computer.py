@@ -29,7 +29,7 @@
 
 import time
 from abc import ABC, abstractmethod
-from copy import copy, deepcopy
+from copy import deepcopy
 from typing import TypeVar, Callable
 
 from .command import Command
@@ -43,7 +43,7 @@ from .simulated_computer import SimulatedComputer
 from .async_getter import AsyncGetter
 from .payload_generator import PayloadGenerator
 
-from perceval.utils import perf_dict_to_noise, ProgressCallback, ProcessorType, NoiseModel, PostSelect
+from perceval.utils import perf_dict_to_noise, ProgressCallback, NoiseModel, PostSelect
 from perceval.utils.logging import channel, get_logger
 from perceval.components import PortLocation, Experiment
 
@@ -157,10 +157,7 @@ class RemoteComputer(AbstractComputer):
 
     @noise.setter
     def noise(self, noise: NoiseModel | None):
-        if self.type == ProcessorType.PHYSICAL:  # TODO: Not sure this is how we should decide (for example: sim:belenos)
-            get_logger().warn("Can't set noise to a physical computer", channel.user)
-        else:
-            self._custom_noise = noise
+        self._custom_noise = noise
 
     @property
     def specs(self) -> PlatformSpecs:
@@ -196,7 +193,6 @@ class RemoteComputer(AbstractComputer):
     def check_experiment(self, experiment: Experiment) -> None:
         self.check_min_detected_photons_filter(experiment)
 
-        # TODO: move this to QuandelaRemote ?
         constraints = self.specs.constraints
         if constraints:
             input_state = experiment.input_state
@@ -250,9 +246,10 @@ class RemoteComputer(AbstractComputer):
 
     def _execute_command(self, computation: Computation, progress_cb: ProgressCallback = None) -> dict:
         async_getter = self._execute_single_async(computation)
+        # TODO: use the progress callback in the wait function
         while not async_getter.is_complete:
             time.sleep(1)
-        return self._load_async_result(async_getter)
+        return async_getter.get_results()
 
     def _execute_command_async(self, computation: Computation) -> _RemoteGetter:
         # Subclasses may implement something here to ask for availability before sending to the cloud
@@ -276,7 +273,7 @@ class RemoteComputer(AbstractComputer):
     def type(self):
         return self._specs.type
 
-    def _compute_sample_of_interest_probability(self, computation: Computation | ComputationIterator, param_values: dict = None) -> float:
+    def _estimate_sample_probability(self, computation: Computation | ComputationIterator, param_values: dict = None) -> float:
         # Simulation with a noisy source (only losses)
         computation.validate()
 
@@ -342,7 +339,7 @@ class RemoteComputer(AbstractComputer):
         :return: Estimate of the number of shots the user needs to acquire enough samples of interest,
             or None if no sample of interest can be acquired
         """
-        p_interest = self._compute_sample_of_interest_probability(computation, param_values=param_values)
+        p_interest = self._estimate_sample_probability(computation, param_values=param_values)
         if p_interest == 0:
             return None
         return round(nsamples / p_interest)
@@ -358,5 +355,5 @@ class RemoteComputer(AbstractComputer):
             for this computation to run.
         :return: Estimate of the number of samples of interest the user can expect back
         """
-        p_interest = self._compute_sample_of_interest_probability(computation, param_values=param_values)
+        p_interest = self._estimate_sample_probability(computation, param_values=param_values)
         return round(nshots * p_interest)

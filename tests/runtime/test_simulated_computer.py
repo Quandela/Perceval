@@ -147,13 +147,15 @@ def test_execute_async():
     assert len(getters) == 1
     assert len(getters[0]) == 1
 
-    while not computer.is_complete(getters[0][0]):
+    while not getters[0][0].is_complete:
         time.sleep(0.01)
 
     res_out = dict()
     res = computer.get_results(computation, *access, getters, res_out)
     assert res is res_out
     assert res["results"] == BSDistribution({FockState([1, 0]): 1.})
+
+    assert getters[0][0].is_complete
 
 
 def test_execute_iterator():
