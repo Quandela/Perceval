@@ -52,7 +52,6 @@ class SimulatedComputer(LocalComputer):
     def __init__(self, backend):
         super().__init__()
         self._init_backend(backend)
-        self._has_custom_noise = False  # Legacy; allows noise to be defined in Experiment if False
         self._noise: NoiseModel = NoiseModel()
 
         cls = type(self)
@@ -73,13 +72,8 @@ class SimulatedComputer(LocalComputer):
         return self._noise
 
     @noise.setter
-    def noise(self, noise: NoiseModel | None):
-        if noise is not None:
-            self._has_custom_noise = True
-            self._noise = noise
-        else:
-            self._has_custom_noise = False
-            self._noise = NoiseModel()
+    def noise(self, noise: NoiseModel):
+        self._noise = noise
 
     def validate_single(self, computation: Computation) -> None:
         super().validate_single(computation)
@@ -97,7 +91,7 @@ class SimulatedComputer(LocalComputer):
                                                  "Else, only a global performance will be returned."}
 
     def _create_source(self, experiment: Experiment) -> Source:
-        if self._has_custom_noise or experiment.noise is None:
+        if experiment.noise is None:
             return Source.from_noise_model(self.noise)
         return Source.from_noise_model(experiment.noise)
 

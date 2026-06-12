@@ -146,7 +146,7 @@ class RemoteComputer(AbstractComputer):
         self._specs = communication_layer.get_specs()
         self._perfs = communication_layer.get_performances()
         self._custom_noise: NoiseModel | None = None
-        self._remote_mitigations: list[AbstractMitigation] = []  # Mitigation setters must fill this by default
+        self._remote_mitigations: list[AbstractMitigation] = []
         # TODO: how to get default mitigations ?
 
     @property
@@ -158,6 +158,14 @@ class RemoteComputer(AbstractComputer):
     @noise.setter
     def noise(self, noise: NoiseModel | None):
         self._custom_noise = noise
+
+    @property
+    def mitigations(self):
+        return self._remote_mitigations
+
+    @mitigations.setter
+    def mitigations(self, error_mitigations: list[AbstractMitigation]):
+        self._remote_mitigations = error_mitigations
 
     @property
     def specs(self) -> PlatformSpecs:

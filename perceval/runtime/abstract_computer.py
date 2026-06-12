@@ -65,16 +65,17 @@ class AbstractComputer(ABC):
             raise ValueError(f"Command '{command_name}' doesn't exist in {self.__class__.__name__}")
         return self._commands[command_name]
 
-    def set_mitigations(self, error_mitigations: list[AbstractMitigation]):
-        # TODO: The interface to set the mitigation is still to be defined
+    @property
+    def mitigations(self) -> list[AbstractMitigation]:
+        return self._error_mitigations
+
+    @mitigations.setter
+    def mitigations(self, error_mitigations: list[AbstractMitigation]):
         self._error_mitigations = error_mitigations
 
     @property
     def available_commands(self) -> list[str]:
         return list(self._commands)  # Makes a copy
-
-    def set_parameters(self, parameters):
-        self._parameters = parameters
 
     def reset_parameters(self):
         # May be overloaded to have default parameters
@@ -83,6 +84,10 @@ class AbstractComputer(ABC):
     @property
     def parameters(self) -> dict[str, Any]:
         return self._parameters
+
+    @parameters.setter
+    def parameters(self, parameters: dict[str, Any]):
+        self._parameters = parameters
 
     @property
     def available_parameters(self) -> dict[str, str]:
@@ -326,7 +331,7 @@ class AbstractComputer(ABC):
 
     @noise.setter
     @abstractmethod
-    def noise(self, noise: NoiseModel | None):
+    def noise(self, noise: NoiseModel):
         pass
 
     @property
@@ -342,7 +347,7 @@ class AbstractComputer(ABC):
     def apply_configuration(self,
                             mitigations: list[AbstractMitigation] = None,
                             noise: NoiseModel = None,
-                            parameters: dict[str, Any] = None):
+                            parameters: dict[str, Any] = None) -> ContextManager:
         """
         :param mitigations: The mitigations to apply within the ContextManager. If None, nothing is changed
         :param noise: The noise model to apply within the ContextManager. If None, nothing is changed
@@ -350,18 +355,17 @@ class AbstractComputer(ABC):
         :return: A ContextManager that applies the given arguments to the computer (noise, mitigations, parameters)
           at enter and reset the parameters to the previous values at exit
         """
-        # TODO: For RemoteComputer, we need to overload? Or use a public way to get the mitigations?
-        starting_mitigations = self._error_mitigations if mitigations is not None else None
+        starting_mitigations = self.mitigations if mitigations is not None else None
         starting_noise = self.noise if noise is not None else None
-        starting_parameters = self._parameters if parameters is not None else None
+        starting_parameters = self.parameters if parameters is not None else None
 
         def apply(mitigations_: list[AbstractMitigation] | None, noise_: NoiseModel | None, parameters_: dict[str, Any] | None):
             if mitigations_ is not None:
-                self.set_mitigations(mitigations_)
+                self.mitigations = mitigations_
             if noise_ is not None:
                 self.noise = noise_
             if parameters_ is not None:
-                self.set_parameters(parameters_)
+                self.parameters = parameters_
 
         return ContextManager(lambda: apply(mitigations, noise, parameters),
                               lambda: apply(starting_mitigations, starting_noise, starting_parameters))

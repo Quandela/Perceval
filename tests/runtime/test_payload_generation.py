@@ -116,7 +116,7 @@ def test_payload_generator():
 def test_payload_applier():
     computer = SimulatedComputer("SLOS")
     default_parameters = {"compute_physical_logical_perf": True}
-    computer.set_parameters(default_parameters)
+    computer.parameters = default_parameters
 
     default_noise =  NoiseModel(0.8)
     computer.noise = default_noise
@@ -124,7 +124,7 @@ def test_payload_applier():
     in_computation_parameters = {"compute_physical_logical_perf": False}
     in_computation_noise = NoiseModel(0.6)
 
-    payload = PayloadGenerator.from_computation(computer.get_command("probs"), [], in_computation_parameters, in_computation_noise)
+    payload = PayloadGenerator.from_computation(None, [], in_computation_parameters, in_computation_noise)
 
     with PayloadGenerator.payload_applier(computer, payload):
         assert computer.noise == in_computation_noise
