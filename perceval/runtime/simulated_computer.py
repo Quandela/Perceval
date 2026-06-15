@@ -139,6 +139,7 @@ class SimulatedComputer(LocalComputer):
         :param max_samples. The maximum number of samples to consider.
          A sample is any event with at least min_photons photon (defined in the Experiment).
          Used only is the computer has a Sampling backend or if the precision and the max_shots are not given
+        :param compilation_seed: A seed to use for the compilation starting point or the random phases
         :return:
         """
         if isinstance(self._backend, AStrongSimulationBackend):
