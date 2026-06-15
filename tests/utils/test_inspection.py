@@ -27,51 +27,32 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import pytest
-
-from perceval import Command
+from perceval.utils.inspection import parse_signature
 
 
-def test_fill():
-    signature = [("float", float, True), ("list", list, False)]
+def unannotated(a):
+    pass
 
-    command = Command("test", signature)
+def annotated_int(a: int):
+    pass
 
-    assert command.fill(1.2, [3.14]) == {"float": 1.2, "list": [3.14]}
-    assert command.fill(1.2, list=[3.14]) == {"float": 1.2, "list": [3.14]}
-    assert command.fill(float=1.2, list=[3.14]) == {"float": 1.2, "list": [3.14]}
+def annotated_return() -> int:
+    pass
 
-    assert command.fill(list=[3.14]) == {"list": [3.14]}
-    assert command.fill(1.2) == {"float": 1.2}
+def annotated_union(a: list | int):
+    pass
 
-    assert command.fill() == {}
+def unannotated_kwarg(a = None):
+    pass
 
-    with pytest.raises(TypeError):
-        command.fill([3.14])  # Incorrect argument type
-
-    with pytest.raises(TypeError):
-        command.fill(1.2, 3.14)  # Incorrect argument type
-
-    with pytest.raises(TypeError):
-        command.fill(list=3.14)  # Incorrect argument type
-
-    with pytest.raises(TypeError):
-        command.fill(1.2, float=3.14)  # Same argument given twice
-
-    with pytest.raises(TypeError):
-        command.fill(1.2, [3.14], 42)  # Too many arguments
-
-    with pytest.raises(TypeError):
-        command.fill(unknown=3.14)  # Unknown argument
+def annotated_kwarg(a: int = None):
+    pass
 
 
-def test_validate():
-    signature = [("mandatory", float, True), ("optional", list, False)]
-
-    command = Command("test", signature)
-
-    command.check({"mandatory": 1.2, "optional": [3.14]})
-    command.check({"mandatory": 1.2})
-
-    with pytest.raises(ValueError):
-        command.check({"optional": [3.14]})  # Missing mandatory
+def test_parse_signature():
+    assert parse_signature(unannotated) == ([("a", None, True)], None)
+    assert parse_signature(annotated_int) == ([("a", int, True)], None)
+    assert parse_signature(annotated_return) == ([], int)
+    assert parse_signature(annotated_union) == ([("a", None, True)], None)
+    assert parse_signature(unannotated_kwarg) == ([("a", None, False)], None)
+    assert parse_signature(annotated_kwarg) == ([("a", int, False)], None)

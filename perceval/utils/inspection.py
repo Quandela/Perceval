@@ -34,9 +34,8 @@ from typing import Callable
 def has_kwargs(func: Callable):
     """Check if a function can be called with any number of keyword arguments (i.e. has **kwargs)"""
     sig = signature(func)
-    parameters = list(sig.parameters.values())
 
-    for param in parameters:
+    for param in sig.parameters.values():
         if param.kind == param.VAR_KEYWORD:
             return True
 
@@ -46,9 +45,8 @@ def has_kwargs(func: Callable):
 def has_arguments(func: Callable):
     """Check if a function can be called with at least one non-named argument (i.e. signature is not empty or only **kwargs)"""
     sig = signature(func)
-    parameters = list(sig.parameters.values())
 
-    for param in parameters:
+    for param in sig.parameters.values():
         if param.kind == param.VAR_POSITIONAL:  # *args
             return True
         elif param.kind == param.VAR_KEYWORD:  # **kwargs
@@ -57,3 +55,37 @@ def has_arguments(func: Callable):
             return True
 
     return False
+
+
+def parse_signature(func: Callable) -> tuple[list[tuple[str, type | None, bool]], type | None]:
+    """
+    Returns the signature of the given function as a list of (name, type, is_positional_arg) tuples,
+    and the type of the expected returned value.
+    For types, if several values are given, or none is given, None is returned instead.
+
+    *args and **kwargs are ignored.
+    """
+
+    sig = signature(func)
+
+    res = []
+
+    for param in sig.parameters.values():
+        if param.kind == param.VAR_POSITIONAL or param.kind == param.VAR_KEYWORD:
+            continue
+
+        # First, we get the class. If the class is not given, or several classes are given, we don't use one
+        cls = param.annotation
+        if cls is param.empty or not isinstance(cls, type):
+            cls = None
+
+        # Now we get if there is a default argument, in which case this argument is considered as optional
+        positional = param.default is param.empty
+
+        res.append((param.name, cls, positional))
+
+    cls = sig.return_annotation
+    if cls is sig.empty or not isinstance(cls, type):
+        cls = None
+
+    return res, cls

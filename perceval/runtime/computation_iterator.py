@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from typing import Any
+from typing import Any, Callable
 
 from .parameter_iterator import ParameterIterator
 from .command import Command
@@ -34,6 +34,7 @@ from .computation import Computation
 
 from perceval.utils.constants import KEY_SHOTS_USED, KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_RESULTS_LIST, KEY_ITERATION
 from perceval.components import Experiment
+from perceval.serialization import register_to_serialization
 
 
 class ComputationIterator:
@@ -116,32 +117,27 @@ class ComputationIterator:
            - noise: NoiseModel
            - postselect: PostSelect
         """
+        # TODO: see what to do with noise
         self._parameter_iterator.add_iteration(**kwargs)
 
-    @staticmethod
-    def validate() -> bool:
-        return True  # Already done by the ParameterIterator
+    def validate(self) -> bool:
+        # Already done by the ParameterIterator for other
+        return self.base_computation.validate()
 
-    # Follows the Mitigation interface for automatic parsing
-    def extend_computation(self, *args, **kwargs) -> list[Computation]:
-        return [comp for comp in self]
-
-    def parse_results(self, computation: Computation, results: list, noise) -> dict:
+    def make_inserter(self, out: dict) -> Callable[[dict], None]:
         """
-        Parses the results obtained from an iterator obtained through extend_computation().
-        :param computation: The computation asked by the upper layer
-        :param results: The results for the list of computations obtained through extend_computation()
-        :param noise: The Computer noise with which the results were obtained
-        :return: A dictionary containing the results of the computation as a list in the "results_list" field.
+        :param out: The place where to store the results of the computation
+        :return: A callable that can be used to add results to :code:`out`
         """
-        if len(self._parameter_iterator) == 0:
-            return results[0]
+        out[KEY_RESULTS_LIST] = []
 
-        res = {KEY_RESULTS_LIST: results}
-        n_shots = None
-        for result, iteration in zip(results, self._parameter_iterator):
-            result[KEY_ITERATION] = iteration.parameters
-            if KEY_SHOTS_USED in result:
-                n_shots = result[KEY_SHOTS_USED] if n_shots is None else n_shots + result[KEY_SHOTS_USED]
+        def inserter(res: dict):
+            i = len(out[KEY_RESULTS_LIST])
+            res[KEY_ITERATION] = self._parameter_iterator.iterations[i]
+            if KEY_SHOTS_USED in res:
+                out[KEY_SHOTS_USED] = out[KEY_SHOTS_USED] + res[KEY_SHOTS_USED] if KEY_SHOTS_USED in out else res[KEY_SHOTS_USED]
+            out[KEY_RESULTS_LIST].append(res)
 
-        return res
+        return inserter
+
+register_to_serialization(ComputationIterator, default_compress=True)

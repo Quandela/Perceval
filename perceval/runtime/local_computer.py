@@ -27,17 +27,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from abc import ABC, abstractmethod
+from abc import ABC
 from threading import Thread
-from typing import Callable
+from typing import Callable, Any
 
-from perceval.utils import ProgressCallback
+from perceval.utils import ProgressCallback, parse_signature
 from perceval.components import Experiment
 
 from .job_status import RunningStatus
 from .abstract_computer import AbstractComputer
 from .computation import Computation
 from .async_getter import AsyncGetter
+from .command import Command
 
 
 class _ThreadedExecution(AsyncGetter):
@@ -103,28 +104,51 @@ class _ThreadedExecution(AsyncGetter):
 
 
 class LocalComputer(AbstractComputer, ABC):
+    """An abstract computer for local computer. Must implement at least "probs", "sample_count", and "samples" methods."""
 
     def __init__(self):
         super().__init__()
-        self._commands = ["probs", "samples", "sample_count"]
+        self._methods: dict[str, Callable[[LocalComputer, Experiment, ...], dict]] = {}
+
+    def _register_method(self,
+                         method: Callable[[Any, Experiment, ...], dict],
+                         name: str = None,
+                         use_emt: bool = True):
+        """
+        :param method: The callable to use for this method.
+            The first 3 arguments (self, experiment, progress_callback) of this method are ignored in the underlying command
+        :param name: The name to give to the command. If none is provided, the method name will be used.
+        :param use_emt: Whether this method must skip the error mitigation when called
+        """
+        signature = parse_signature(method)
+
+        if signature[1] is not None and signature[1] != dict:
+            raise TypeError(f"Method {method.__name__} must return a dict.")
+
+        sig = signature[0][2:]  # Removes self and Experiment
+
+        for i, (param_name, _, _) in enumerate(sig):
+            if param_name == "progress_callback":
+                sig.pop(i)
+                break
+
+        name = name or method.__name__
+        command = Command(name, sig, use_emt)
+        self._register_command(command)
+        self._methods[name] = method
 
     def _execute_command(self, computation: Computation, progress_callback: ProgressCallback = None) -> dict:
-        return getattr(self, computation.command.name)(computation.experiment, progress_callback, **computation.parameters)
+        try:
+            return self._methods[computation.command.name](self,
+                                                           computation.experiment,
+                                                           progress_callback=progress_callback,
+                                                           **computation.parameters)
+        except TypeError as e:
+            if "progress_callback" in str(e):
+                return self._methods[computation.command.name](self, computation.experiment, **computation.parameters)
 
     def _execute_command_async(self, computation: Computation) -> _ThreadedExecution:
         return _ThreadedExecution(self._execute_single, args=(computation,))
-
-    @abstractmethod
-    def probs(self, experiment: Experiment, progress_callback: ProgressCallback = None, **kwargs) -> dict:
-        pass
-
-    @abstractmethod
-    def samples(self, experiment: Experiment, progress_callback: ProgressCallback = None, **kwargs) -> dict:
-        pass
-
-    @abstractmethod
-    def sample_count(self, experiment: Experiment, progress_callback: ProgressCallback = None, **kwargs) -> dict:
-        pass
 
     @property
     def is_remote(self) -> bool:

@@ -31,10 +31,9 @@ from multipledispatch import dispatch
 
 from perceval.components import Experiment, Herald, Port, APort, IDetector, AComponent
 from exqalibur.serialization import circuit_pb2 as pb
-from perceval.serialization import serialize
-from perceval.serialization._circuit_serialization import serialize_port, serialize_herald, ComponentSerializer
-from perceval.serialization._constants import VALUE_NOT_SET
-from perceval.serialization._detector_serialization import serialize_idetector
+from ._circuit_serialization import serialize_port, serialize_herald, ComponentSerializer
+from ._constants import VALUE_NOT_SET
+from ._detector_serialization import serialize_idetector
 
 
 class ExperimentSerializer:
@@ -43,18 +42,19 @@ class ExperimentSerializer:
         self._serialized = None
 
     def serialize(self, experiment: Experiment):
+        from .serialize import serialize
         self._serialized = pb.Experiment()
 
         if experiment.input_state is not None:
-            self._serialized.input_state = serialize.serialize(experiment.input_state)
+            self._serialized.input_state = serialize(experiment.input_state)
 
         self._serialized.name = experiment.name
 
         if experiment.noise is not None:
-            self._serialized.noise_model = serialize.serialize(experiment.noise)
+            self._serialized.noise_model = serialize(experiment.noise)
 
         if experiment.post_select_fn is not None:
-            self._serialized.post_select = serialize.serialize(experiment.post_select_fn)
+            self._serialized.post_select = serialize(experiment.post_select_fn)
 
         self._serialized.n_mode = experiment.circuit_size
 

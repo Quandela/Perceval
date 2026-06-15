@@ -27,22 +27,24 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval import Experiment, FockState, Computation, CommandFactory, BSSamples, NoiseModel
+from perceval import Experiment, FockState, Computation, BSSamples, NoiseModel, Command
 from perceval.runtime.computation_iterator import ComputationIterator
 from tests._test_utils import assert_experiment_equals
 
+
+probs_command = Command("samples", [("max_samples", int, False)])
 
 def test_iterator_extension():
     e = Experiment(2)
     e.with_input(FockState([1, 0]))
 
-    base_comp = Computation(CommandFactory.probs, e)
+    base_comp = Computation(probs_command, e)
     comp = ComputationIterator(base_comp)
 
     comp.add_iteration(max_samples=10000)
     comp.add_iteration(max_samples=50000)
 
-    sub_comps = comp.extend_computation()
+    sub_comps = list(comp)
 
     assert len(sub_comps) == 2
 
@@ -56,17 +58,19 @@ def test_iterator_extension():
 def test_iteration_parsing():
     e = Experiment(2)
 
-    base_comp = Computation(CommandFactory.probs, e)
+    base_comp = Computation(probs_command, e)
     comp = ComputationIterator(base_comp)
 
     comp.add_iteration(max_samples=10000)
     comp.add_iteration(max_samples=50000)
 
+    parsed = {}
+    inserter = comp.make_inserter(parsed)
+
     fake_results = [{"results": BSSamples([FockState([1, 0])])}, {"results": BSSamples([FockState([0, 1])])}]
+    for res in fake_results:
+        inserter(res)
 
-    parsed = comp.parse_results(base_comp, fake_results, NoiseModel())
-
-    assert isinstance(parsed, dict)
     assert "results_list" in parsed
     assert len(parsed["results_list"]) == 2
     assert parsed["results_list"] == fake_results

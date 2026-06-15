@@ -32,7 +32,7 @@ import pytest
 from exqalibur import BSCount, BSSamples
 
 from perceval import SimulatedComputer, Experiment, BS, FockState, BSDistribution, samples_to_sample_count, NoiseModel, \
-    ProcessorType, Computation, CommandFactory
+    ProcessorType, Computation
 from perceval.runtime.computation_iterator import ComputationIterator
 from tests._test_utils import assert_bsd_close
 
@@ -128,9 +128,8 @@ def test_execute_simple():
     experiment = Experiment(2)
     experiment.with_input(FockState([1, 0]))
 
-    computation = Computation(CommandFactory.probs, experiment)
-
     computer = SimulatedComputer("SLOS")
+    computation = Computation(computer.get_command("probs"), experiment)
     res = computer.execute(computation)
 
     assert res["results"] == BSDistribution({FockState([1, 0]): 1.})
@@ -140,33 +139,39 @@ def test_execute_async():
     experiment = Experiment(2)
     experiment.with_input(FockState([1, 0]))
 
-    computation = Computation(CommandFactory.probs, experiment)
-
     computer = SimulatedComputer("SLOS")
+    computation = Computation(computer.get_command("probs"), experiment)
+
     *access, getters = computer.execute_async(computation)
 
     assert len(getters) == 1
+    assert len(getters[0]) == 1
 
-    while not getters[0].is_complete:
+    while not getters[0][0].is_complete:
         time.sleep(0.01)
 
-    res = computer.get_results(computation, *access, getters)
+    res_out = dict()
+    res = computer.get_results(computation, *access, getters, res_out)
+    assert res is res_out
     assert res["results"] == BSDistribution({FockState([1, 0]): 1.})
 
-    assert getters[0].is_complete
+    assert getters[0][0].is_complete
 
 
 def test_execute_iterator():
     experiment = Experiment(2)
+    computer = SimulatedComputer("SLOS")
 
-    computation = Computation(CommandFactory.probs, experiment)
+    computation = Computation(computer.get_command("probs"), experiment)
     computation = ComputationIterator(computation)
 
     computation.add_iteration(input_state = FockState([1, 0]))
     computation.add_iteration(input_state = FockState([0, 1]))
 
-    computer = SimulatedComputer("SLOS")
-    res = computer.execute(computation)
+    res_out = dict()
+    res = computer.execute(computation, res_out)
+
+    assert res is res_out
 
     assert isinstance(res, dict)
     assert "results_list" in res

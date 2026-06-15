@@ -1,3 +1,5 @@
+
+
 # MIT License
 #
 # Copyright (c) 2022 Quandela
@@ -27,51 +29,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import pytest
+KNOWN_TYPES: dict[str, type] = {}
 
-from perceval import Command
-
-
-def test_fill():
-    signature = [("float", float, True), ("list", list, False)]
-
-    command = Command("test", signature)
-
-    assert command.fill(1.2, [3.14]) == {"float": 1.2, "list": [3.14]}
-    assert command.fill(1.2, list=[3.14]) == {"float": 1.2, "list": [3.14]}
-    assert command.fill(float=1.2, list=[3.14]) == {"float": 1.2, "list": [3.14]}
-
-    assert command.fill(list=[3.14]) == {"list": [3.14]}
-    assert command.fill(1.2) == {"float": 1.2}
-
-    assert command.fill() == {}
-
-    with pytest.raises(TypeError):
-        command.fill([3.14])  # Incorrect argument type
-
-    with pytest.raises(TypeError):
-        command.fill(1.2, 3.14)  # Incorrect argument type
-
-    with pytest.raises(TypeError):
-        command.fill(list=3.14)  # Incorrect argument type
-
-    with pytest.raises(TypeError):
-        command.fill(1.2, float=3.14)  # Same argument given twice
-
-    with pytest.raises(TypeError):
-        command.fill(1.2, [3.14], 42)  # Too many arguments
-
-    with pytest.raises(TypeError):
-        command.fill(unknown=3.14)  # Unknown argument
+for t in [int, float, complex, str, bool, list, dict, tuple]:
+    KNOWN_TYPES[t.__name__] = t
 
 
-def test_validate():
-    signature = [("mandatory", float, True), ("optional", list, False)]
+def add_type_deserializer(t: type):
+    global KNOWN_TYPES
+    KNOWN_TYPES[t.__name__] = t
 
-    command = Command("test", signature)
 
-    command.check({"mandatory": 1.2, "optional": [3.14]})
-    command.check({"mandatory": 1.2})
-
-    with pytest.raises(ValueError):
-        command.check({"optional": [3.14]})  # Missing mandatory
+def deserialize_type(serialized_type: str) -> type:
+    if serialized_type in KNOWN_TYPES:
+        return KNOWN_TYPES[serialized_type]
+    raise TypeError(f"Unknown type {serialized_type}")

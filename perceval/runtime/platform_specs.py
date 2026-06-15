@@ -29,9 +29,10 @@
 
 from typing import Any
 
-from ..utils import FockState, deprecated, ProcessorType
-from ..utils.logging import channel, get_logger
-from ..components import Experiment, ACircuit, Detector
+from .command import Command, CommandFactory
+from perceval.utils import FockState, deprecated, ProcessorType
+from perceval.utils.logging import channel, get_logger
+from perceval.components import Experiment, ACircuit, Detector
 
 DEFAULT_MIN_VERSION = "0.10.0"
 
@@ -172,17 +173,36 @@ class PlatformSpecs(dict):
         self["detector"] = value
 
     @property
+    @deprecated(reason="Get the commands from the 'commands' attribute", version="1.3.0")
     def available_commands(self) -> list[str]:
         """
         :return: the list of command names available for this platform
         """
-        return self.get("available_commands", [])
+        if "available_commands" in self:
+            return self._getitem("available_commands")
+        return [command.name for command in self.commands]
 
     @available_commands.setter
+    @deprecated(reason="Set the commands in the 'commands' attribute", version="1.3.0")
     def available_commands(self, value: list[str]):
         assert isinstance(value, list)
         assert all(isinstance(val, str) for val in value)
         self["available_commands"] = value
+
+    @property
+    def commands(self) -> list[Command]:
+        """
+        :return: the list of command available for this platform
+        """
+        if "commands" in self:
+            return self._getitem("commands")
+        return [getattr(CommandFactory, cmd) for cmd in self.get("available_commands", [])]
+
+    @commands.setter
+    def commands(self, value: list[Command]):
+        assert isinstance(value, list)
+        assert all(isinstance(val, Command) for val in value)
+        self["commands"] = value
 
     @property
     def constraints(self) -> dict[str, Any]:

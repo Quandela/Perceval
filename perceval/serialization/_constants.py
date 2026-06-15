@@ -49,5 +49,6 @@ NOISE_TAG = "NoiseModel"
 POSTSELECT_TAG = "PostSelect"
 BS_LAYERED_DETECTOR_TAG = "BSLayeredDetector"
 DETECTOR_TAG = "Detector"
+TYPE_TAG = "Type"
 
 VALUE_NOT_SET = 0x0fffffff  # Maximum writable value

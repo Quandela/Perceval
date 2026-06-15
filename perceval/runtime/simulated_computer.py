@@ -29,10 +29,9 @@
 
 import sys
 
-from perceval.backends import AStrongSimulationBackend, ExqaliburBackendWrapper
+from perceval.backends import ABackend, AStrongSimulationBackend, ExqaliburBackendWrapper, BACKEND_LIST
 from perceval.components import Experiment, Source
 from perceval.simulators import SimulatorFactory, ExqaliburNoisySamplingSimulator, NoisySamplingSimulator
-from perceval.simulators.noisy_sampling_simulator import ASamplingSimulator
 from perceval.utils import NoiseModel, BasicState, StateVector, SVDistribution, AnnotatedFockState, ProcessorType, \
     ConversionHelper, ProgressCallback, noise_to_perf_dict
 from perceval.utils.logging import get_logger, channel
@@ -43,22 +42,28 @@ from .platform_specs import PlatformSpecs
 
 
 class SimulatedComputer(LocalComputer):
+    """
+    A computer able to perform local simulations
+    :param backend: The backend to use to perform the simulations. Can be a backend name or a backend instance
+    """
 
     PROBS_DEFAULT_SAMPLES = 10000
 
     def __init__(self, backend):
         super().__init__()
         self._init_backend(backend)
-        self._has_custom_noise = False  # Legacy; allows noise to be defined in Experiment if False
         self._noise: NoiseModel = NoiseModel()
+
+        cls = type(self)
+        self._register_method(cls.probs)
+        self._register_method(cls.samples)
+        self._register_method(cls.sample_count)
 
     def _init_backend(self, backend):
         if isinstance(backend, str):
-            from perceval import BACKEND_LIST
             assert backend in BACKEND_LIST, f"Unknown simulation backend '{backend}'. Possible backends: {BACKEND_LIST}"
             self._backend = BACKEND_LIST[backend]()
         else:
-            from perceval import ABackend
             assert isinstance(backend, ABackend), f"'backend' must be an ABackend (got {type(backend).__name__})"
             self._backend = backend
 
@@ -67,13 +72,8 @@ class SimulatedComputer(LocalComputer):
         return self._noise
 
     @noise.setter
-    def noise(self, noise: NoiseModel | None):
-        if noise is not None:
-            self._has_custom_noise = True
-            self._noise = noise
-        else:
-            self._has_custom_noise = False
-            self._noise = NoiseModel()
+    def noise(self, noise: NoiseModel):
+        self._noise = noise
 
     def validate_single(self, computation: Computation) -> None:
         super().validate_single(computation)
@@ -91,7 +91,7 @@ class SimulatedComputer(LocalComputer):
                                                  "Else, only a global performance will be returned."}
 
     def _create_source(self, experiment: Experiment) -> Source:
-        if self._has_custom_noise or experiment.noise is None:
+        if experiment.noise is None:
             return Source.from_noise_model(self.noise)
         return Source.from_noise_model(experiment.noise)
 
@@ -116,24 +116,35 @@ class SimulatedComputer(LocalComputer):
         return source, experiment.input_state
 
     @staticmethod
-    def _parse_precision(kwargs) -> float | None:
-        if "precision" in kwargs:
-            return kwargs["precision"]
-        nb_shots = kwargs.get("max_shots", kwargs.get("max_samples", None))
+    def _parse_precision(precision: float = None, max_shots: int = None, max_samples: int = None) -> float | None:
+        if precision is not None:
+            return precision
+        nb_shots = max_shots or max_samples
         return None if nb_shots is None else min(1e-6, 1 / nb_shots)
 
-    def probs(self, experiment: Experiment, progress_callback: ProgressCallback = None, **kwargs) -> dict:
+    def probs(self, experiment: Experiment,
+              progress_callback: ProgressCallback = None,
+              precision: float = None,
+              max_samples: int = None,
+              max_shots: int = None,
+              **kwargs) -> dict:
         """
         Computes the probabilities for a given experiment. Does not apply error mitigations
-        :param experiment:
-        :param kwargs:
+        :param experiment: The Experiment to simulate.
+        :param precision: The precision of the computation.
+         Probabilities lower than the biggest input probability times this are ignored. Used only with Probability backends
+        :param max_shots: The maximum number of shots to consider. A shot is any event with at least 1 photon
+         Used only is the computer has a Sampling backend or if the precision is not given
+        :param max_samples. The maximum number of samples to consider.
+         A sample is any event with at least min_photons photon (defined in the Experiment).
+         Used only is the computer has a Sampling backend or if the precision and the max_shots are not given
         :return:
         """
         if isinstance(self._backend, AStrongSimulationBackend):
             experiment = experiment.use_phase_noise(self.noise, kwargs.get("compilation_seed"))
             simulator = SimulatorFactory.build(experiment, self._backend)
 
-            precision = self._parse_precision(kwargs)
+            precision = self._parse_precision(precision, max_shots, max_samples)
             if precision is not None:
                 simulator.set_precision(precision)
             source = self._create_source(experiment)
@@ -148,14 +159,14 @@ class SimulatedComputer(LocalComputer):
             self.log_resources(sys._getframe().f_code.co_name, experiment, {'precision': precision})
             return res
 
-        if "max_samples" not in kwargs:
-            kwargs["max_samples"] = self.PROBS_DEFAULT_SAMPLES
+        if max_samples is None:
+            max_samples = self.PROBS_DEFAULT_SAMPLES
 
-        res = self.sample_count(experiment, progress_callback, **kwargs)
+        res = self.sample_count(experiment, max_samples, max_shots, progress_callback, **kwargs)
         res["results"] = ConversionHelper.convert_to("probs", res["results"])
         return res
 
-    def _setup_sampling_simulator(self, experiment: Experiment, compilation_seed: int | None) -> ASamplingSimulator:
+    def _setup_sampling_simulator(self, experiment: Experiment, compilation_seed: int | None):
         if isinstance(self._backend, ExqaliburBackendWrapper):
             simulator = ExqaliburNoisySamplingSimulator(self._backend)
         else:
@@ -171,39 +182,41 @@ class SimulatedComputer(LocalComputer):
         simulator.keep_heralds(False)
         simulator.compute_physical_logical_perf(self._parameters.get("compute_physical_logical_perf", False))
         simulator.set_detectors(experiment.detectors)
-        return simulator
 
-    def samples(self, experiment: Experiment, progress_callback: ProgressCallback = None, **kwargs) -> dict:
-        if isinstance(self._backend, AStrongSimulationBackend):
-            res = self.probs(experiment, progress_callback, **kwargs)
-            res["results"] = ConversionHelper.convert_to("samples", res["results"], **kwargs)
-            return res
-
-        max_samples = kwargs["max_samples"]
-        max_shots = kwargs.get("max_shots", None)
-        simulator = self._setup_sampling_simulator(experiment, kwargs.get("compilation_seed"))
-        self.log_resources(sys._getframe().f_code.co_name, experiment, {'max_samples': max_samples, 'max_shots': max_shots})
         source = self._create_source(experiment)
         get_logger().info(f"Start a local {'perfect' if source.is_perfect() else 'noisy'} sampling", channel.general)
-        sample_provider = self._make_input(experiment, source)
+        return simulator, self._make_input(experiment, source)
+
+    def samples(self, experiment: Experiment,
+                max_samples: int,
+                max_shots: int = None,
+                progress_callback: ProgressCallback = None,
+                **kwargs) -> dict:
+        if isinstance(self._backend, AStrongSimulationBackend):
+            res = self.probs(experiment, progress_callback, max_samples=max_samples, max_shots=max_shots, **kwargs)
+            res["results"] = ConversionHelper.convert_to("samples", res["results"], max_samples=max_samples, max_shots=max_shots, **kwargs)
+            return res
+
+        self.log_resources(sys._getframe().f_code.co_name, experiment, {'max_samples': max_samples, 'max_shots': max_shots})
+
+        simulator, sample_provider = self._setup_sampling_simulator(experiment)
         res = simulator.samples(sample_provider, max_samples, max_shots, progress_callback)
         get_logger().info("Local sampling complete!", channel.general)
         return res
 
-    def sample_count(self, experiment: Experiment, progress_callback: ProgressCallback = None, **kwargs) -> dict:
+    def sample_count(self, experiment: Experiment,
+                     max_samples: int,
+                     max_shots: int = None,
+                     progress_callback: ProgressCallback = None,
+                     **kwargs) -> dict:
         if isinstance(self._backend, AStrongSimulationBackend):
-            res = self.probs(experiment, progress_callback, **kwargs)
-            res["results"] = ConversionHelper.convert_to("sample_count", res["results"], **kwargs)
+            res = self.probs(experiment, progress_callback, max_samples=max_samples, max_shots=max_shots, **kwargs)
+            res["results"] = ConversionHelper.convert_to("sample_count", res["results"], max_samples=max_samples, max_shots=max_shots, **kwargs)
             return res
 
-        max_samples = kwargs["max_samples"]
-        max_shots = kwargs.get("max_shots", None)
-        simulator = self._setup_sampling_simulator(experiment, kwargs.get("compilation_seed"))
-        self.log_resources(sys._getframe().f_code.co_name, experiment,
-                           {'max_samples': max_samples, 'max_shots': max_shots})
-        source = self._create_source(experiment)
-        get_logger().info(f"Start a local {'perfect' if source.is_perfect() else 'noisy'} sampling", channel.general)
-        sample_provider = self._make_input(experiment, source)
+        self.log_resources(sys._getframe().f_code.co_name, experiment, {'max_samples': max_samples, 'max_shots': max_shots})
+
+        simulator, sample_provider = self._setup_sampling_simulator(experiment)
         res = simulator.sample_count(sample_provider, max_samples, max_shots, progress_callback)
         get_logger().info("Local sampling complete!", channel.general)
         return res

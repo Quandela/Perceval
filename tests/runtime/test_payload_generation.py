@@ -29,7 +29,7 @@
 """module test payload generation"""
 import pytest
 
-from perceval import RemoteProcessor, BasicState, catalog, PayloadGenerator
+from perceval import RemoteProcessor, BasicState, catalog, PayloadGenerator, SimulatedComputer, NoiseModel
 from perceval.serialization._constants import ZIP_PREFIX
 
 from tests.runtime._mock_rpc_handler import get_rpc_handler_for_tests
@@ -111,3 +111,24 @@ def test_payload_generator():
     payload = data['payload']
     assert 'command' in payload and payload['command'] == COMMAND_NAME
     assert 'experiment' in payload and payload['experiment'].startswith(ZIP_PREFIX)  # Circuits are compressed in payloads
+
+
+def test_payload_applier():
+    computer = SimulatedComputer("SLOS")
+    default_parameters = {"compute_physical_logical_perf": True}
+    computer.parameters = default_parameters
+
+    default_noise =  NoiseModel(0.8)
+    computer.noise = default_noise
+
+    in_computation_parameters = {"compute_physical_logical_perf": False}
+    in_computation_noise = NoiseModel(0.6)
+
+    payload = PayloadGenerator.from_computation(None, [], in_computation_parameters, in_computation_noise)
+
+    with PayloadGenerator.payload_applier(computer, payload):
+        assert computer.noise == in_computation_noise
+        assert computer.parameters == in_computation_parameters
+
+    assert computer.noise == default_noise
+    assert computer.parameters == default_parameters

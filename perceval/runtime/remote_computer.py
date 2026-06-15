@@ -29,9 +29,10 @@
 
 import time
 from abc import ABC, abstractmethod
-from copy import copy, deepcopy
-from typing import TypeVar
+from copy import deepcopy
+from typing import TypeVar, Callable
 
+from .command import Command
 from .computation import Computation
 from .abstract_computer import AbstractComputer
 from .computation_iterator import ComputationIterator
@@ -39,11 +40,10 @@ from .platform_specs import PlatformSpecs
 from .error_mitigation import AbstractMitigation
 from .job_status import JobStatus, RunningStatus
 from .simulated_computer import SimulatedComputer
-from .command import CommandFactory
 from .async_getter import AsyncGetter
 from .payload_generator import PayloadGenerator
 
-from perceval.utils import perf_dict_to_noise, ProgressCallback, ProcessorType, NoiseModel, PostSelect
+from perceval.utils import perf_dict_to_noise, ProgressCallback, NoiseModel, PostSelect
 from perceval.utils.logging import channel, get_logger
 from perceval.components import PortLocation, Experiment
 
@@ -88,7 +88,7 @@ class CommunicationLayer(ABC):
         pass
 
     @abstractmethod
-    def get_commands(self) -> list[str]:
+    def get_commands(self) -> list[Command]:
         pass
 
     @abstractmethod
@@ -144,11 +144,11 @@ class RemoteComputer(AbstractComputer):
     def __init__(self, communication_layer: CommunicationLayer):
         super().__init__()
         self._communication_layer = communication_layer  # cloud_access is the communication layer
-        self._commands = communication_layer.get_commands()
+        self._commands = {command.name: command for command in communication_layer.get_commands()}
         self._specs = communication_layer.get_specs()
         self._perfs = communication_layer.get_performances()
         self._custom_noise: NoiseModel | None = None
-        self._remote_mitigations: list[AbstractMitigation] = []  # Mitigation setters must fill this by default
+        self._remote_mitigations: list[AbstractMitigation] = []
         # TODO: how to get default mitigations ?
 
     @property
@@ -160,6 +160,14 @@ class RemoteComputer(AbstractComputer):
     @noise.setter
     def noise(self, noise: NoiseModel | None):
         self._custom_noise = noise
+
+    @property
+    def mitigations(self):
+        return self._remote_mitigations
+
+    @mitigations.setter
+    def mitigations(self, error_mitigations: list[AbstractMitigation]):
+        self._remote_mitigations = error_mitigations
 
     @property
     def specs(self) -> PlatformSpecs:
@@ -219,18 +227,34 @@ class RemoteComputer(AbstractComputer):
             if 'min_mode_count' in constraints and m < constraints['min_mode_count']:
                 raise RuntimeError(f"Circuit too small ({m} < {constraints['min_mode_count']})")
 
-    def _handle_iterator(self, comp: Computation | ComputationIterator, emts: list[AbstractMitigation] = None) -> tuple[Computation, list[AbstractMitigation | ComputationIterator]]:
+    def _handle_iterator(self, comp: Computation | ComputationIterator, out: dict | None)\
+            -> tuple[dict, Callable[[dict], None]]:
+        if out is None:
+            out = dict()
+
         # Avoids sending separate jobs if there is an Iterator but no local mitigations
-        if comp.command.apply_emt:
-            emts = emts if emts is not None else self._error_mitigations
+        if isinstance(comp, ComputationIterator) and len(self._error_mitigations) > 0:
+            return out, comp.make_inserter(out)
+
+        return out, lambda res: out.update(res)
+
+    def extend_computation_keep_original(self, computation: Computation | ComputationIterator) -> list[tuple[list[Computation], Computation]]:
+        if len(self._error_mitigations) > 0:
+            return super().extend_computation_keep_original(computation)
         else:
-            emts = []
-        if not len(emts):
-            return comp, []
+            # Avoids sending separate jobs if there is an Iterator but no local mitigations
+            # This is doable here because execute_command was made so that it supports ComputationIterator
+            return [([computation], computation)]
 
-        return super()._handle_iterator(comp, emts)
+    def extend_computation(self, computation: Computation | ComputationIterator) -> list[list[Computation]]:
+        if len(self._error_mitigations) > 0:
+            return super().extend_computation(computation)
+        else:
+            # Avoids sending separate jobs if there is an Iterator but no local mitigations
+            # This is doable here because execute_command was made so that it supports ComputationIterator
+            return [[computation]]
 
-    def _execute_command(self, computation: Computation, progress_callback: ProgressCallback = None) -> dict:
+    def _execute_command(self, computation: Computation, progress_cb: ProgressCallback = None) -> dict:
         async_getter = self._execute_single_async(computation)
         # TODO: use the progress callback in the wait function
         while not async_getter.is_complete:
@@ -259,26 +283,16 @@ class RemoteComputer(AbstractComputer):
     def type(self):
         return self._specs.type
 
-    # TODO: test all these
     def _estimate_sample_probability(self, computation: Computation | ComputationIterator, param_values: dict = None) -> float:
         # Simulation with a noisy source (only losses)
         computation.validate()
 
+        lc = SimulatedComputer("SLOS")  # TODO: replace by "best" when available
+
         computation = deepcopy(computation)
-        computation.command = CommandFactory.probs
+        computation.command = lc.get_command("probs")
 
-        nm = copy(self.noise)
-        nm.g2 = 0
-        nm.indistinguishability = 1
-
-        if isinstance(computation, ComputationIterator):
-            exp = computation.base_computation.experiment
-
-            # TODO: make a better interface and remove this line + Test if this is useful
-            computation._parameter_iterator._experiment = exp
-        else:
-            exp = computation.experiment
-
+        exp = computation.experiment
         n = exp.input_state.n
         photon_filter = n
         if exp.min_photons_filter is not None:
@@ -309,7 +323,9 @@ class RemoteComputer(AbstractComputer):
             for m in range(exp.circuit_size):
                 exp.add(m, archi.detectors[m])
 
-        lc = SimulatedComputer("SLOS")  # TODO: replace by "best" when available
+        nm = deepcopy(self.noise)
+        nm.g2 = 0
+        nm.indistinguishability = 1
         lc.noise = nm
         # TODO: how to get default mitigations ?
         lc._error_mitigations = self._error_mitigations + self._remote_mitigations  # TODO: make and use interface

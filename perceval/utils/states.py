@@ -57,7 +57,10 @@ class BasicStateMeta(type):
 
     def __subclasscheck__(cls, sub):
         """Implement issubclass(sub, cls)."""
-        return any(c in cls._state_classes for c in sub.mro()) or sub is cls
+        try:
+            return any(c in cls._state_classes for c in sub.mro()) or sub is cls
+        except TypeError:
+            return False  # If sub.mro() doesn't work, this is not a BasicState
 
 State: TypeAlias = Union[FockState, NoisyFockState, AnnotatedFockState]
 

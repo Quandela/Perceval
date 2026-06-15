@@ -33,6 +33,7 @@ from typing import Any
 
 from perceval.components import Experiment
 from perceval.utils import NoiseModel, PostSelect, BasicState
+from perceval.serialization import register_to_serialization
 
 
 @dataclasses.dataclass
@@ -206,3 +207,5 @@ class ParameterIterator:
     @staticmethod
     def _set_postselect(post_select: PostSelect, computation: ComputationDescriptor):
         computation.experiment.set_postselection(post_select)
+
+register_to_serialization(ParameterIterator, default_compress=False)
