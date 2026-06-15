@@ -32,7 +32,8 @@ from .parameter_iterator import ParameterIterator
 from .command import Command
 from .computation import Computation
 
-from perceval.utils.constants import KEY_SHOTS_USED, KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_RESULTS_LIST, KEY_ITERATION
+from perceval.utils.constants import KEY_SHOTS_USED, KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_RESULTS_LIST, KEY_ITERATION, \
+    KEY_COMPILATION_SEED
 from perceval.components import Experiment
 from perceval.serialization import register_to_serialization
 
@@ -86,9 +87,11 @@ class ComputationIterator:
         for iteration in self._parameter_iterator:
             computation = Computation(self.base_computation.command, iteration.experiment)
             if iteration.max_samples is not None:
-                computation.add_params(max_samples=iteration.max_samples)
+                computation.add_params(max_samples = iteration.max_samples)
             if iteration.max_shots is not None:
                 computation.add_params(max_shots = iteration.max_shots)
+            if KEY_COMPILATION_SEED in iteration.parameters:
+                computation.add_params(**{KEY_COMPILATION_SEED: iteration.parameters[KEY_COMPILATION_SEED]})
             yield computation
 
     def __len__(self):
@@ -116,6 +119,7 @@ class ComputationIterator:
            - max_shots: int
            - noise: NoiseModel
            - postselect: PostSelect
+           - compilation_seed: int
         """
         # TODO: see what to do with noise
         self._parameter_iterator.add_iteration(**kwargs)

@@ -30,6 +30,7 @@
 # Parameters
 KEY_MAX_SHOTS = "max_shots"
 KEY_MAX_SAMPLES = "max_samples"
+KEY_COMPILATION_SEED = "compilation_seed"
 
 # Results keys
 KEY_RESULTS = "results"
