@@ -34,6 +34,7 @@ from typing import Callable, Any
 from perceval.utils import ProgressCallback, parse_signature
 from perceval.components import Experiment
 
+from .job_status import RunningStatus
 from .abstract_computer import AbstractComputer
 from .computation import Computation
 from .async_getter import AsyncGetter
@@ -51,19 +52,31 @@ class _ThreadedExecution(AsyncGetter):
         self._thread.start()
 
     def _update_status(self) -> None:
-        pass  # Do nothing, everything is done in the other methods
+        if self._status.running and not self._thread.is_alive():
+            if self._canceled:
+                self._status.stop_run(RunningStatus.CANCELED, "Canceled")
+            else:
+                self._status.stop_run()
 
     def _encapsulate(self, method: Callable):
         def custom_method(*args, **kwargs):
             try:
-                self._results = method(*args, **kwargs, progress_callback = self._progress_callback)
-            except TypeError as e:
-                if "progress_callback" in str(e):
-                    self._results = method(*args, **kwargs)
-                else:
-                    raise e
+                try:
+                    self._results = method(*args, **kwargs, progress_callback = self._progress_callback)
+                except TypeError as e:
+                    if "progress_callback" in str(e):
+                        self._results = method(*args, **kwargs)
+                    else:
+                        raise e
 
-            self._status.stop_run()
+                if not self._status.canceled:
+                    self._status.stop_run()
+
+            except Exception as e:
+                msg = f"{type(e).__name__}: {e}"
+                self._results = {"results": msg}
+                self._status.stop_run(RunningStatus.ERROR, e)
+                raise e
 
         return custom_method
 
@@ -72,6 +85,7 @@ class _ThreadedExecution(AsyncGetter):
         return self._results
 
     def cancel(self):
+        self._status.stop_run(RunningStatus.CANCELED, "Canceled")
         self._canceled = True
 
     def get_progress(self):

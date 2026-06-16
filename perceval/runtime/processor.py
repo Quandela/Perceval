@@ -159,7 +159,8 @@ class Processor(AProcessor):
         :raises RuntimeError: If any component is non-unitary
         :return: The resulting Circuit object
         """
-        return self.experiment.unitary_circuit(flatten=flatten, use_phase_noise=True)
+        experiment = self.experiment.use_phase_noise(self.noise)
+        return experiment.unitary_circuit(flatten=flatten)
 
     def samples(self, max_samples: int, max_shots: int = None, progress_callback=None) -> dict:
         self.check_min_detected_photons_filter()
@@ -192,12 +193,15 @@ class Processor(AProcessor):
     def probs(self, precision: float = None, progress_callback: ProgressCallback = None) -> dict:
         self.check_min_detected_photons_filter()
 
+        experiment = self.experiment.use_phase_noise(self.noise)
+
         # assert self._inputs_map is not None, "Input is missing, please call with_inputs()"
         if self._simulator is None:
             from perceval.simulators import SimulatorFactory  # Avoids a circular import
-            self._simulator = SimulatorFactory.build(self)
+            self._simulator = SimulatorFactory.build(experiment)
         else:
-            self._simulator.set_circuit(self.linear_circuit() if self.experiment.is_unitary else self.components, self.circuit_size)
+            self._simulator.set_circuit(experiment.unitary_circuit() if experiment.is_unitary else experiment.components,
+                                        experiment.circuit_size)
             self._simulator.set_min_detected_photons_filter(self._min_detected_photons_filter)
 
         if precision is not None:

@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import random
 from abc import ABC
 from collections.abc import Iterable
 import sympy as sp
@@ -62,6 +63,10 @@ class AComponent(ABC):
         :return: True if the component is itself composed of subcomponents
         """
         return False
+
+    def apply_phase_noise(self, phase_error = 0, phase_imprecision = 0, rng: random.Random = None):
+        """Applies a noise on phases. Acts in-place"""
+        pass
 
 
 class AParametrizedComponent(AComponent):

@@ -127,6 +127,7 @@ class SimulatedComputer(LocalComputer):
               precision: float = None,
               max_samples: int = None,
               max_shots: int = None,
+              compilation_seed: int = None,
               **kwargs) -> dict:
         """
         Computes the probabilities for a given experiment. Does not apply error mitigations
@@ -138,9 +139,11 @@ class SimulatedComputer(LocalComputer):
         :param max_samples. The maximum number of samples to consider.
          A sample is any event with at least min_photons photon (defined in the Experiment).
          Used only is the computer has a Sampling backend or if the precision and the max_shots are not given
+        :param compilation_seed: A seed to use for the compilation starting point or the random phases
         :return:
         """
         if isinstance(self._backend, AStrongSimulationBackend):
+            experiment = experiment.use_phase_noise(self.noise, compilation_seed)
             simulator = SimulatorFactory.build(experiment, self._backend)
 
             precision = self._parse_precision(precision, max_shots, max_samples)
@@ -161,17 +164,18 @@ class SimulatedComputer(LocalComputer):
         if max_samples is None:
             max_samples = self.PROBS_DEFAULT_SAMPLES
 
-        res = self.sample_count(experiment, max_samples, max_shots, progress_callback, **kwargs)
+        res = self.sample_count(experiment, max_samples, max_shots, progress_callback, compilation_seed, **kwargs)
         res["results"] = ConversionHelper.convert_to("probs", res["results"])
         return res
 
-    def _setup_sampling_simulator(self, experiment: Experiment):
+    def _setup_sampling_simulator(self, experiment: Experiment, compilation_seed: int | None):
         if isinstance(self._backend, ExqaliburBackendWrapper):
             simulator = ExqaliburNoisySamplingSimulator(self._backend)
         else:
             simulator = NoisySamplingSimulator(self._backend)
         simulator.sleep_between_batches = 0  # Remove sleep time between batches of samples in local simulation
-        # TODO: solve discrepancy for phase noise (SimulatorFactory.build)
+
+        experiment = experiment.use_phase_noise(self.noise, compilation_seed)
         simulator.set_circuit(experiment.unitary_circuit())
         simulator.set_selection(
             min_detected_photons_filter=experiment.min_photons_filter,
@@ -189,15 +193,21 @@ class SimulatedComputer(LocalComputer):
                 max_samples: int,
                 max_shots: int = None,
                 progress_callback: ProgressCallback = None,
+                compilation_seed: int = None,
                 **kwargs) -> dict:
         if isinstance(self._backend, AStrongSimulationBackend):
-            res = self.probs(experiment, progress_callback, max_samples=max_samples, max_shots=max_shots, **kwargs)
+            res = self.probs(experiment,
+                             progress_callback,
+                             max_samples=max_samples,
+                             max_shots=max_shots,
+                             compilation_seed=compilation_seed,
+                             **kwargs)
             res["results"] = ConversionHelper.convert_to("samples", res["results"], max_samples=max_samples, max_shots=max_shots, **kwargs)
             return res
 
         self.log_resources(sys._getframe().f_code.co_name, experiment, {'max_samples': max_samples, 'max_shots': max_shots})
 
-        simulator, sample_provider = self._setup_sampling_simulator(experiment)
+        simulator, sample_provider = self._setup_sampling_simulator(experiment, compilation_seed)
         res = simulator.samples(sample_provider, max_samples, max_shots, progress_callback)
         get_logger().info("Local sampling complete!", channel.general)
         return res
@@ -206,15 +216,21 @@ class SimulatedComputer(LocalComputer):
                      max_samples: int,
                      max_shots: int = None,
                      progress_callback: ProgressCallback = None,
+                     compilation_seed: int = None,
                      **kwargs) -> dict:
         if isinstance(self._backend, AStrongSimulationBackend):
-            res = self.probs(experiment, progress_callback, max_samples=max_samples, max_shots=max_shots, **kwargs)
+            res = self.probs(experiment,
+                             progress_callback,
+                             max_samples=max_samples,
+                             max_shots=max_shots,
+                             compilation_seed=compilation_seed,
+                             **kwargs)
             res["results"] = ConversionHelper.convert_to("sample_count", res["results"], max_samples=max_samples, max_shots=max_shots, **kwargs)
             return res
 
         self.log_resources(sys._getframe().f_code.co_name, experiment, {'max_samples': max_samples, 'max_shots': max_shots})
 
-        simulator, sample_provider = self._setup_sampling_simulator(experiment)
+        simulator, sample_provider = self._setup_sampling_simulator(experiment, compilation_seed)
         res = simulator.sample_count(sample_provider, max_samples, max_shots, progress_callback)
         get_logger().info("Local sampling complete!", channel.general)
         return res

@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import random
 
 import pytest
 from pathlib import Path
@@ -446,3 +447,24 @@ def test_copy():
 
     c_copy = c.copy()
     assert_circuits_eq(c, c_copy)
+
+
+def test_phase_noise():
+    phase = 0.4
+    circuit = comp.PS(0.4)
+
+    rng = random.Random(42)
+    circuit.apply_phase_noise(0.1, 0, rng)
+
+    assert - 0.1 <= float(circuit.param("phi")) - phase <= 0.1
+    assert float(circuit.param("phi")) != phase
+
+    rng = random.Random(42)
+    circuit2 = comp.PS(0.4)
+    circuit2.apply_phase_noise(0.1, 0, rng)
+
+    assert float(circuit2.param("phi")) == float(circuit.param("phi"))
+
+    circuit = comp.PS(0.775)
+    circuit.apply_phase_noise(0, 0.25)
+    assert pytest.approx(float(circuit.param("phi"))) == 0.75

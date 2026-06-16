@@ -249,8 +249,7 @@ class PS(ACircuit):
     :param phi: Phase angle
     :param max_error: Maximum random error to apply. The error is uniformly drawn in
                       :math:`[\\phi - max_{error}, \\phi + max_{error}]`.
-                      A global phase error noise parameter can also be set in the `NoiseModel` for all the phase
-                      shifters of a given `Experiment`.
+                      Used only when calling apply_phase_noise(). If not 0, replaces the parameter of the method
     """
     DEFAULT_NAME = "PS"
 
@@ -261,13 +260,12 @@ class PS(ACircuit):
 
     def _compute_unitary(self, assign=None, use_symbolic=False):
         self.assign(assign)
+        if assign:
+            self.apply_phase_noise(0, 0)
         if use_symbolic:
-            err = self._max_error.spv*random.uniform(-1, 1)
-            phase = self._phi.spv + err
-            return Matrix([[sp.exp(phase * sp.I)]], True)
+            return Matrix([[sp.exp(self._phi.spv * sp.I)]], True)
         else:
-            err = float(self._max_error)*random.uniform(-1, 1)
-            phase = float(self._phi) + err
+            phase = float(self._phi)
             return Matrix([[math.cos(phase) + 1j * math.sin(phase)]], False)
 
     def get_variables(self):
@@ -283,7 +281,7 @@ class PS(ACircuit):
 
     def inverse(self, v=False, h=False):
         if h:
-            if self._phi.is_symbolic:
+            if self._phi.is_symbolic():
                 self._phi = self._set_parameter("phi", -self._phi, None, None)
             else:
                 self._phi.set_value(-float(self._phi), force=True)
@@ -291,6 +289,38 @@ class PS(ACircuit):
     def definition(self) -> Matrix:
         phase_param = Expression("Uniform(-1, 1) * max_error + phi", {Parameter('max_error'), Parameter("phi")})
         return PS(phase_param).U
+
+    @staticmethod
+    def get_random(rng: random.Random | None, limit = 1):
+        if rng is None:
+            return random.uniform(-limit, limit)
+        return rng.uniform(-limit, limit)
+
+    def apply_phase_noise(self, phase_error: float = 0, phase_quantization: float = 0, rng: random.Random = None):
+        """
+        Applies random error and non-random discretization on the value of the phase.
+
+        :param phase_error: A random error to apply. Ignored and replaced by self.max_error if max_error is not 0
+        :param phase_quantization: A discretization to apply to the phase
+        """
+        if self._max_error.defined:
+            err = float(self._max_error) * self.get_random(rng)
+        else:
+            err = self._max_error * self.get_random(rng)
+        if err == 0:
+            err = phase_error * self.get_random(rng)
+
+        if err == 0 and phase_quantization == 0:
+            return  # Avoid changing the parameter
+
+        if self._phi.is_symbolic() or self._max_error.is_symbolic():
+            val = self._phi + err
+        else:
+            val = float(self._phi) + err
+            if phase_quantization:
+                val = phase_quantization * round(val / phase_quantization)
+
+        self._phi = self._set_parameter("phi", val,0, 2*math.pi)
 
 
 class WP(ACircuit):
