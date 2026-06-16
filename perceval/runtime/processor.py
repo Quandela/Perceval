@@ -198,7 +198,7 @@ class Processor(AProcessor):
         # assert self._inputs_map is not None, "Input is missing, please call with_inputs()"
         if self._simulator is None:
             from perceval.simulators import SimulatorFactory  # Avoids a circular import
-            self._simulator = SimulatorFactory.build(experiment)
+            self._simulator = SimulatorFactory.build(experiment, self.backend)
         else:
             self._simulator.set_circuit(experiment.unitary_circuit() if experiment.is_unitary else experiment.components,
                                         experiment.circuit_size)

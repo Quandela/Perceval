@@ -106,8 +106,9 @@ def test_processor_input_state_vector():
     assert_svd_close(p.source_distribution, {sv: 1})  # The source does NOT affect SV inputs
 
 
-def test_processor_probs():
-    qpu = Processor("Naive", BS())
+@pytest.mark.parametrize("backend_name", ["SLOS", "Naive"])
+def test_processor_probs(backend_name):
+    qpu = Processor(backend_name, BS())
     qpu.with_input(FockState([1, 1]))  # Are expected only states with 2 photons in the same mode.
     for m in range(qpu.circuit_size):
         qpu.add(m, Detector.threshold())  # With threshold detectors, the simulation will only detect |1,0> and |0,1>
@@ -292,9 +293,8 @@ def test_empty_output():
     p.min_detected_photons_filter(2)
     p.with_input(FockState([0, 1, 0]))
 
-    with pytest.raises(RuntimeError, match=r".*empty distribution.*"):
-        res = p.probs()["results"]
-
+    res = p.probs()["results"]
+    assert res == BSDistribution()
 
 def test_mask_distinguishability():
     p = Processor("SLOS", 3, noise=NoiseModel(indistinguishability=.5))
