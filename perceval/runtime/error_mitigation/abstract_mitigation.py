@@ -31,10 +31,10 @@ from abc import abstractmethod, ABC
 
 from exqalibur import BSDistribution, BSCount, BSSamples
 
-from utils.constants import KEY_RESULTS, KEY_GLOBAL_PERF, KEY_PHYSICAL_PERF, KEY_LOGICAL_PERF
 from ..computation import Computation
 
 from perceval.utils import NoiseModel, ConversionHelper, apply_min_photons, apply_post_select
+from perceval.utils.constants import KEY_RESULTS, KEY_GLOBAL_PERF, KEY_PHYSICAL_PERF, KEY_LOGICAL_PERF
 from perceval.components import Experiment
 
 
