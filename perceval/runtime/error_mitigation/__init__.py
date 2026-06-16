@@ -29,3 +29,4 @@
 
 from .loss_mitigation import photon_recycling
 from .abstract_mitigation import AbstractMitigation
+from .compilation_averaging import CompilationAveraging
