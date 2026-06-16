@@ -35,6 +35,7 @@ from multipledispatch import dispatch
 from typing import Generator, Union, final, TypeAlias
 
 import exqalibur as xq
+from .bsdistribution import BSDistribution
 
 import numpy as np
 
@@ -45,7 +46,6 @@ AnnotatedFockState: TypeAlias = xq.AnnotatedFockState
 BSCount: TypeAlias = xq.BSCount
 BSSamples: TypeAlias = xq.BSSamples
 StateVector: TypeAlias = xq.StateVector
-BSDistribution: TypeAlias = xq.BSDistribution
 SVDistribution: TypeAlias = xq.SVDistribution
 
 class BasicStateMeta(type):

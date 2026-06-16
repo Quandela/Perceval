@@ -1010,5 +1010,7 @@ class ExqaliburSimulator(Simulator):
             n = input_dist.n_max
             res = self._sim.probs_svd(input_dist)
 
+        res = BSDistribution(res)
+
         self.log_resources(sys._getframe().f_code.co_name, {'n': n})
         return self.format_results(res, self._sim.get_physical_perf(), self._sim.get_logical_perf())

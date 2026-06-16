@@ -1,7 +1,13 @@
-BSDistribution
+FSFunction
 ==============
 
-.. autoclass:: exqalibur.BSDistribution
+.. autoclass:: exqalibur.FSFunction
+   :members:
+
+FSDistribution
+==============
+
+.. autoclass:: exqalibur.FSDistribution
    :members:
 
 BSCount
