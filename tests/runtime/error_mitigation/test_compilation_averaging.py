@@ -35,7 +35,7 @@ from exqalibur.exqalibur import PostSelect
 
 from perceval import CompilationAveraging, Computation, CommandFactory, Experiment, NoiseModel, Command, BSCount, \
     apply_min_photons, apply_post_select
-from utils.constants import KEY_SHOTS_USED
+from perceval.utils.constants import KEY_SHOTS_USED
 
 
 def test_computation_extension():
