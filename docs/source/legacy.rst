@@ -5,6 +5,14 @@ While, with its latest versions, Perceval tends to stabilise its public API, som
 
 This section lists the major breaking changes.
 
+Breaking changes in Perceval 1.2.3
+----------------------------------
+
+BSDistribution must be imported from Perceval
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The BSDistribution class now relies on 2 utility classes and cannot be imported from exqalibur anymore.
+
 Breaking changes in Perceval 1.2
 --------------------------------
 
