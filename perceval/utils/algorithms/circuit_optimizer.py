@@ -89,7 +89,7 @@ class CircuitOptimizer:
                  template: ACircuit,
                  empty_mode_list: list[int] = None,
                  first_guess: list[float] = None,
-                 ) -> tuple[ACircuit, float]:
+                 seed: int | None = None) -> tuple[ACircuit, float]:
         """
         Optimize a template circuit unitary's fidelity with a target matrix or circuit.
 
@@ -121,7 +121,7 @@ class CircuitOptimizer:
         if empty_mode_list is None:
             empty_mode_list = []
 
-        optimizer = xq.CircuitOptimizer(target, serialize_binary(template), empty_mode_list)
+        optimizer = xq.CircuitOptimizer(target, serialize_binary(template), empty_mode_list, seed)
         optimizer.set_max_eval_per_trial(self._max_eval_per_trial)
         optimizer.set_threshold(self._threshold)
         if first_guess is None:
