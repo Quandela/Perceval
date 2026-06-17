@@ -53,7 +53,8 @@ class CompilationAveraging(AbstractMitigation):
         :param starting_seed: Optional, seed to use as a starting point for the compilation seed.
         """
         self.repetitions = repetitions
-        assert isinstance(self.repetitions, int) and repetitions >= 1, "Number of repetitions must be a positive integer"
+        assert isinstance(self.repetitions, int) and repetitions >= 1,\
+            f"Number of repetitions must be a positive integer (got {repetitions})"
         self.starting_seed = starting_seed
 
     def extend_computation(self, computation: Computation, noise: NoiseModel) -> list[Computation]:
@@ -62,17 +63,25 @@ class CompilationAveraging(AbstractMitigation):
 
         starting_seed = self.starting_seed if self.starting_seed is not None else random.randint(0, 1_000_000)
 
-        remaining_shots: int | None = computation.parameters.get(KEY_MAX_SHOTS)
-        shots_per_computation = remaining_shots // self.repetitions if remaining_shots is not None else None
-        # TODO: split into less sub-computations in this case?
-        assert shots_per_computation is None or shots_per_computation >= self.repetitions, \
-            "Can't split into more sub-computations than the number of shots"
+        shots: int | None = computation.parameters.get(KEY_MAX_SHOTS)
+        if shots is not None:
+            if shots < self.repetitions:
+                raise RuntimeError("CompilationAveraging: Can't split into more sub-computations than the number of shots")
+            shots_per_computation = shots // self.repetitions
+            remaining_shots = shots - shots_per_computation * self.repetitions
+        else:
+            shots_per_computation = None
+            remaining_shots = None
 
-        remaining_samples: int | None = computation.parameters.get(KEY_MAX_SAMPLES)
-        samples_per_computation = remaining_samples // self.repetitions if remaining_samples is not None else None
-        # TODO: split into less sub-computations in this case?
-        assert samples_per_computation is None or samples_per_computation >= self.repetitions, \
-            "Can't split into more sub-computations than the number of samples"
+        samples: int | None = computation.parameters.get(KEY_MAX_SAMPLES)
+        if samples is not None:
+            if samples < self.repetitions:
+                raise RuntimeError("CompilationAveraging: Can't split into more sub-computations than the number of samples")
+            samples_per_computation = samples // self.repetitions
+            remaining_samples = samples - samples_per_computation * self.repetitions
+        else:
+            samples_per_computation = None
+            remaining_samples = None
 
         res = []
         for i in range(self.repetitions):
@@ -80,19 +89,12 @@ class CompilationAveraging(AbstractMitigation):
             new_comp.command.name = "sample_count"
 
             if shots_per_computation is not None:
-                new_comp.add_params(max_shots=shots_per_computation)
-                remaining_shots -= shots_per_computation
+                new_comp.add_params(max_shots=shots_per_computation + (i < remaining_shots))
             if samples_per_computation is not None:
-                new_comp.add_params(max_samples=samples_per_computation)
-                remaining_samples -= samples_per_computation
-            new_comp.add_params(compilation_seed=starting_seed + i)  # hash((starting_seed, i)) ?
+                new_comp.add_params(max_samples=samples_per_computation + (i < remaining_samples))
+            new_comp.add_params(compilation_seed=starting_seed + i)
 
             res.append(new_comp)
-
-        if remaining_samples is not None:
-            new_comp.parameters[KEY_MAX_SAMPLES] += remaining_samples
-        if remaining_shots is not None:
-            new_comp.parameters[KEY_MAX_SHOTS] += remaining_shots
 
         return res
 
