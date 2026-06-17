@@ -213,5 +213,3 @@ class ParameterIterator:
     @staticmethod
     def _set_compilation_seed(compilation_seed: int, computation: ComputationDescriptor):
         pass  # compilation seed is only inserted into the parameters
-
-register_to_serialization(ParameterIterator, default_compress=False)
