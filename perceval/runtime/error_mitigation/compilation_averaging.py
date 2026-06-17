@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 import random
-from copy import deepcopy
+from copy import deepcopy, copy
 
 from .abstract_mitigation import AbstractMitigation
 from ..computation import Computation
@@ -104,36 +104,41 @@ class CompilationAveraging(AbstractMitigation):
             return results[0]
 
         # Here, we know we have expanded the computation, so all results are BSCount
-        res = results[0]  # We are going to modify this in-place to keep custom fields as much as we can
-
-        bsc: BSCount = res[KEY_RESULTS]
+        bsc = BSCount()
 
         # global_perf = n_samples / n_clock; phys_perf = n_phys / n_clock; log_perf = n_samples / n_phys
-        n_clocks = bsc.total() / res[KEY_GLOBAL_PERF]
-        n_physical = n_clocks * res[KEY_PHYSICAL_PERF] if KEY_PHYSICAL_PERF in res else None
+        n_clocks = 0
+        n_physical = 0
+        shots_used = 0
 
-        for other in results[1:]:
-            other_bsc: BSCount = other[KEY_RESULTS]
-            for state, count in other_bsc.items():
+        for res in results:
+            res_bsc: BSCount = res[KEY_RESULTS]
+            for state, count in res_bsc.items():
                 bsc[state] += count
 
-            if KEY_SHOTS_USED in other:
-                if KEY_SHOTS_USED in res:
-                    res[KEY_SHOTS_USED] += other[KEY_SHOTS_USED]
-                else:
-                    res[KEY_SHOTS_USED] = other[KEY_SHOTS_USED]
+            if shots_used is not None and KEY_SHOTS_USED in res:
+                shots_used += res[KEY_SHOTS_USED]
+            else:
+                shots_used = None
 
-            sub_n_clocks = other_bsc.total() / other[KEY_GLOBAL_PERF]
+            sub_n_clocks = res_bsc.total() / res[KEY_GLOBAL_PERF]
             n_clocks += sub_n_clocks
 
-            if n_physical is not None and KEY_PHYSICAL_PERF in other:
-                n_physical += sub_n_clocks * other[KEY_PHYSICAL_PERF]
+            if n_physical is not None and KEY_PHYSICAL_PERF in res:
+                n_physical += sub_n_clocks * res[KEY_PHYSICAL_PERF]
+            else:
+                n_physical = None
 
+        res = copy(results[0])  # We are going to modify this to keep custom fields as much as we can
+        res[KEY_RESULTS] = bsc
         n_samples = bsc.total()
         res[KEY_GLOBAL_PERF] = n_samples / n_clocks
 
         if n_physical is not None:
             res[KEY_PHYSICAL_PERF] = n_physical / n_clocks
             res[KEY_LOGICAL_PERF] = n_samples / n_physical
+
+        if shots_used is not None:
+            res[KEY_SHOTS_USED] = shots_used
 
         return res
