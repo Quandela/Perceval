@@ -305,7 +305,7 @@ class Expression(Parameter):
         # Create set containing all parent parameters
         self._params = set(parameters)
         self._check_parameters(set(fs.name for fs in e.free_symbols))
-        self._symbol = sp.S(name)
+        self._symbol = e
 
     @property
     def _is_expression(self):

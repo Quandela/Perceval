@@ -1003,12 +1003,20 @@ class ExqaliburSimulator(Simulator):
 
         self._set_detectors(detectors)
 
-        if isinstance(input_dist, tuple):
-            n = input_dist[1].n
-            res = self._sim.probs_svd(input_dist[0]._source, input_dist[1])
-        else:
-            n = input_dist.n_max
-            res = self._sim.probs_svd(input_dist)
+        try:
+            if isinstance(input_dist, tuple):
+                n = input_dist[1].n
+                res = self._sim.probs_svd(input_dist[0]._source, input_dist[1])
+            else:
+                n = input_dist.n_max
+                res = self._sim.probs_svd(input_dist)
+        except RuntimeError as e:
+            if "empty distribution" in str(e):
+                res = xq.FSFunction()
+            else:
+                raise
+
+        res = BSDistribution(res)
 
         self.log_resources(sys._getframe().f_code.co_name, {'n': n})
         return self.format_results(res, self._sim.get_physical_perf(), self._sim.get_logical_perf())

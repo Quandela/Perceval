@@ -26,20 +26,41 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import random
+from copy import deepcopy
 
 import numpy as np
 from packaging.version import Version
-from perceval.components.compiled_circuit import CompiledCircuit
+
+from perceval.components.compiled_circuit import CompiledCircuit, CompiledCircuitVersion
 from perceval.components.core_catalog.mzi import MZIPhaseFirst
 from perceval.components.experiment import Experiment
 
 def test_inheritance():
-    circuit = CompiledCircuit("chip name", 2, [], Version("1.0"))
+    circuit = CompiledCircuit("chip name", 2, [], CompiledCircuitVersion(Version("1.0")))
     exp = Experiment(3, None, "-")
     exp.add(1, circuit)
 
     exp = Experiment(circuit, None, "-")
 
 def test_compute_unitary():
-    circuit = CompiledCircuit("chip name", MZIPhaseFirst().build_circuit(), [0., 1.], Version("1.0"))
+    circuit = CompiledCircuit("chip name", MZIPhaseFirst().build_circuit(), [0., 1.], CompiledCircuitVersion(Version("1.0")))
     assert np.allclose(circuit.compute_unitary(), MZIPhaseFirst().build_circuit(phi_a = 0, phi_b = 1.).compute_unitary())
+
+def test_phase_noise():
+    circuit = CompiledCircuit("chip name", 2, [0., 1.], CompiledCircuitVersion(Version("1.0")))
+
+    rng = random.Random(42)
+
+    circuit_cp = deepcopy(circuit)
+    circuit_cp.apply_phase_noise(0.1, 0, rng)
+
+    for original, phase in zip(circuit.parameters, circuit_cp.parameters):
+        assert - 0.1 <= phase - original <= 0.1
+
+    rng = random.Random(42)
+    circuit_cp2 = deepcopy(circuit)
+    circuit_cp2.apply_phase_noise(0.1, 0, rng)
+
+    assert np.allclose(circuit_cp.parameters, circuit_cp2.parameters)
+    assert not np.allclose(circuit.parameters, circuit_cp.parameters)

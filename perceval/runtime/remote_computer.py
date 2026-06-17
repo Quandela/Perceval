@@ -133,6 +133,8 @@ class _RemoteGetter(AsyncGetter):
     def _get_results(self) -> dict | None:
         if self._results and self.status.completed:
             return self._results
+        if not self.status.maybe_completed:
+            raise RuntimeError('The job is still running, results are not available yet.')
         self._results = self._communication_layer.get_results(self._remote_id)
         return self._results
 

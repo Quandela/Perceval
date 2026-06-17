@@ -47,7 +47,7 @@ def tvd_dist(dist_lh: BSDistribution, dist_rh: BSDistribution) -> float:
                           "Their values will be set to 0 before computing TVD.", channel.user)
 
     all_states = set(dist_lh.keys()).union(dist_rh.keys())
-    tvd = 0.5 * sum(abs(dist_lh.get(basic_state, 0) - dist_rh.get(basic_state, 0)) for basic_state in all_states)
+    tvd = 0.5 * sum(abs(dist_lh[basic_state] - dist_rh[basic_state]) for basic_state in all_states)
 
     return tvd
 
@@ -67,7 +67,7 @@ def kl_divergence(ideal_dist: BSDistribution, est_dist: BSDistribution) -> float
     zero_states_count = 0  # states with null probabilities or missing in estimated distribution
 
     for state, ideal_prob in ideal_dist.items():
-        est_prob = est_dist.get(state, 0)
+        est_prob = est_dist[state]
         if est_prob > 0:
             kl_div += ideal_prob * log(ideal_prob/est_prob)
         else:

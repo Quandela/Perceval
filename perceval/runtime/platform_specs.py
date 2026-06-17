@@ -173,7 +173,7 @@ class PlatformSpecs(dict):
         self["detector"] = value
 
     @property
-    @deprecated(reason="Get the commands from the 'commands' attribute", version="1.3.0")
+    # @deprecated(reason="Get the commands from the 'commands' attribute", version="1.3.0")
     def available_commands(self) -> list[str]:
         """
         :return: the list of command names available for this platform
@@ -183,7 +183,7 @@ class PlatformSpecs(dict):
         return [command.name for command in self.commands]
 
     @available_commands.setter
-    @deprecated(reason="Set the commands in the 'commands' attribute", version="1.3.0")
+    # @deprecated(reason="Set the commands in the 'commands' attribute", version="1.3.0")
     def available_commands(self, value: list[str]):
         assert isinstance(value, list)
         assert all(isinstance(val, str) for val in value)

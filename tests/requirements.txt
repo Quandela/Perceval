@@ -5,3 +5,4 @@ flake8
 responses
 pytest-responses
 flaky
+matplotlib ~= 3.10.0  # TODO: remove this and repair test when dropping python 3.10
