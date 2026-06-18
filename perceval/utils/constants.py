@@ -30,12 +30,16 @@
 # Parameters
 KEY_MAX_SHOTS = "max_shots"
 KEY_MAX_SAMPLES = "max_samples"
+KEY_COMPILATION_SEED = "compilation_seed"
 
 # Results keys
 KEY_RESULTS = "results"
 KEY_SHOTS_USED = "nb_shots_used"
 KEY_RESULTS_LIST = "results_list"
 KEY_ITERATION = "iteration"
+KEY_GLOBAL_PERF = "global_perf"
+KEY_PHYSICAL_PERF = "physical_perf"
+KEY_LOGICAL_PERF = "logical_perf"
 
 # Result legacy keys
 KEY_JOB_CONTEXT = "job_context"

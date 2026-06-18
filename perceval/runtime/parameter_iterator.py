@@ -52,7 +52,8 @@ class ParameterIterator:
                                              'max_samples': int,
                                              'max_shots': int,
                                              'noise': NoiseModel,
-                                             'postselect': PostSelect}
+                                             'postselect': PostSelect,
+                                             'compilation_seed': int,}
 
     def __init__(self, experiment: Experiment, max_shots: int | None, max_samples: int | None):
         # Constant parameters
@@ -139,6 +140,7 @@ class ParameterIterator:
            - max_shots: int
            - noise: NoiseModel
            - postselect: PostSelect
+           - compilation_seed: int
         """
 
         # Iterator construction methods
@@ -208,4 +210,6 @@ class ParameterIterator:
     def _set_postselect(post_select: PostSelect, computation: ComputationDescriptor):
         computation.experiment.set_postselection(post_select)
 
-register_to_serialization(ParameterIterator, default_compress=False)
+    @staticmethod
+    def _set_compilation_seed(compilation_seed: int, computation: ComputationDescriptor):
+        pass  # compilation seed is only inserted into the parameters

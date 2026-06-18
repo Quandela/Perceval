@@ -34,6 +34,7 @@ from exqalibur import BSCount, BSSamples
 from ..computation import Computation
 
 from perceval.utils import NoiseModel, ConversionHelper, apply_min_photons, apply_post_select, BSDistribution
+from perceval.utils.constants import KEY_RESULTS, KEY_GLOBAL_PERF, KEY_PHYSICAL_PERF, KEY_LOGICAL_PERF
 from perceval.components import Experiment
 
 
@@ -71,18 +72,18 @@ class AbstractMitigation(ABC):
         """
         result = self._parse_results(results, noise)
 
-        res, physical_perf, logical_perf = self._apply_filtering(computation.experiment, result["results"])
+        res, physical_perf, logical_perf = self._apply_filtering(computation.experiment, result[KEY_RESULTS])
 
         # TODO: find a way to transmit the correct number of states between layers
         #       We should not use computation.parameters
         res = ConversionHelper.convert_to(computation.command.name, res, **computation.parameters)
-        result["results"] = res
+        result[KEY_RESULTS] = res
 
-        result['global_perf'] *= physical_perf * logical_perf
-        if "physical_perf" in result:
-            result['physical_perf'] *= physical_perf
-        if "logical_perf" in result:
-            result['logical_perf'] *= logical_perf
+        result[KEY_GLOBAL_PERF] *= physical_perf * logical_perf
+        if KEY_PHYSICAL_PERF in result:
+            result[KEY_PHYSICAL_PERF] *= physical_perf
+        if KEY_LOGICAL_PERF in result:
+            result[KEY_LOGICAL_PERF] *= logical_perf
 
         return result
 
