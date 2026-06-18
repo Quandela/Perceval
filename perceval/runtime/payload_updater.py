@@ -127,16 +127,16 @@ class PayloadUpdater:
 
         else:
             command_str = payload.pop(KEY_COMMAND)
-            samples = payload.pop(KEY_MAX_SAMPLES)
-            shots = payload.pop(KEY_MAX_SHOTS)
+            samples = payload.pop(KEY_MAX_SAMPLES, None)
+            shots = payload.pop(KEY_MAX_SHOTS, None)
 
         command = computer.get_command(command_str)
         computation = Computation(command, payload.pop(KEY_EXPERIMENT, Experiment()))
 
         if samples is not None:
-            computation.add_params(max_samples = samples)
+            PayloadUpdater._safe_add_param(computation, "max_samples", samples)
         if shots is not None:
-            computation.add_params(max_shots = shots)
+            PayloadUpdater._safe_add_param(computation, "max_shots", shots)
 
         base_computation = computation
 
@@ -154,9 +154,13 @@ class PayloadUpdater:
         parameters = payload.pop(KEY_PARAMETERS, None)
 
         for key, value in payload.items():
-            try:
-                base_computation.add_params(**{key: value})
-            except TypeError:
-                pass  # Logging ?
+            PayloadUpdater._safe_add_param(base_computation, key, value)
 
         return PayloadGenerator.from_computation(computation, noise=noise, parameters=parameters)
+
+    @staticmethod
+    def _safe_add_param(computation: Computation, param: str, value: Any) -> None:
+        try:
+            computation.add_params(**{param: value})
+        except TypeError:
+            pass  # Logging ?

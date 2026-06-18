@@ -146,6 +146,8 @@ class LocalComputer(AbstractComputer, ABC):
         except TypeError as e:
             if "progress_callback" in str(e):
                 return self._methods[computation.command.name](self, computation.experiment, **computation.parameters)
+            else:
+                raise e
 
     def _execute_command_async(self, computation: Computation) -> _ThreadedExecution:
         return _ThreadedExecution(self._execute_single, args=(computation,))
