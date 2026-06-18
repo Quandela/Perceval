@@ -37,6 +37,7 @@ from perceval.utils.constants import KEY_COMMAND, KEY_PARAMETERS, KEY_EXPERIMENT
     KEY_PAYLOAD, KEY_PLATFORM_NAME, KEY_COMPUTATION, KEY_MITIGATIONS, KEY_NOISE
 
 from .computation import Computation
+from .computation_iterator import ComputationIterator
 from .error_mitigation import AbstractMitigation
 from .abstract_computer import AbstractComputer
 
@@ -120,7 +121,7 @@ class PayloadGenerator:
         return global_data
 
     @staticmethod
-    def from_computation(computation: Computation,
+    def from_computation(computation: Computation | ComputationIterator,
                          mitigations: list[AbstractMitigation] = None,
                          parameters: dict[str, Any] = None,
                          noise: NoiseModel = None):
