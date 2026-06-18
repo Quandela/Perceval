@@ -93,7 +93,7 @@ def compare_computations(left: Computation | ComputationIterator, right: Computa
         assert isinstance(right, ComputationIterator)
 
         # TODO: change this after merging with PCVL-1241
-        assert left._parameter_iterator.iterations == right._parameter_iterator.iterations
+        assert left.iterations == right.iterations
 
 
 def compare_payloads(left: dict, right: dict):
