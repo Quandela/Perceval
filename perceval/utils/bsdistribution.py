@@ -148,6 +148,7 @@ class BSDistribution():
         if self._normalized:
             return
         self._distribution = self._function.move_to_distribution()
+        self._distribution.trim(global_params["min_p"])
         self._function = None
 
     def _unnormalize(self) -> None:
