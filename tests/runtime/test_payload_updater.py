@@ -91,9 +91,9 @@ def compare_computations(left: Computation | ComputationIterator, right: Computa
 
     if isinstance(left, ComputationIterator):
         assert isinstance(right, ComputationIterator)
-
-        # TODO: change this after merging with PCVL-1241
         assert left.iterations == right.iterations
+        assert left.parameters == right.parameters
+        compare_computations(left.base_computation, right.base_computation)
 
 
 def compare_payloads(left: dict, right: dict):
@@ -106,10 +106,11 @@ def compare_payloads(left: dict, right: dict):
 
     assert left == right
 
-def test_payload_update_from_0_10():
+
+def test_payload_update_from_v0():
     # No changes in 0.11, 0.12
     # Empty payload
-    res = PayloadUpdater.update_to_1_0({"toto": 1})
+    res = PayloadUpdater.update_payload({"toto": 1}, None, target_payload_version=1)
     assert res == {"toto": 1}  # Experiment should not be added here
 
     # Minimum payload for experiment
@@ -121,7 +122,7 @@ def test_payload_update_from_0_10():
     target_experiment.set_circuit(minimum_payload["circuit"])
     target_experiment.with_input(minimum_payload["input_state"])
 
-    res = PayloadUpdater.update_to_1_0(minimum_payload)
+    res = PayloadUpdater.update_payload(minimum_payload, None, target_payload_version=1)
 
     assert minimum_payload["toto"] == 2
     assert_experiment_equals(target_experiment, res[KEY_EXPERIMENT])
@@ -144,7 +145,7 @@ def test_payload_update_from_0_10():
 
                     }
 
-    res = PayloadUpdater.update_to_1_0(full_payload)
+    res = PayloadUpdater.update_payload(full_payload, None, target_payload_version=1)
     res["experiment"].name = target_experiment.name
     target_experiment.noise = noise
     assert_experiment_equals(target_experiment, res["experiment"])
@@ -153,7 +154,7 @@ def test_payload_update_from_0_10():
     compare_payloads(res, get_expected())
 
 
-def test_translation_from_1_0():
+def test_translation_from_v1():
     # No change in perceval 1.1 and 1.2
     e = get_experiment()
     e.noise = noise
