@@ -26,11 +26,19 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from copy import deepcopy
+
 import numpy as np
 from math import comb
+
 from scipy.optimize import curve_fit
-from perceval.utils import BSCount, BSDistribution, BasicState
+
+from perceval.components import PortLocation
+from perceval.utils import BSCount, BSDistribution, BasicState, SVDistribution, NoiseModel, PostSelect
 from perceval.utils.logging import get_logger, channel
+
+from ..computation import Computation
+from .abstract_mitigation import AbstractMitigation
 from ._loss_mitigation_utils import _gen_lossy_dists, _get_avg_exp_from_uni_dist, _generate_one_photon_per_mode_mapping
 
 
@@ -60,7 +68,7 @@ def photon_recycling(noisy_input: BSCount | BSDistribution, ideal_photon_count: 
     :param ideal_photon_count: expected photon count for a loss-less system
     :return: photon loss mitigated distribution
     """
-    get_logger().info(f"Running Photon Recycling on a {len(noisy_input)} states distribution targetting {ideal_photon_count} ideal photons",
+    get_logger().info(f"Running Photon Recycling on a {len(noisy_input)} states distribution targeting {ideal_photon_count} ideal photons",
                 channel.general)
     # run checks on noisy input before recycling
     _validate_noisy_input(noisy_input, ideal_photon_count)
@@ -103,3 +111,66 @@ def photon_recycling(noisy_input: BSCount | BSDistribution, ideal_photon_count: 
         mitigated_distribution.add(state, mitigated_probs[index])
 
     return mitigated_distribution
+
+
+class PhotonRecycling(AbstractMitigation):
+    """
+    A mitigation layer that performs the photon recycling algorithm internally
+    """
+
+    @staticmethod
+    def _ideal_photon_number(computation: Computation) -> int:
+        # Returns 0 if the experiment is not compatible
+        exp = computation.experiment
+
+        if not exp.is_unitary:   # I have to admit I don't know if the algorithm can apply in this case
+            return 0
+
+        if isinstance(exp.input_state, BasicState):
+            return exp.input_state.n
+
+        if isinstance(exp.input_state, SVDistribution):  # Nor here
+            all_n = set()
+            for state in exp.input_state:
+                all_n |= state.n
+
+            if len(all_n) == 1:
+                return all_n.pop()
+
+        return 0
+
+    def extend_computation(self, computation: Computation, noise: NoiseModel) -> list[Computation]:
+        expected_photons = self._ideal_photon_number(computation)
+
+        if expected_photons < 3:
+            get_logger().info(f"Photon recycling disabled: not enough photons to mitigate ({expected_photons} < 3), "
+                              "or the given Experiment is not compatible")
+            return [computation]
+
+        comp = deepcopy(computation)
+        if comp.experiment.post_select_fn.has_condition or len(comp.experiment.heralds):
+            get_logger().warn("Photon recycling is used along logical post-selection. Not optimal.", channel.user)
+            comp.experiment.set_postselection(PostSelect())
+            for m in comp.experiment.heralds:
+                comp.experiment.remove_port(m, location=PortLocation.OUTPUT)
+
+        if comp.experiment.min_photons_filter is None or comp.experiment.min_photons_filter > expected_photons - 2:
+            comp.experiment.min_detected_photons_filter(expected_photons - 2)
+
+        computation.command.name = "probs"
+
+        return [comp]
+
+    def _parse_results(self, computation: Computation, results: list[dict], noise: NoiseModel) -> dict:
+        ideal_photon_count = self._ideal_photon_number(computation)
+        res = results[0]
+
+        if ideal_photon_count < 3:
+            return res
+
+        try:
+            res["results"] = photon_recycling(res["results"], ideal_photon_count)
+        except ValueError:
+            pass
+
+        return res

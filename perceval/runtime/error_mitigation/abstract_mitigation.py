@@ -53,7 +53,7 @@ class AbstractMitigation(ABC):
         pass
 
     @abstractmethod
-    def _parse_results(self, results: list[dict], noise: NoiseModel) -> dict:
+    def _parse_results(self, computation: Computation, results: list[dict], noise: NoiseModel) -> dict:
         """
         Parses the results obtained from an iterator obtained through extend_computation().
         :param results: The results for the list of computations obtained through extend_computation()
@@ -70,7 +70,7 @@ class AbstractMitigation(ABC):
         :param noise: The Computer noise with which the results were obtained
         :return: The mitigated result, matching the expectations of computation
         """
-        result = self._parse_results(results, noise)
+        result = self._parse_results(computation, results, noise)
 
         res, physical_perf, logical_perf = self._apply_filtering(computation.experiment, result[KEY_RESULTS])
 

@@ -26,18 +26,20 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from unittest.mock import patch
 
 import pytest
 
-from tests._test_utils import retry
+from tests._test_utils import retry, LogChecker
 
 from perceval.error_mitigation import photon_recycling
 from perceval.utils import BasicState, BSDistribution
 from perceval.components import catalog, Unitary
 from perceval.utils import Matrix, NoiseModel
 from perceval.algorithm import Sampler
-from perceval import Processor, Detector
+from perceval import Processor, Detector, PhotonRecycling, Computation, CommandFactory, Experiment, PostSelect
 from perceval.utils.dist_metrics import tvd_dist, kl_divergence
+import perceval as pcvl
 
 
 def _sampler_setup_cnot(output_type: str):
@@ -117,19 +119,24 @@ def test_input_validation_loss_mitigation():
         photon_recycling(lossy_bsd2, 6)
 
 
-def _compute_random_circ_probs(source_emission, num_photons):
-
+def _get_random_experiment(num_photons):
     random_loc = Unitary(Matrix.random_unitary(20))
-    # Processor config
-    processor = Processor("SLOS", random_loc, noise=NoiseModel(transmittance=source_emission))
-    processor.min_detected_photons_filter(0)
-    for m in range(processor.circuit_size):
-        processor.add(m, Detector.threshold())
+
+    experiment = Experiment(random_loc)
+    experiment.min_detected_photons_filter(0)
+    for m in range(experiment.circuit_size):
+        experiment.add(m, Detector.threshold())
 
     # Input state
     input_state = BasicState([1] * num_photons + [0] * (random_loc.m - num_photons))
 
-    processor.with_input(input_state)
+    experiment.with_input(input_state)
+    return experiment
+
+
+def _compute_random_circ_probs(source_emission, num_photons):
+    processor = Processor("SLOS", _get_random_experiment(num_photons))
+    processor.noise = NoiseModel(transmittance=source_emission)
 
     # Sampler
     sampler = Sampler(processor)
@@ -163,3 +170,30 @@ def test_mitigation_over_postselect_tvd():
     assert tvd_miti < tvd_post  # checks that mitigated is closer to ideal than post-selected distribution
 
     assert kl_divergence(ideal_dist, mitigated_dist) < kl_divergence(ideal_dist, post_select_dist)
+
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
+def test_photon_recycling_class(mock_warn):
+    pr = PhotonRecycling()
+
+    n_photons = 4
+
+    e = _get_random_experiment(n_photons)
+    starting_comp = Computation(CommandFactory.sample_count, e)
+
+    computations = pr.extend_computation(starting_comp, NoiseModel(transmittance=0.3))
+
+    assert len(computations) == 1
+    e2 = computations[0].experiment
+
+    assert e2.min_photons_filter == e.min_photons_filter
+
+    e.min_detected_photons_filter(3)
+    e.add_herald(0, 1)
+    e.set_postselection(PostSelect("[2] <= 2"))
+
+    with LogChecker(mock_warn):
+        computations = pr.extend_computation(starting_comp, NoiseModel(transmittance=0.3))
+    e2 = computations[0].experiment
+    assert e2.min_photons_filter == n_photons - 2
+    assert e2.heralds == {}
+    assert not e2.post_select_fn.has_condition

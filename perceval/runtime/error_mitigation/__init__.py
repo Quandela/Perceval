@@ -27,6 +27,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .loss_mitigation import photon_recycling
+from .loss_mitigation import photon_recycling, PhotonRecycling
 from .abstract_mitigation import AbstractMitigation
 from .compilation_averaging import CompilationAveraging
