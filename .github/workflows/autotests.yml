@@ -106,6 +106,7 @@ jobs:
         python -m pip install .
         python -m pip install -r tests/requirements.txt
         python -m pip uninstall -y -r .github/rendering_requirements.txt
+        python -m pip uninstall -y qhub-api
 
     - name: Test with pytest
       run: |

@@ -100,3 +100,92 @@ Then, we can attach a toy circuit and send it on our session
 >>> print(job)
 
 Congratulation you can now design and send jobs to Scaleway QaaS through your processor. You can continue with the documentation of :ref:`algorithm`.
+
+Kipu Quantum Hub
+----------------
+
+The `Kipu Quantum Hub <https://dashboard.hub.kipu-quantum.com/>`_ brokers quantum jobs to multiple quantum providers. Through it, Perceval can run Quandela photonic backends hosted on the Hub.
+
+This provider relies on an optional dependency (the ``qhub-api`` package). Install it with::
+
+    pip install perceval[kipu]
+
+If the dependency is missing, creating a Kipu ``RemoteProcessor`` raises an ``ImportError`` telling you to run the command above.
+
+Kipu authentication
+^^^^^^^^^^^^^^^^^^^
+
+To use the Kipu Quantum Hub as a provider you need a Kipu Quantum account and a Personal Access Token (PAT).
+
+1. Create a Kipu Quantum account at the `Kipu Quantum Hub dashboard <https://dashboard.hub.kipu-quantum.com/>`_.
+2. Copy your Personal Access Token (PAT) from the dashboard.
+3. (Optional) Provide an ``organization_id`` to run within an organization context. If omitted, your `personal account <https://docs.hub.kipu-quantum.com/manage-organizations#switch-context-between-personal-account-and-organization>`_ is used.
+
+Alternatively, authenticate with the `qhubctl <https://docs.hub.kipu-quantum.com/quickstart>`_ CLI instead of passing a token:
+
+.. code-block:: bash
+
+    qhubctl login
+
+Once logged in, create the session **without** a ``token`` — it is resolved automatically from the environment or the ``qhubctl`` credentials file.
+
+KipuSession
+^^^^^^^^^^^
+
+.. autoclass:: perceval.providers.kipu.Session
+   :members:
+
+Available platforms
+^^^^^^^^^^^^^^^^^^^
+
+The ``platform_name`` is a Hub backend id, or one of its aliases:
+
+============================  =============
+Backend id                    Alias
+============================  =============
+``quandela.sim.belenos``       ``sim:belenos``
+``quandela.qpu.belenos``      ``qpu:belenos``
+============================  =============
+
+Create a Kipu session
+^^^^^^^^^^^^^^^^^^^^^
+
+Import the library and the Kipu Quantum Hub provider:
+
+>>> import perceval as pcvl
+>>> import perceval.providers.kipu as kipu
+
+Provide your Personal Access Token (PAT) and choose a platform:
+
+>>> TOKEN = "your-personal-access-token"
+>>> PLATFORM_NAME = "quandela.sim.belenos"
+
+Create the session (``organization_id`` is optional):
+
+>>> session = kipu.Session(platform_name=PLATFORM_NAME, token=TOKEN)
+
+If you authenticated via ``qhubctl login``, omit the token:
+
+>>> session = kipu.Session(platform_name=PLATFORM_NAME)
+
+.. note:: The Kipu session is stateless: there is no ``start``/``stop`` to call and no ``with`` block lifecycle to manage, unlike the Scaleway session.
+
+.. note:: ``JobGroup`` (batch job submission) is not supported by the Kipu Quantum Hub provider, like the Scaleway provider.
+
+Send a circuit to a Kipu-hosted backend
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Build a :code:`RemoteProcessor` from the session:
+
+>>> processor = session.build_remote_processor()
+
+Attach a toy circuit and send it:
+
+>>> processor.set_circuit(pcvl.Circuit(m=2, name="a-toy-circuit") // pcvl.BS.H())
+>>> processor.with_input(pcvl.BasicState("|0,1>"))
+>>> processor.min_detected_photons_filter(1)
+>>> sampler = pcvl.algorithm.Sampler(processor, max_shots_per_call=10_000)
+>>> job = sampler.samples(100)
+>>> print(job)
+
+You can now design and send jobs to Quandela backends through the Kipu Quantum Hub. Continue with the documentation of :ref:`algorithm`.

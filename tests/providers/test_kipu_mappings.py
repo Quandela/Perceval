@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2022 Quandela
+# Copyright (c) 2026 Kipu Quantum GmbH
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -26,30 +26,41 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Provider related imports and classes"""
 
-from perceval.runtime import ISession
+import pytest
 
-from .quandela import Session as QuandelaSession
-from .scaleway import Session as ScalewaySession
-from .kipu import Session as KipuSession
-
-PROVIDER_LIST = {
-    "Quandela": QuandelaSession,
-    "Scaleway": ScalewaySession,
-    "Kipu": KipuSession,
-}
+from perceval.providers.kipu.kipu_rpc_handler import (
+    _resolve_backend_id,
+    _to_perceval_status,
+)
 
 
-class ProviderFactory:
-    @staticmethod
-    def get_provider(provider_name: str, **kwargs) -> ISession:
-        name = provider_name
-        if name in PROVIDER_LIST:
-            return PROVIDER_LIST[name](**kwargs)
+def test_resolve_backend_id_passthrough():
+    assert _resolve_backend_id("quandela.sim.belenos") == "quandela.sim.belenos"
+    assert _resolve_backend_id("quandela.qpu.belenos") == "quandela.qpu.belenos"
 
-        raise KeyError(f'Cloud Provider "{name}" not found, available providers are: {ProviderFactory.list()}.')
 
-    @staticmethod
-    def list():
-        return list(PROVIDER_LIST.keys())
+def test_resolve_backend_id_alias():
+    assert _resolve_backend_id("sim:belenos") == "quandela.sim.belenos"
+    assert _resolve_backend_id("qpu:belenos") == "quandela.qpu.belenos"
+
+
+def test_resolve_backend_id_unknown_raises():
+    with pytest.raises(ValueError, match="quandela.sim.belenos"):
+        _resolve_backend_id("nonsense")
+
+
+@pytest.mark.parametrize("hub_status,expected", [
+    ("PENDING", "waiting"),
+    ("RUNNING", "running"),
+    ("COMPLETED", "completed"),
+    ("FAILED", "error"),
+    ("CANCELLING", "cancel_requested"),
+    ("CANCELLED", "canceled"),
+    ("ABORTED", "error"),
+    ("UNKNOWN", "unknown"),
+    (None, "unknown"),
+    ("SOMETHING_NEW", "unknown"),
+])
+def test_to_perceval_status(hub_status, expected):
+    assert _to_perceval_status(hub_status) == expected

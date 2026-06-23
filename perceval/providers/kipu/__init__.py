@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2022 Quandela
+# Copyright (c) 2026 Kipu Quantum GmbH
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -26,30 +26,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Provider related imports and classes"""
 
-from perceval.runtime import ISession
+from .kipu_session import Session
+from .kipu_rpc_handler import KipuRPCHandler
 
-from .quandela import Session as QuandelaSession
-from .scaleway import Session as ScalewaySession
-from .kipu import Session as KipuSession
-
-PROVIDER_LIST = {
-    "Quandela": QuandelaSession,
-    "Scaleway": ScalewaySession,
-    "Kipu": KipuSession,
-}
-
-
-class ProviderFactory:
-    @staticmethod
-    def get_provider(provider_name: str, **kwargs) -> ISession:
-        name = provider_name
-        if name in PROVIDER_LIST:
-            return PROVIDER_LIST[name](**kwargs)
-
-        raise KeyError(f'Cloud Provider "{name}" not found, available providers are: {ProviderFactory.list()}.')
-
-    @staticmethod
-    def list():
-        return list(PROVIDER_LIST.keys())
+__all__ = ["Session", "KipuRPCHandler"]

@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2022 Quandela
+# Copyright (c) 2026 Kipu Quantum GmbH
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -26,30 +26,26 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Provider related imports and classes"""
 
 from perceval.runtime import ISession
-
-from .quandela import Session as QuandelaSession
-from .scaleway import Session as ScalewaySession
-from .kipu import Session as KipuSession
-
-PROVIDER_LIST = {
-    "Quandela": QuandelaSession,
-    "Scaleway": ScalewaySession,
-    "Kipu": KipuSession,
-}
+from perceval.providers import ProviderFactory
 
 
-class ProviderFactory:
-    @staticmethod
-    def get_provider(provider_name: str, **kwargs) -> ISession:
-        name = provider_name
-        if name in PROVIDER_LIST:
-            return PROVIDER_LIST[name](**kwargs)
+def test_kipu_in_provider_list():
+    assert "Kipu" in ProviderFactory.list()
 
-        raise KeyError(f'Cloud Provider "{name}" not found, available providers are: {ProviderFactory.list()}.')
 
-    @staticmethod
-    def list():
-        return list(PROVIDER_LIST.keys())
+def test_get_kipu_provider():
+    session = ProviderFactory.get_provider(
+        "Kipu",
+        platform_name="quandela.sim.belenos",
+        token="t",
+        organization_id="org-1",
+    )
+    assert isinstance(session, ISession)
+
+
+def test_kipu_package_exports():
+    from perceval.providers.kipu import Session, KipuRPCHandler
+    assert Session is not None
+    assert KipuRPCHandler is not None
