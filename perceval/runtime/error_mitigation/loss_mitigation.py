@@ -157,7 +157,7 @@ class PhotonRecycling(AbstractMitigation):
         if comp.experiment.min_photons_filter is None or comp.experiment.min_photons_filter > expected_photons - 2:
             comp.experiment.min_detected_photons_filter(expected_photons - 2)
 
-        computation.command.name = "probs"
+        comp.command.name = "probs"
 
         return [comp]
 
