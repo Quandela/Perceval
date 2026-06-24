@@ -33,7 +33,8 @@ from unittest.mock import MagicMock
 import json
 
 import pytest
-pytest.importorskip("qhub")
+# qhub is a namespace package; guard on the concrete submodule so the suite skips when [kipu] is absent.
+pytest.importorskip("qhub.api.quantum")
 
 import perceval.providers.kipu.kipu_rpc_handler as kipu_mod
 from perceval.providers.kipu.kipu_rpc_handler import KipuRPCHandler

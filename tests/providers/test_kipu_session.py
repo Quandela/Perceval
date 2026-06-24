@@ -28,7 +28,8 @@
 # SOFTWARE.
 
 import pytest
-pytest.importorskip("qhub")
+# qhub is a namespace package; guard on the concrete submodule so the suite skips when [kipu] is absent.
+pytest.importorskip("qhub.api.quantum")
 from unittest.mock import patch
 
 from perceval.providers.kipu.kipu_session import Session
