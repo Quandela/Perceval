@@ -250,7 +250,7 @@ class QuandelaComputer(RemoteComputer):
         if proxies is None:
             proxies = remote.get_proxies()
         self.name = name
-        communication_layer = QuandelaCommunicationLayer(name, url, token, proxies)
+        communication_layer = QuandelaCommunicationLayer(name, token, url, proxies)
 
         super().__init__(communication_layer)
         self._available_jobs = communication_layer.get_availability()
