@@ -64,10 +64,10 @@ class PayloadUpdater:
             raise ValueError(f"Unknown target version (received {target_payload_version}, expected it between 0 and {PayloadUpdater.max_version})")
 
         if version < target_payload_version:
-            if version < 1:
+            if version < 1 <= target_payload_version:
                 payload = PayloadUpdater._update_to_v1(payload)
                 version = 1
-            if version < 2:
+            if version < 2 <= target_payload_version:
                 if computer is None:
                     raise RuntimeError("Can't update a payload to version 2 if no Computer is given")
                 payload = PayloadUpdater._update_to_v2(payload, computer)
@@ -76,7 +76,7 @@ class PayloadUpdater:
             if target_payload_version == 0:
                 raise NotImplementedError("Downgrade to payload version 0 is not implemented")
 
-            if version > 1:
+            if version > 1 >= target_payload_version:
                 if computer is None:
                     raise RuntimeError("Can't downgrade a payload to version 1 if no Computer/RemoteProcessor is given")
                 payload = PayloadUpdater._downgrade_to_v1(payload, computer.available_commands)
