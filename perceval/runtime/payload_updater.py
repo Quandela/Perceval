@@ -73,6 +73,9 @@ class PayloadUpdater:
                 payload = PayloadUpdater._update_to_v2(payload, computer)
 
         elif version > target_payload_version:
+            if target_payload_version == 0:
+                raise NotImplementedError("Downgrade to payload version 0 is not implemented")
+
             if version > 1:
                 if computer is None:
                     raise RuntimeError("Can't downgrade a payload to version 1 if no Computer/RemoteProcessor is given")

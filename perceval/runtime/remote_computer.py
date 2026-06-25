@@ -267,10 +267,8 @@ class RemoteComputer(AbstractComputer):
         return _RemoteGetter(self._communication_layer, self._communication_layer.send(payload))
 
     def prepare_payload(self, computation: Computation) -> dict:
-        # if self.specs.perceval_version < 1.3.0:
-        #     return self._prepare_old_payload(computation)
-
         return PayloadGenerator.from_computation(computation,
+                                                 # TODO: fix the replacement of the default mitigations by an empty list if the parameter is default
                                                  self._remote_mitigations,
                                                  self._parameters,
                                                  self._custom_noise)
