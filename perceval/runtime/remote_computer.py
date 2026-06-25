@@ -148,7 +148,8 @@ class RemoteComputer(AbstractComputer):
         self._specs = communication_layer.get_specs()
         self._perfs = communication_layer.get_performances()
         self._custom_noise: NoiseModel | None = None
-        self._remote_mitigations: list[AbstractMitigation] = []
+        self._use_custom_remote_mitigations = True  # TODO: Find if mitigations are supported
+        self._remote_mitigations: list[AbstractMitigation] | None = None
         # TODO: how to get default mitigations ?
 
     @property
@@ -163,11 +164,34 @@ class RemoteComputer(AbstractComputer):
 
     @property
     def mitigations(self):
-        return self._remote_mitigations
+        if self._use_custom_remote_mitigations:
+            return self._remote_mitigations if self._remote_mitigations is not None else []
+        return self._error_mitigations
 
     @mitigations.setter
     def mitigations(self, error_mitigations: list[AbstractMitigation]):
-        self._remote_mitigations = error_mitigations
+        if self._use_custom_remote_mitigations:
+            self._remote_mitigations = error_mitigations
+        else:
+            self._error_mitigations = error_mitigations
+
+    @property
+    def use_custom_remote_mitigations(self) -> bool:
+        return self._use_custom_remote_mitigations
+
+    @use_custom_remote_mitigations.setter
+    def use_custom_remote_mitigations(self, use_mitigations_remotely: bool) -> None:
+        if use_mitigations_remotely == self._use_custom_remote_mitigations:
+            return
+
+        self._use_custom_remote_mitigations = use_mitigations_remotely
+        if use_mitigations_remotely:
+            self._remote_mitigations = self._error_mitigations
+            self._error_mitigations = []
+
+        else:
+            self._error_mitigations = self._remote_mitigations if self._remote_mitigations is not None else []
+            self._remote_mitigations = None
 
     @property
     def specs(self) -> PlatformSpecs:
@@ -268,7 +292,6 @@ class RemoteComputer(AbstractComputer):
 
     def prepare_payload(self, computation: Computation) -> dict:
         return PayloadGenerator.from_computation(computation,
-                                                 # TODO: fix the replacement of the default mitigations by an empty list if the parameter is default
                                                  self._remote_mitigations,
                                                  self._parameters,
                                                  self._custom_noise)
