@@ -104,6 +104,11 @@ def compare_payloads(left: dict, right: dict):
         comp_right = right.pop(KEY_COMPUTATION)
         compare_computations(comp_left, comp_right)
 
+    if KEY_EXPERIMENT in left:
+        exp_left = left.pop(KEY_EXPERIMENT)
+        exp_right = right.pop(KEY_EXPERIMENT)
+        assert_experiment_equals(exp_left, exp_right)
+
     assert left == right
 
 
