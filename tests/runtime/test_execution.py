@@ -27,26 +27,54 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .job_status import JobStatus, RunningStatus
-from .job import Job
-from .local_job import LocalJob
-from .remote_job import RemoteJob
-from .abstract_processor import AProcessor
-from .processor import Processor
-from .remote_processor import RemoteProcessor, perf_dict_to_noise
-from .session import ISession
-from .remote_config import RemoteConfig
-from .job_group import JobGroup
-from .check_cancel import cancel_requested
-from .payload_generator import PayloadGenerator
-from .payload_updater import PayloadUpdater
-from .computation import Computation
-from .computation_iterator import ComputationIterator
-from .command import Command, CommandFactory
-from .error_mitigation import *
-from .abstract_computer import AbstractComputer
-from .local_computer import LocalComputer
-from .simulated_computer import SimulatedComputer
-from .remote_computer import RemoteComputer, CommunicationLayer
-from .quandela_computer import QuandelaComputer, QuandelaCommunicationLayer
-from .execution import Execution
+import time
+
+import pytest
+
+from perceval import LocalComputer, Execution, Computation, Experiment, NoiseModel
+
+# This test file is heavily inspired by the test on the old Job class
+
+PERIOD = 0.1
+
+class ComputerForTest(LocalComputer):
+
+    @property
+    def noise(self):
+        return NoiseModel()
+
+    @noise.setter
+    def noise(self, noise: NoiseModel):
+        pass
+
+    @property
+    def performance(self):
+        pass
+
+    @property
+    def type(self):
+        pass
+
+    def __init__(self):
+        super().__init__()
+        self._register_method(ComputerForTest.quadratic_count_down, use_emt=False)
+
+    def quadratic_count_down(self, _: Experiment, n: int, period: float = PERIOD, must_fail: bool = False, progress_callback=None):
+        l = []
+        for i in range(n):
+            time.sleep(period)
+            if progress_callback:
+                progress_callback(i / n, "counting %d" % i)
+            l.append(i ** 2)
+        assert not must_fail  # Dummy failure condition
+        return {"results": l}
+
+
+@pytest.fixture
+def execution():
+    computer = ComputerForTest()
+    return Execution(Computation(computer.get_command("quadratic_count_down"), Experiment()),
+                     computer)
+
+def test_run_sync_0(execution):
+    assert execution(5, 0.) == {"results": [0, 1, 4, 9, 16]}

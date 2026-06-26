@@ -35,13 +35,13 @@ from perceval.utils.logging import get_logger, channel
 
 
 class RunningStatus(Enum):
-    WAITING = 0
-    RUNNING = 1
-    SUCCESS = 2
-    ERROR = 3
-    CANCELED = 4
-    SUSPENDED = 5
-    CANCEL_REQUESTED = 6
+    SUCCESS = 0
+    WAITING = 1
+    RUNNING = 2
+    SUSPENDED = 3
+    CANCEL_REQUESTED = 4
+    CANCELED = 5
+    ERROR = 6
     UNKNOWN = 7
 
     @staticmethod
@@ -77,6 +77,10 @@ class RunningStatus(Enum):
         else:
             return status.name.lower()
 
+    @staticmethod
+    def merge(left: RunningStatus, right: RunningStatus):
+        return RunningStatus(max(left.value, right.value))
+
 RunningStatus.WAITING.__doc__ = ("The job is recorded on the Cloud but waits for a computing platform to be available "
                                  "in order to start.")
 RunningStatus.RUNNING.__doc__ = "The job is being run on a given computing platform."
@@ -103,8 +107,6 @@ class JobStatus:
         self._running_progress: float = 0
         self._running_phase: str | None = None
         self._stop_message: str | None = None
-        self._waiting_progress: int | None = None
-        self._last_progress_time: float = 0
 
     def __call__(self) -> str:
         """
@@ -159,10 +161,6 @@ class JobStatus:
             self.start_run()
         self._running_progress = progress
         self._running_phase = phase
-        now = time()
-        if self._last_progress_time and self._last_progress_time - now > 5:
-            sleep(0.001)
-        self._last_progress_time = now
 
     def update_times(self, creation_datetime: float, start_time: float, duration: float):
         """
@@ -224,9 +222,9 @@ class JobStatus:
     @property
     def canceled(self) -> bool:
         """
-        :return: whether the job is in "CANCELED" status
+        :return: whether the job is in "CANCELED" or "CANCEL_REQUESTED" status
         """
-        return self._status in [RunningStatus.CANCELED]
+        return self._status in [RunningStatus.CANCELED, RunningStatus.CANCEL_REQUESTED]
 
     @property
     def success(self) -> bool:
@@ -298,7 +296,37 @@ class JobStatus:
             self._running_phase = status._running_phase
         if status._stop_message:
             self._stop_message = status._stop_message
-        if status._waiting_progress:
-            self._waiting_progress = status._waiting_progress
-        if status._last_progress_time:
-            self._last_progress_time = status._last_progress_time
+
+    @staticmethod
+    def merge_status(status: list[JobStatus]) -> JobStatus:
+        res = JobStatus()
+
+        running_status = RunningStatus(0)
+        for stat in status:
+            running_status = RunningStatus.merge(running_status, stat.status)
+
+        current_maximum_status = status[[stat.status for stat in status].index(running_status)]
+
+        res._status = running_status
+        res._init_time_start = min(stat._init_time_start for stat in status)
+
+        running_start_times = [stat._running_time_start for stat in status if stat._running_time_start is not None]
+        if len(running_start_times) > 0:
+            res._running_time_start = min(running_start_times)
+
+        completed_times = [stat._completed_time for stat in status]
+        res._completed_time = max(completed_times) if all(t is not None for t in completed_times) else None
+
+        time_for_duration = res._completed_time if res._completed_time is not None else time()
+
+        if any(stat._duration is not None for stat in status):
+            if res._running_time_start is not None:
+                res._duration = time_for_duration - res._running_time_start
+            else:
+                res._duration = time_for_duration - res._init_time_start
+
+        res._running_progress = sum(stat._running_progress for stat in status) / len(status)
+        res._running_phase = current_maximum_status._running_phase
+        res._stop_message = current_maximum_status._stop_message
+
+        return res
