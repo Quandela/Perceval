@@ -49,7 +49,7 @@ class AbstractComputer(ABC):
 
     def __init__(self):
         self._commands: dict[str, Command] = {}
-        self._error_mitigations: list[AbstractMitigation] = []
+        self._error_mitigations: list[AbstractMitigation] | None = None
         self._parameters: dict[str, Any] = {}
         self.reset_parameters()
 
@@ -66,12 +66,16 @@ class AbstractComputer(ABC):
         return self._commands[command_name]
 
     @property
-    def mitigations(self) -> list[AbstractMitigation]:
+    def mitigations(self) -> list[AbstractMitigation] | None:
         return self._error_mitigations
 
     @mitigations.setter
-    def mitigations(self, error_mitigations: list[AbstractMitigation]):
+    def mitigations(self, error_mitigations: list[AbstractMitigation] | None):
         self._error_mitigations = error_mitigations
+
+    def _get_mitigations(self) -> list[AbstractMitigation]:
+        # Internal use: defines which mitigations to apply locally
+        return self._error_mitigations or []
 
     @property
     def available_commands(self) -> list[str]:
@@ -137,7 +141,7 @@ class AbstractComputer(ABC):
         :return: The list of all computations to execute
         """
         if comp.command.apply_emt:
-            return self._prepare_sub_computations([comp], self._error_mitigations)
+            return self._prepare_sub_computations([comp], self._get_mitigations())
         return [comp]
 
     def _prepare_sub_computations(self, computations: list[Computation], emts: list[AbstractMitigation]) -> list[Computation]:
@@ -156,7 +160,7 @@ class AbstractComputer(ABC):
                      noise: NoiseModel,
                      emts: list[AbstractMitigation] = None,
                      progress_callback: ProgressCallback = None) -> dict:
-        if original_computation.command.apply_emt:
+        if not original_computation.command.apply_emt:
             emts = None
         return self._post_process(original_computation, emts or [], results, noise, progress_callback)[0]
 
@@ -239,7 +243,7 @@ class AbstractComputer(ABC):
     def _execute_command(self, computation: Computation, progress_callback: ProgressCallback = None) -> dict:
         pass
 
-    def execute_async(self, computation: Computation | ComputationIterator) -> tuple[list[AbstractMitigation], NoiseModel, list[list[AsyncGetter]]]:
+    def execute_async(self, computation: Computation | ComputationIterator) -> tuple[list[AbstractMitigation] | None, NoiseModel, list[list[AsyncGetter]]]:
         """
         Asynchronous execution of computation
 
@@ -248,7 +252,7 @@ class AbstractComputer(ABC):
         """
         computation.validate()
         computations = self.extend_computation(computation)
-        return deepcopy(self._error_mitigations), deepcopy(self.noise), self._execute_all_async(computations)
+        return deepcopy(self._get_mitigations()), deepcopy(self.noise), self._execute_all_async(computations)
 
     def get_results(self, computation: Computation | ComputationIterator,
                     mitigations: list[AbstractMitigation],
@@ -355,12 +359,12 @@ class AbstractComputer(ABC):
         :return: A ContextManager that applies the given arguments to the computer (noise, mitigations, parameters)
           at enter and reset the parameters to the previous values at exit
         """
-        starting_mitigations = self.mitigations if mitigations is not None else None
+        starting_mitigations = self.mitigations
         starting_noise = self.noise if noise is not None else None
         starting_parameters = self.parameters if parameters is not None else None
 
-        def apply(mitigations_: list[AbstractMitigation] | None, noise_: NoiseModel | None, parameters_: dict[str, Any] | None):
-            if mitigations_ is not None:
+        def apply(mitigations_: list[AbstractMitigation] | None, noise_: NoiseModel | None, parameters_: dict[str, Any] | None, force = False):
+            if mitigations_ is not None or force:
                 self.mitigations = mitigations_
             if noise_ is not None:
                 self.noise = noise_
@@ -368,4 +372,4 @@ class AbstractComputer(ABC):
                 self.parameters = parameters_
 
         return ContextManager(lambda: apply(mitigations, noise, parameters),
-                              lambda: apply(starting_mitigations, starting_noise, starting_parameters))
+                              lambda: apply(starting_mitigations, starting_noise, starting_parameters, force = True))

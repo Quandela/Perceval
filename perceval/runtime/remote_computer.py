@@ -148,8 +148,7 @@ class RemoteComputer(AbstractComputer):
         self._specs = communication_layer.get_specs()
         self._perfs = communication_layer.get_performances()
         self._custom_noise: NoiseModel | None = None
-        self._use_custom_remote_mitigations = True  # TODO: Find if mitigations are supported
-        self._remote_mitigations: list[AbstractMitigation] | None = None
+        self._use_mitigations_remotely = True  # TODO: detect if the target supports mitigations ?
         # TODO: how to get default mitigations ?
 
     @property
@@ -163,35 +162,15 @@ class RemoteComputer(AbstractComputer):
         self._custom_noise = noise
 
     @property
-    def mitigations(self):
-        if self._use_custom_remote_mitigations:
-            return self._remote_mitigations if self._remote_mitigations is not None else []
-        return self._error_mitigations
+    def use_mitigations_remotely(self) -> bool:
+        return self.use_mitigations_remotely
 
-    @mitigations.setter
-    def mitigations(self, error_mitigations: list[AbstractMitigation]):
-        if self._use_custom_remote_mitigations:
-            self._remote_mitigations = error_mitigations
-        else:
-            self._error_mitigations = error_mitigations
+    @use_mitigations_remotely.setter
+    def use_mitigations_remotely(self, use_mitigations_remotely: bool) -> None:
+        self._use_mitigations_remotely = use_mitigations_remotely
 
-    @property
-    def use_custom_remote_mitigations(self) -> bool:
-        return self._use_custom_remote_mitigations
-
-    @use_custom_remote_mitigations.setter
-    def use_custom_remote_mitigations(self, use_mitigations_remotely: bool) -> None:
-        if use_mitigations_remotely == self._use_custom_remote_mitigations:
-            return
-
-        self._use_custom_remote_mitigations = use_mitigations_remotely
-        if use_mitigations_remotely:
-            self._remote_mitigations = self._error_mitigations
-            self._error_mitigations = []
-
-        else:
-            self._error_mitigations = self._remote_mitigations if self._remote_mitigations is not None else []
-            self._remote_mitigations = None
+    def _get_mitigations(self) -> list[AbstractMitigation]:
+        return [] if self._use_mitigations_remotely else (self._error_mitigations or [])
 
     @property
     def specs(self) -> PlatformSpecs:
@@ -257,13 +236,13 @@ class RemoteComputer(AbstractComputer):
             out = dict()
 
         # Avoids sending separate jobs if there is an Iterator but no local mitigations
-        if isinstance(comp, ComputationIterator) and len(self._error_mitigations) > 0:
+        if isinstance(comp, ComputationIterator) and len(self._get_mitigations()) > 0:
             return out, comp.make_inserter(out)
 
         return out, lambda res: out.update(res)
 
     def extend_computation_keep_original(self, computation: Computation | ComputationIterator) -> list[tuple[list[Computation], Computation]]:
-        if len(self._error_mitigations) > 0:
+        if len(self._get_mitigations()) > 0:
             return super().extend_computation_keep_original(computation)
         else:
             # Avoids sending separate jobs if there is an Iterator but no local mitigations
@@ -271,7 +250,7 @@ class RemoteComputer(AbstractComputer):
             return [([computation], computation)]
 
     def extend_computation(self, computation: Computation | ComputationIterator) -> list[list[Computation]]:
-        if len(self._error_mitigations) > 0:
+        if len(self._get_mitigations()) > 0:
             return super().extend_computation(computation)
         else:
             # Avoids sending separate jobs if there is an Iterator but no local mitigations
@@ -291,8 +270,16 @@ class RemoteComputer(AbstractComputer):
         return _RemoteGetter(self._communication_layer, self._communication_layer.send(payload))
 
     def prepare_payload(self, computation: Computation) -> dict:
+        if self._error_mitigations is not None:
+            if self._use_mitigations_remotely:
+                remote_mitigations = self._error_mitigations
+            else:
+                remote_mitigations = []
+        else:
+            remote_mitigations = None  # Apply default mitigations
+
         return PayloadGenerator.from_computation(computation,
-                                                 self._remote_mitigations,
+                                                 remote_mitigations,
                                                  self._parameters,
                                                  self._custom_noise)
 
@@ -349,7 +336,7 @@ class RemoteComputer(AbstractComputer):
         nm.indistinguishability = 1
         lc.noise = nm
         # TODO: how to get default mitigations ?
-        lc._error_mitigations = self._error_mitigations + self._remote_mitigations  # TODO: make and use interface
+        lc.mitigations = self._error_mitigations
 
         probs = lc.execute(computation)
         p_above_filter_ns = 0

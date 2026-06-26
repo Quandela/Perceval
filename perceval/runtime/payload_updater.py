@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from copy import copy
+from copy import copy, deepcopy
 from typing import Any
 
 from perceval.utils.constants import KEY_EXPERIMENT, KEY_CIRCUIT, KEY_RESULT_MAPPING, KEY_MAPPING_PARAMETERS, \
@@ -156,11 +156,11 @@ class PayloadUpdater:
         if KEY_COMPUTATION not in payload:
             return payload
 
-        payload = copy(payload)
+        payload = deepcopy(payload)
         computation: Computation | ComputationIterator = payload.pop(KEY_COMPUTATION)
 
         if KEY_NOISE in payload:
-            computation.experiment.noise = payload.pop(KEY_NOISE)  # Make a copy ?
+            computation.experiment.noise = payload.pop(KEY_NOISE)
         payload[KEY_EXPERIMENT] = computation.experiment
         if isinstance(computation, ComputationIterator):
             payload[KEY_ITERATOR] = computation.iterations
