@@ -65,7 +65,7 @@ class ComputerForTest(LocalComputer):
             if progress_callback:
                 progress_callback(i / n, "counting %d" % i)
             l.append(i ** 2)
-        assert not must_fail, "Expected fail"  # Dummy failure condition
+        assert not must_fail, "Expected failure"  # Dummy failure condition
         return {"results": l}
 
 
