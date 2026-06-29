@@ -65,7 +65,7 @@ class ComputerForTest(LocalComputer):
             if progress_callback:
                 progress_callback(i / n, "counting %d" % i)
             l.append(i ** 2)
-        assert not must_fail  # Dummy failure condition
+        assert not must_fail, "Expected fail"  # Dummy failure condition
         return {"results": l}
 
 
@@ -127,6 +127,7 @@ def test_run_async(execution):
     assert execution.status.status == RunningStatus.SUCCESS
 
 
+@pytest.mark.filterwarnings("ignore:expected failure")
 def test_run_async_fail(execution):
     assert execution.execute_async(5, 0.01, must_fail = True) is execution
 
