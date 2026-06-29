@@ -127,7 +127,7 @@ def test_run_async(execution):
     assert execution.status.status == RunningStatus.SUCCESS
 
 
-@pytest.mark.filterwarnings("ignore:expected failure")
+@pytest.mark.filterwarnings(f"ignore::pytest.PytestUnhandledThreadExceptionWarning")
 def test_run_async_fail(execution):
     assert execution.execute_async(5, 0.01, must_fail = True) is execution
 
