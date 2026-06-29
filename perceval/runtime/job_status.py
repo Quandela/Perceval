@@ -304,7 +304,7 @@ class JobStatus:
     def merge_status(status: list[JobStatus]) -> JobStatus:
         res = JobStatus()
 
-        running_status = status[0]  # Avoids the problem that SUCCESS + WAITING = RUNNING
+        running_status = status[0].status  # Avoids the problem that SUCCESS + WAITING = RUNNING
         for stat in status[1:]:
             running_status = RunningStatus.merge(running_status, stat.status)
 

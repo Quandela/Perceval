@@ -28,18 +28,19 @@
 # SOFTWARE.
 import random
 import time
+from copy import copy
 from typing import TypeAlias
 
 from perceval import AbstractComputer, SimulatedComputer, Experiment, FockState, Computation, BSDistribution, JobStatus, \
-    Unitary, BS, PS, NoiseModel, Circuit, Detector, FFCircuitProvider, Command, P, PayloadGenerator, AbstractMitigation
+    Unitary, BS, PS, NoiseModel, Circuit, Detector, FFCircuitProvider, Command, P, PayloadGenerator, Execution
 from perceval.runtime.computation_iterator import ComputationIterator
 from perceval.runtime.platform_specs import PlatformSpecs
 from perceval.runtime.remote_computer import CommunicationLayer, RemoteComputer
-from perceval.runtime.async_getter import AsyncGetter
 from tests._test_utils import assert_bsd_close
 
 
-RemoteId: TypeAlias = tuple[Computation | ComputationIterator, tuple[list[AbstractMitigation], NoiseModel, list[list[AsyncGetter]]]]
+RemoteId: TypeAlias = Execution
+
 
 class ComputerProxy(CommunicationLayer):
 
@@ -52,21 +53,16 @@ class ComputerProxy(CommunicationLayer):
     def send(self, payload: dict) -> RemoteId:
         with PayloadGenerator.payload_applier(self.computer, payload):
             computation = PayloadGenerator.get_computation(payload)
-            return computation, self.computer.execute_async(computation)
+            # I'm not sure that payload_applier works well with execute_async, so we make a copy of self.computer
+            return Execution(computation, copy(self.computer)).execute_async()
 
     def get_results(self, remote_id: RemoteId) -> dict:
-        while not all(getter.is_complete for getter_list in remote_id[1][-1] for getter in getter_list):
+        while not remote_id.is_complete:
             time.sleep(0.1)
-        return self.computer.get_results(remote_id[0], *remote_id[1])
+        return remote_id.get_results(allow_partial_results=True)
 
     def get_job_status(self, remote_id: RemoteId, refresh_errors: int = 0) -> JobStatus | None:
-        # TODO: account better for progress and times
-        for getters in remote_id[1][-1]:
-            for getter in getters:
-                status = getter.status
-                if not status.completed:
-                    return status
-        return status
+        return remote_id.status
 
     def get_remote_status(self) -> str:
         return "available"
@@ -78,9 +74,7 @@ class ComputerProxy(CommunicationLayer):
         return [self.computer.get_command(command) for command in self.computer.available_commands]
 
     def cancel(self, remote_id: RemoteId) -> None:
-        for getter_list in remote_id[1][-1]:
-            for getter in getter_list:
-                getter.cancel()
+        remote_id.cancel()
 
 
 def test_remote_computer_basic():
