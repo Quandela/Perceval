@@ -28,15 +28,7 @@
 # SOFTWARE.
 
 from .job_status import JobStatus, RunningStatus
-from .job import Job
-from .local_job import LocalJob
-from .remote_job import RemoteJob
-from .abstract_processor import AProcessor
-from .processor import Processor
-from .remote_processor import RemoteProcessor, perf_dict_to_noise
-from .session import ISession
 from .remote_config import RemoteConfig
-from .job_group import JobGroup
 from .check_cancel import cancel_requested
 from .payload_generator import PayloadGenerator
 from .payload_updater import PayloadUpdater
@@ -49,3 +41,13 @@ from .local_computer import LocalComputer
 from .simulated_computer import SimulatedComputer
 from .remote_computer import RemoteComputer, CommunicationLayer
 from .quandela_computer import QuandelaComputer, QuandelaCommunicationLayer
+
+# Legacy
+from .session import ISession
+from .job import Job
+from .local_job import LocalJob
+from .remote_job import RemoteJob
+from .job_group import JobGroup
+from .abstract_processor import AProcessor
+from .processor import Processor
+from .remote_processor import RemoteProcessor, perf_dict_to_noise

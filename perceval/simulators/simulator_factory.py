@@ -37,7 +37,6 @@ from .polarization_simulator import PolarizationSimulator
 from ._simulator_utils import _unitary_components_to_circuit
 from perceval.components import ACircuit, TD, LC, Experiment, AFFConfigurator
 from perceval.backends import ABackend, SLOSExqaliburBackend, BACKEND_LIST, ExqaliburBackendWrapper
-from perceval.runtime import Processor
 
 
 class SimulatorFactory:
@@ -48,7 +47,7 @@ class SimulatorFactory:
     """
 
     @staticmethod
-    def build(circuit: ACircuit | Processor | Experiment | list,
+    def build(circuit: ACircuit | Experiment | list,
               backend: ABackend | str = None,
               **kwargs) -> ISimulator:
         """
@@ -72,6 +71,7 @@ class SimulatorFactory:
         noise = None
         m = None
 
+        from perceval.runtime import Processor
         if isinstance(circuit, Processor):
             if backend is None:
                 # If no backend was chosen, the backend type set in the Processor is used
