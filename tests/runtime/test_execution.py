@@ -143,7 +143,6 @@ def test_run_async_fail(execution):
     assert "AssertionError" in execution.get_results(allow_partial_results=True)["results"]
 
 
-@pytest.mark.long_test
 def test_run_async_cancel(execution):
     assert execution.execute_async(5, 0.3) is execution
     execution.cancel()

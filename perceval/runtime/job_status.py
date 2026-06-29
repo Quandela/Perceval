@@ -29,7 +29,7 @@
 from __future__ import annotations  # Python 3.11 : Replace using Self typing
 
 from enum import Enum
-from time import time, sleep
+from time import time
 
 from perceval.utils.logging import get_logger, channel
 
@@ -78,11 +78,20 @@ class RunningStatus(Enum):
             return status.name.lower()
 
     @staticmethod
-    def merge(left: RunningStatus, right: RunningStatus):
+    def merge_with_index(left: RunningStatus, right: RunningStatus, index_left: int, index_right: int) -> tuple[RunningStatus, int]:
+        """
+        :return: The predominant RunningStatus between left and right, as well as its associated index.
+            As a special case, SUCCESS + WAITING = RUNNING, and the returned index is the one of the WAITING status
+        """
         # Only exception to the natural order
-        if (left == RunningStatus.SUCCESS and right == RunningStatus.WAITING) or (left == RunningStatus.WAITING and right == RunningStatus.SUCCESS):
-            return RunningStatus.RUNNING
-        return RunningStatus(max(left.value, right.value))
+        if left == RunningStatus.SUCCESS and right == RunningStatus.WAITING:
+            return RunningStatus.RUNNING, index_right
+        if left == RunningStatus.WAITING and right == RunningStatus.SUCCESS:
+            return RunningStatus.RUNNING, index_left
+
+        if left.value < right.value:
+            return right, index_right
+        return left, index_left
 
 RunningStatus.WAITING.__doc__ = ("The job is recorded on the Cloud but waits for a computing platform to be available "
                                  "in order to start.")
@@ -305,10 +314,9 @@ class JobStatus:
         res = JobStatus()
 
         running_status = status[0].status  # Avoids the problem that SUCCESS + WAITING = RUNNING
-        for stat in status[1:]:
-            running_status = RunningStatus.merge(running_status, stat.status)
-
-        current_maximum_status = status[[stat.status for stat in status].index(running_status)]
+        running_index = 0
+        for i, stat in enumerate(status[1:], start=1):
+            running_status, running_index = RunningStatus.merge_with_index(running_status, stat.status, running_index, i)
 
         res._status = running_status
         res._init_time_start = min(stat._init_time_start for stat in status)
@@ -329,6 +337,8 @@ class JobStatus:
                 res._duration = time_for_duration - res._init_time_start
 
         res._running_progress = sum(stat._running_progress for stat in status) / len(status)
+
+        current_maximum_status = status[running_index]
         res._running_phase = current_maximum_status._running_phase
         res._stop_message = current_maximum_status._stop_message
 

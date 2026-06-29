@@ -46,8 +46,8 @@ class Execution:
     def __init__(self, computation: Computation | ComputationIterator, computer: AbstractComputer):
         self._computation = computation
         self._computer = computer
-        self._name = ""
-        self._job_group_name: str = ""
+        self._name = computation.job_name
+        self._job_group_name = computation.job_group_name
         self._results = {}
         self._status: JobStatus = JobStatus()
 
@@ -113,6 +113,7 @@ class Execution:
         self.job_group_name = new_name
 
     def _transmit_args(self, *args, **kwargs):
+        # Make a copy to avoid black magic?
         if len(args) > 0 or len(kwargs) > 0:
             self._computation.add_params(*args, **kwargs)  # Will raise an error if we have a ComputationIterator
         if self._name:
@@ -133,11 +134,7 @@ class Execution:
         """
         if len(self._getters) > 0 and not self._status.completed:
             all_status = [getter.status for getters in self._getters for getter in getters]
-            if len(all_status) == 1:
-                self._status.copy_from(all_status[0])  # TODO: test if merge_status can work with 1 status
-
-            else:
-                self._status.copy_from(JobStatus.merge_status(all_status))
+            self._status.copy_from(JobStatus.merge_status(all_status))
 
         return self._status
 
@@ -234,6 +231,7 @@ class Execution:
         if self.was_sent:
             raise RuntimeError("Execution has already been launched")
 
+        self._status.start_run()
         self._transmit_args(*args, **kwargs)
         self._mitigations, self._noise, self._getters = self._computer.execute_async(self._computation)
         return self
