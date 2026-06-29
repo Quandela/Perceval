@@ -73,7 +73,7 @@ class AbstractComputer(ABC):
     def mitigations(self, error_mitigations: list[AbstractMitigation] | None):
         self._error_mitigations = error_mitigations
 
-    def _get_mitigations(self) -> list[AbstractMitigation]:
+    def _get_local_mitigations(self) -> list[AbstractMitigation]:
         # Internal use: defines which mitigations to apply locally
         return self._error_mitigations or []
 
@@ -141,7 +141,7 @@ class AbstractComputer(ABC):
         :return: The list of all computations to execute
         """
         if comp.command.apply_emt:
-            return self._prepare_sub_computations([comp], self._get_mitigations())
+            return self._prepare_sub_computations([comp], self._get_local_mitigations())
         return [comp]
 
     def _prepare_sub_computations(self, computations: list[Computation], emts: list[AbstractMitigation]) -> list[Computation]:
@@ -252,7 +252,7 @@ class AbstractComputer(ABC):
         """
         computation.validate()
         computations = self.extend_computation(computation)
-        return deepcopy(self._get_mitigations()), deepcopy(self.noise), self._execute_all_async(computations)
+        return deepcopy(self._get_local_mitigations()), deepcopy(self.noise), self._execute_all_async(computations)
 
     def get_results(self, computation: Computation | ComputationIterator,
                     mitigations: list[AbstractMitigation],

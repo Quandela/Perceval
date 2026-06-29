@@ -148,7 +148,7 @@ class RemoteComputer(AbstractComputer):
         self._specs = communication_layer.get_specs()
         self._perfs = communication_layer.get_performances()
         self._custom_noise: NoiseModel | None = None
-        self._use_mitigations_remotely = True  # TODO: detect if the target supports mitigations ?
+        self.use_mitigations_remotely: bool = True  # TODO: detect if the target supports mitigations ?
         # TODO: how to get default mitigations ?
 
     @property
@@ -161,16 +161,8 @@ class RemoteComputer(AbstractComputer):
     def noise(self, noise: NoiseModel | None):
         self._custom_noise = noise
 
-    @property
-    def use_mitigations_remotely(self) -> bool:
-        return self.use_mitigations_remotely
-
-    @use_mitigations_remotely.setter
-    def use_mitigations_remotely(self, use_mitigations_remotely: bool) -> None:
-        self._use_mitigations_remotely = use_mitigations_remotely
-
-    def _get_mitigations(self) -> list[AbstractMitigation]:
-        return [] if self._use_mitigations_remotely else (self._error_mitigations or [])
+    def _get_local_mitigations(self) -> list[AbstractMitigation]:
+        return [] if self.use_mitigations_remotely else super()._get_local_mitigations()
 
     @property
     def specs(self) -> PlatformSpecs:
@@ -236,13 +228,13 @@ class RemoteComputer(AbstractComputer):
             out = dict()
 
         # Avoids sending separate jobs if there is an Iterator but no local mitigations
-        if isinstance(comp, ComputationIterator) and len(self._get_mitigations()) > 0:
+        if isinstance(comp, ComputationIterator) and len(self._get_local_mitigations()) > 0:
             return out, comp.make_inserter(out)
 
         return out, lambda res: out.update(res)
 
     def extend_computation_keep_original(self, computation: Computation | ComputationIterator) -> list[tuple[list[Computation], Computation]]:
-        if len(self._get_mitigations()) > 0:
+        if len(self._get_local_mitigations()) > 0:
             return super().extend_computation_keep_original(computation)
         else:
             # Avoids sending separate jobs if there is an Iterator but no local mitigations
@@ -250,7 +242,7 @@ class RemoteComputer(AbstractComputer):
             return [([computation], computation)]
 
     def extend_computation(self, computation: Computation | ComputationIterator) -> list[list[Computation]]:
-        if len(self._get_mitigations()) > 0:
+        if len(self._get_local_mitigations()) > 0:
             return super().extend_computation(computation)
         else:
             # Avoids sending separate jobs if there is an Iterator but no local mitigations
@@ -271,7 +263,7 @@ class RemoteComputer(AbstractComputer):
 
     def prepare_payload(self, computation: Computation) -> dict:
         if self._error_mitigations is not None:
-            if self._use_mitigations_remotely:
+            if self.use_mitigations_remotely:
                 remote_mitigations = self._error_mitigations
             else:
                 remote_mitigations = []
