@@ -131,7 +131,7 @@ class Execution:
         """
         The job status metadata structure
         """
-        if self.was_sent:
+        if len(self._getters) > 0 and not self._status.completed:
             all_status = [getter.status for getters in self._getters for getter in getters]
             if len(all_status) == 1:
                 self._status.copy_from(all_status[0])  # TODO: test if merge_status can work with 1 status
@@ -162,8 +162,8 @@ class Execution:
         return self.status.running
 
     @property
-    def was_sent(self) -> bool:  # Name is legacy. Change it to reflect that an Execution can be local ?
-        return self._getters is not None and not len(self._results)
+    def was_sent(self) -> bool:  # Name is a legacy. Change it to reflect that an Execution can be local ?
+        return len(self._getters) > 0 or len(self._results) > 0
 
     def cancel(self):
         """
@@ -206,9 +206,9 @@ class Execution:
             return self._results  # Problem here if we try to reuse a job with different args and kwargs
 
         self._status.start_run()
-        self._transmit_args(*args, **kwargs)
         with self._computer.acquire():
             try:
+                self._transmit_args(*args, **kwargs)
                 self._computer.execute(self._computation, self._results, progress_callback=self._progress_callback)
             except Exception as e:
                 if not allow_partial_results:
@@ -254,16 +254,19 @@ class Execution:
         if self._results:
             return self._results
 
+        if not allow_partial_results and self.is_failed:
+            raise RuntimeError(f"Execution failed: {self._status.stop_message}")
+
         try:
             self._computer.get_results(self._computation, self._mitigations, self._noise, self._getters, self._results)
         except Exception as e:
             if not allow_partial_results:
-                self._results = {}
+                self._results = {}  # Return None as in legacy ?
                 raise e
         return self._results
 
     def __str__(self):
         if not self.was_sent:
-            return f"RemoteJob '{self.name}', status:not sent"
+            return f"Execution '{self.name}', status:not sent"
         else:
-            return f"RemoteJob '{self.name}', status:{self._status}"
+            return f"Execution '{self.name}', status:{self._status}"

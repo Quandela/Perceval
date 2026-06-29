@@ -75,7 +75,7 @@ class _ThreadedExecution(AsyncGetter):
             except Exception as e:
                 msg = f"{type(e).__name__}: {e}"
                 self._results = {"results": msg}
-                self._status.stop_run(RunningStatus.ERROR, e)
+                self._status.stop_run(RunningStatus.ERROR, msg)
                 raise e
 
         return custom_method

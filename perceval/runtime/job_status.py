@@ -79,6 +79,9 @@ class RunningStatus(Enum):
 
     @staticmethod
     def merge(left: RunningStatus, right: RunningStatus):
+        # Only exception to the natural order
+        if (left == RunningStatus.SUCCESS and right == RunningStatus.WAITING) or (left == RunningStatus.WAITING and right == RunningStatus.SUCCESS):
+            return RunningStatus.RUNNING
         return RunningStatus(max(left.value, right.value))
 
 RunningStatus.WAITING.__doc__ = ("The job is recorded on the Cloud but waits for a computing platform to be available "
@@ -301,8 +304,8 @@ class JobStatus:
     def merge_status(status: list[JobStatus]) -> JobStatus:
         res = JobStatus()
 
-        running_status = RunningStatus(0)
-        for stat in status:
+        running_status = status[0]  # Avoids the problem that SUCCESS + WAITING = RUNNING
+        for stat in status[1:]:
             running_status = RunningStatus.merge(running_status, stat.status)
 
         current_maximum_status = status[[stat.status for stat in status].index(running_status)]

@@ -199,6 +199,10 @@ class AbstractComputer(ABC):
         except Exception as e:
             inserter({KEY_RESULTS: f"{type(e).__name__}: {e}"})
             raise
+
+        if progress_callback is not None:
+            progress_callback(1., "Finished!")
+
         return res
 
     def _execute_all(self,
@@ -225,9 +229,10 @@ class AbstractComputer(ABC):
             inserter(self.post_process(original_computation, res, self.noise, self._error_mitigations,
                                        partial_progress_callable(batch_callback, self.EMT_POST_PROGRESS_START)))
 
-            progress_msg = "All iterations complete" if i == n_iter - 1 else "Switching to next iteration"
-            if call_and_check_cancel(batch_callback, 1, progress_msg):
-                return
+            if len(computations) > 1:
+                progress_msg = "All iterations complete" if i == n_iter - 1 else "Switching to next iteration"
+                if call_and_check_cancel(batch_callback, 1, progress_msg):
+                    return
 
     def _execute_single(self, computation: Computation, progress_callback: ProgressCallback = None) -> dict:
         # Most of the AbstractComputer specific implementation is in the self._commands
