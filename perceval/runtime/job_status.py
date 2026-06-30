@@ -35,6 +35,7 @@ from perceval.utils.logging import get_logger, channel
 
 
 class RunningStatus(Enum):
+    NONE = -1
     SUCCESS = 0
     WAITING = 1
     RUNNING = 2
@@ -313,9 +314,12 @@ class JobStatus:
     def merge_status(status: list[JobStatus]) -> JobStatus:
         res = JobStatus()
 
-        running_status = status[0].status  # Avoids the problem that SUCCESS + WAITING = RUNNING
+        if len(status) == 0:
+            return res
+
+        running_status = RunningStatus.NONE
         running_index = 0
-        for i, stat in enumerate(status[1:], start=1):
+        for i, stat in enumerate(status):
             running_status, running_index = RunningStatus.merge_with_index(running_status, stat.status, running_index, i)
 
         res._status = running_status

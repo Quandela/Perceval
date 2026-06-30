@@ -44,7 +44,7 @@ from perceval.utils import NoiseModel, ProgressCallback
 class Execution:
 
     def __init__(self, computation: Computation | ComputationIterator, computer: AbstractComputer):
-        self._computation = computation
+        self._computation = deepcopy(computation)
         self._computer = computer
         self._name = computation.job_name
         self._job_group_name = computation.job_group_name
@@ -56,7 +56,7 @@ class Execution:
         self._noise: NoiseModel | None = None
         self._getters: list[list[AsyncGetter]] = []
 
-        # Serialize it if it is a serializable class? Else display a warning?
+        # Not serialized
         self._user_cb: ProgressCallback | None = None
 
     def set_progress_callback(self, callback: ProgressCallback):
@@ -113,7 +113,6 @@ class Execution:
         self.job_group_name = new_name
 
     def _transmit_args(self, *args, **kwargs):
-        # Make a copy to avoid black magic?
         if len(args) > 0 or len(kwargs) > 0:
             self._computation.add_params(*args, **kwargs)  # Will raise an error if we have a ComputationIterator
         if self._name:
