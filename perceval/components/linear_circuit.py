@@ -31,20 +31,23 @@ from __future__ import annotations  # Python 3.11 : Replace using Self typing
 
 import copy
 import random
+from warnings import warn
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from typing import Generator
 
 import numpy as np
 import sympy as sp
 import scipy.optimize as so
 
+from exqalibur import permanent_cx, estimate_permanent_cx
 from perceval.components.abstract_component import AParametrizedComponent
 from perceval.utils import Parameter, Matrix, MatrixN, matrix_double, global_params, InterferometerShape
 from perceval.utils.logging import get_logger, channel
 from perceval.utils.algorithms import decomposition, Match
 from perceval.utils.algorithms.solve import solve
+from perceval.utils.states import FockState
 
 
 class ACircuit(AParametrizedComponent, ABC):
@@ -92,6 +95,111 @@ class ACircuit(AParametrizedComponent, ABC):
         if use_polarization and not self._supports_polarization:
             return matrix_double(u)
         return u
+
+    def compute_fock_matrix(self,
+                             basis: Iterable[FockState],
+                             perm_method: str,
+                             n_iter = None):
+        """Compute the matrix representation of the circuit in the Fock space
+        for a particular basis.
+
+        :param basis: Basis of states over which to calculate the transition
+            matrix.
+        :param perm_method: Permanent calculation method. Currently supported
+            exact methods: "ryser", "glynn". Currently supported approximate
+            methods: "gurvits".
+        :param n_iter: Number of iterations for convergence using approximate
+            permanent estimation method
+        """
+        assert isinstance(perm_method, str), (
+            "Permanent computation method must be a string."
+        )
+        perm_method = perm_method.lower()
+
+        assert self.defined, (
+            'All parameters must be defined to compute numeric Fock matrix.'
+        )
+
+        if self.requires_polarization:
+            raise NotImplementedError(
+                "`compute_fock_matrix` cannot currently be called on "
+                "polarized circuits."
+            )
+
+        basis = tuple(basis)
+        prodnfact_dict = {}
+        mat_idx_dict = {}
+
+        for state in basis:
+            assert isinstance(state, FockState), (
+                "`basis` members must be of type `FockState`."
+            )
+            assert state.m == self.m, (
+                f"State {state} in basis does not match the correct number of "
+                f"modes. ({state.m} != {self.m})"
+            )
+
+            # Precompute the state's product factorial
+            prodnfact_dict[state] = state.prodnfact()
+
+            # Pre-compute the matrix columns/row indices for each state
+            rows = []
+            for mode, photon_count in enumerate(state):
+                rows.extend([mode] * photon_count)
+
+            mat_idx_dict[state] = rows
+
+        if perm_method in {"ryser", "glynn"}:
+            if n_iter is not None:
+                warn("`n_iter` argument is ignored for exact method: " +
+                    perm_method, stacklevel=2
+                )
+            perm_estimator = lambda x: permanent_cx(
+                x,
+                ptype=perm_method
+            )
+        elif perm_method == "gurvits":
+            assert n_iter is not None, (
+                "`n_iter` must be specified for approximate permanent "
+                "estimation method: " + perm_method
+            )
+            perm_estimator = lambda x: estimate_permanent_cx(
+                x,
+                ptype=perm_method,
+                n_iter=n_iter
+            )[0]
+        else:
+            raise NotImplementedError(
+                perm_method + " permanent calculation method not supported."
+            )
+
+        U = self.compute_unitary(use_symbolic=False)
+        dim = len(basis)
+        U_fock = np.zeros((dim, dim), dtype=complex)
+
+        # Construct the matrix U_{t, s}
+        for i, t in enumerate(basis):
+            rows = mat_idx_dict[t]
+            t_prodnfact = prodnfact_dict[t]
+
+            for j, s in enumerate(basis):
+
+                # No transition amplitude between Fock states with differing n
+                if t.n != s.n:
+                    continue
+
+                if t.n == 0 and s.n == 0:
+                    perm = 1
+                else:
+                    cols = mat_idx_dict[s]
+                    U_ts = U[np.ix_(rows, cols)]
+                    perm = perm_estimator(U_ts)
+
+                denom = (t_prodnfact * prodnfact_dict[s]) ** 0.5
+
+                U_fock[i, j] = perm / denom
+
+        return U_fock
 
     @property
     def requires_polarization(self):
