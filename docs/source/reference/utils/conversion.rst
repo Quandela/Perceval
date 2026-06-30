@@ -2,7 +2,7 @@ conversion
 ^^^^^^^^^^
 
 Perceval provides helper methods to convert the three types of results of the :ref:`Sampler`
-(namely the :ref:`BSDistribution`, :ref:`BSCount` and :ref:`BSSamples`) into each other.
+(namely the :ref:`Basic State Distribution`, :ref:`BSCount` and :ref:`BSSamples`) into each other.
 
 >>> import perceval as pcvl
 >>> distribution = pcvl.BSDistribution({pcvl.BasicState([1, 0]): 0.4, pcvl.BasicState([0, 1]): 0.6})

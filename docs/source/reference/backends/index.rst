@@ -12,7 +12,7 @@ We distinguish two kinds of backends:
 - The sampling backends, that can provide a random output state following the output distribution without computing it.
 
 The strong simulation backends are all capable of computing single output probability (or amplitude),
-the whole distribution as a list or a :ref:`BSDistribution`, evolve a state,
+the whole distribution as a list or a :ref:`Basic State Distribution`, evolve a state,
 and use masks to reduce the computation space to be faster.
 Note that the output of the strong simulation backends is not normalized,
 so the sum of the values is not always guaranteed to be 1 for approximating backends or when there is a mask.

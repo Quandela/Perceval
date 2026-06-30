@@ -8,4 +8,4 @@ Loss Mitigation
 
 Photon recycling was introduced in the following publication: :cite:t:`mills2024`
 
-.. autofunction:: perceval.error_mitigation.loss_mitigation.photon_recycling
+.. autofunction:: perceval.error_mitigation.photon_recycling
