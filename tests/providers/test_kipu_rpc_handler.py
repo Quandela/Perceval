@@ -58,6 +58,30 @@ def test_handler_properties():
     assert handler.headers == {}
 
 
+def test_handler_warns_on_unsupported_proxies(monkeypatch):
+    warnings = []
+    logger = MagicMock()
+    logger.warn.side_effect = lambda msg, *a, **k: warnings.append(msg)
+    monkeypatch.setattr(kipu_mod, "get_logger", lambda: logger)
+
+    handler = KipuRPCHandler(
+        platform_name="quandela.sim.belenos",
+        token="test-token",
+        proxies={"https": "http://proxy:8080"},
+        client=MagicMock(),
+    )
+    assert handler.proxies == {"https": "http://proxy:8080"}
+    assert len(warnings) == 1
+    assert "proxies" in warnings[0]
+
+
+def test_handler_no_proxy_warning_when_absent(monkeypatch):
+    logger = MagicMock()
+    monkeypatch.setattr(kipu_mod, "get_logger", lambda: logger)
+    _make_handler()
+    logger.warn.assert_not_called()
+
+
 def test_handler_url_passthrough():
     handler = _make_handler(url="https://hub.example.test/quantum")
     assert handler.url == "https://hub.example.test/quantum"
@@ -96,7 +120,6 @@ def test_create_job_builds_typed_request_and_returns_id():
     assert kwargs["sdk_provider"] == "PERCEVAL"
     assert kwargs["name"] == "toy"
     assert kwargs["input"].value == payload["payload"]
-    assert kwargs["input_params"].platform_name == "quandela.sim.belenos"
     assert kwargs["input_params"].pcvl_version == "1.0"
     assert kwargs["input_params"].process_id == "proc-1"
 
@@ -123,7 +146,7 @@ def test_get_job_status_maps_completed_with_timing():
     client.jobs.get_job_status.assert_called_once_with("job-1")
     client.jobs.get_job.assert_called_once_with("job-1")
     assert status["status"] == "completed"
-    assert status["progress"] == 1.0
+    assert status["progress"] == pytest.approx(1.0)
     assert status["msg"] == "ok"
     assert status["duration"] == 12
     assert isinstance(status["creation_datetime"], float)
@@ -144,9 +167,11 @@ def test_get_job_status_maps_running():
     handler = _make_handler(client=client)
     status = handler.get_job_status("job-2")
     assert status["status"] == "running"
-    assert status["progress"] == 0.0
-    assert status["start_time"] is None
-    assert status["duration"] is None
+    assert status["progress"] == pytest.approx(0.0)
+    # missing timing fields default to a number, not None: Perceval coerces
+    # them with float()/int(), so None would spam an error log on every poll
+    assert status["start_time"] == pytest.approx(0.0)
+    assert status["duration"] == pytest.approx(0.0)
     client.jobs.get_job_result.assert_not_called()
 
 

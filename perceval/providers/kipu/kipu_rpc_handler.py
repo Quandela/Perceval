@@ -29,6 +29,8 @@
 
 from datetime import datetime
 
+from perceval.utils.logging import get_logger, channel
+
 _MISSING_QHUB_MSG = (
     "The Kipu Quantum Hub provider requires the 'qhub-api' package. "
     "Install it with: pip install perceval[kipu]"
@@ -81,10 +83,11 @@ def _resolve_backend_id(platform_name: str) -> str:
 
 
 def _to_perceval_status(hub_status: str | None) -> str:
-    """Map a Hub JobStatus value to a Perceval status string."""
-    if hub_status is None:
-        return "unknown"
-    return _STATUS_MAP.get(str(hub_status), "unknown")
+    """Map a Hub JobStatus value to a Perceval status string.
+
+    A missing status (None) is not a map key, so it falls back to "unknown".
+    """
+    return _STATUS_MAP.get(hub_status, "unknown")
 
 
 def _import_qhub() -> dict:
@@ -117,11 +120,13 @@ def _import_qhub() -> dict:
 def _to_timestamp(value):
     """Convert an ISO-8601 datetime string to a POSIX timestamp (float).
 
-    Returns None for falsy input. Tolerates a trailing 'Z' (Python 3.10's
-    ``datetime.fromisoformat`` does not accept it).
+    Returns 0. for falsy input — Perceval's status parser coerces the timing
+    fields with float()/int(), so a numeric default avoids a spurious error log
+    on every poll (see ``_retrieve_from_response`` in remote_job.py). Tolerates a
+    trailing 'Z' (Python 3.10's ``datetime.fromisoformat`` does not accept it).
     """
     if not value:
-        return None
+        return 0.
     if isinstance(value, str) and value.endswith("Z"):
         # explicit offset: 3.10's fromisoformat rejects 'Z'; naive would be local
         value = value[:-1] + "+00:00"
@@ -149,6 +154,12 @@ class KipuRPCHandler:
         self._token = token
         self._organization_id = organization_id
         self._proxies = proxies or {}
+        if self._proxies:
+            get_logger().warn(
+                "Kipu Quantum Hub provider does not support proxies; "
+                "the 'proxies' argument is ignored.",
+                channel.general,
+            )
         self._backend_id = _resolve_backend_id(platform_name)
         self._client = client if client is not None else self._build_client()
 
@@ -197,7 +208,6 @@ class KipuRPCHandler:
             input=input_cls(value=inner),
             input_format="PERCEVAL",
             input_params=params_cls(
-                platform_name=payload.get("platform_name"),
                 pcvl_version=payload.get("pcvl_version"),
                 process_id=payload.get("process_id"),
             ),
@@ -219,7 +229,7 @@ class KipuRPCHandler:
         status_message = self._fetch_error_message(job_id) if status == "error" else None
         return {
             "creation_datetime": _to_timestamp(getattr(job, "created_at", None)),
-            "duration": getattr(job, "runtime", None),
+            "duration": getattr(job, "runtime", None) or 0.,
             "failure_code": None,
             "last_intermediate_results": None,
             "msg": "ok",
