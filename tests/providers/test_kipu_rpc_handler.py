@@ -27,7 +27,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import socket
 import sys
+import threading
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 import json
@@ -58,28 +60,62 @@ def test_handler_properties():
     assert handler.headers == {}
 
 
-def test_handler_warns_on_unsupported_proxies(monkeypatch):
-    warnings = []
-    logger = MagicMock()
-    logger.warn.side_effect = lambda msg, *a, **k: warnings.append(msg)
-    monkeypatch.setattr(kipu_mod, "get_logger", lambda: logger)
-
-    handler = KipuRPCHandler(
-        platform_name="quandela.sim.belenos",
-        token="test-token",
-        proxies={"https": "http://proxy:8080"},
-        client=MagicMock(),
-    )
-    assert handler.proxies == {"https": "http://proxy:8080"}
-    assert len(warnings) == 1
-    assert "proxies" in warnings[0]
+def test_build_httpx_client_none_without_proxies():
+    assert kipu_mod._build_httpx_client({}) is None
+    assert kipu_mod._build_httpx_client(None) is None
 
 
-def test_handler_no_proxy_warning_when_absent(monkeypatch):
-    logger = MagicMock()
-    monkeypatch.setattr(kipu_mod, "get_logger", lambda: logger)
-    _make_handler()
-    logger.warn.assert_not_called()
+def test_build_httpx_client_routes_traffic_through_proxy():
+    # A one-shot local socket standing in for a proxy: an HTTP/1.1 request routed
+    # through a proxy uses absolute-form ("GET http://host/path"), whereas a direct
+    # request uses origin-form ("GET /path"). Seeing absolute-form proves routing.
+    captured = {}
+
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server.bind(("127.0.0.1", 0))
+    server.listen(1)
+    port = server.getsockname()[1]
+
+    def serve():
+        conn, _ = server.accept()
+        with conn:
+            data = b""
+            while b"\r\n\r\n" not in data:
+                chunk = conn.recv(4096)
+                if not chunk:
+                    break
+                data += chunk
+            captured["request_line"] = data.split(b"\r\n", 1)[0].decode()
+            conn.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+
+    client = kipu_mod._build_httpx_client({"http": f"http://127.0.0.1:{port}"})
+    try:
+        resp = client.get("http://proxy-target.test/ping")
+    finally:
+        client.close()
+        thread.join(timeout=5)
+        server.close()
+
+    assert resp.status_code == 200
+    assert captured["request_line"].startswith("GET http://proxy-target.test/ping")
+
+
+@pytest.mark.parametrize("proxies, injected", [
+    ({"https": "http://proxy:8080"}, True),
+    (None, False),
+])
+def test_build_client_injects_httpx_client_only_when_proxied(monkeypatch, proxies, injected):
+    captured = {}
+    monkeypatch.setattr(kipu_mod, "_import_qhub", lambda: {
+        "client": lambda **kwargs: captured.update(kwargs) or MagicMock(),
+        "credentials": lambda token: SimpleNamespace(get_access_token=lambda: "key"),
+    })
+    KipuRPCHandler(platform_name="quandela.sim.belenos", token="test-token", proxies=proxies)
+    assert ("httpx_client" in captured) is injected
 
 
 def test_handler_url_passthrough():

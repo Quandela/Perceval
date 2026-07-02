@@ -29,18 +29,19 @@
 
 from datetime import datetime
 
-from perceval.utils.logging import get_logger, channel
-
 _MISSING_QHUB_MSG = (
     "The Kipu Quantum Hub provider requires the 'qhub-api' package. "
     "Install it with: pip install perceval[kipu]"
 )
 
-_SUPPORTED_BACKENDS = ("quandela.sim.belenos", "quandela.qpu.belenos")
+_SIM_BELENOS = "quandela.sim.belenos"
+_QPU_BELENOS = "quandela.qpu.belenos"
+
+_SUPPORTED_BACKENDS = (_SIM_BELENOS, _QPU_BELENOS)
 
 _ALIASES = {
-    "sim:belenos": "quandela.sim.belenos",
-    "qpu:belenos": "quandela.qpu.belenos",
+    "sim:belenos": _SIM_BELENOS,
+    "qpu:belenos": _QPU_BELENOS,
 }
 
 _STATUS_MAP = {
@@ -107,14 +108,32 @@ def _import_qhub() -> dict:
         "client": HubQuantumClient,
         "credentials": DefaultCredentialsProvider,
         "input": {
-            "quandela.sim.belenos": CreateJobRequestInput_QuandelaSimBelenos,
-            "quandela.qpu.belenos": CreateJobRequestInput_QuandelaQpuBelenos,
+            _SIM_BELENOS: CreateJobRequestInput_QuandelaSimBelenos,
+            _QPU_BELENOS: CreateJobRequestInput_QuandelaQpuBelenos,
         },
         "params": {
-            "quandela.sim.belenos": CreateJobRequestInputParams_QuandelaSimBelenos,
-            "quandela.qpu.belenos": CreateJobRequestInputParams_QuandelaQpuBelenos,
+            _SIM_BELENOS: CreateJobRequestInputParams_QuandelaSimBelenos,
+            _QPU_BELENOS: CreateJobRequestInputParams_QuandelaQpuBelenos,
         },
     }
+
+
+def _build_httpx_client(proxies: dict | None):
+    """Build an httpx.Client routing through `proxies`, or None if none set.
+
+    Perceval proxies are requests-style ({scheme: url}); httpx wants per-scheme
+    transport mounts. httpx is imported lazily — it ships with qhub-api, not base
+    Perceval.
+    """
+    if not proxies:
+        return None
+    import httpx
+    mounts = {
+        f"{scheme}://": httpx.HTTPTransport(proxy=url)
+        for scheme, url in proxies.items()
+    }
+    # explicit timeout: injecting httpx_client bypasses qhub-api's 60s default
+    return httpx.Client(timeout=60, mounts=mounts)
 
 
 def _to_timestamp(value):
@@ -143,7 +162,9 @@ class KipuRPCHandler:
         resolved from the environment or the `qhubctl login` config file
     :param organization_id: optional Kipu organization id; when None your
         personal account is used
-    :param proxies: optional protocol->URL proxy mapping (stored for symmetry)
+    :param proxies: optional protocol->URL proxy mapping (requests-style, e.g.
+        ``{"https": "http://proxy:8080"}``); routed through the underlying httpx
+        client
     :param client: optional pre-built HubQuantumClient (used for testing)
     """
 
@@ -154,12 +175,6 @@ class KipuRPCHandler:
         self._token = token
         self._organization_id = organization_id
         self._proxies = proxies or {}
-        if self._proxies:
-            get_logger().warn(
-                "Kipu Quantum Hub provider does not support proxies; "
-                "the 'proxies' argument is ignored.",
-                channel.general,
-            )
         self._backend_id = _resolve_backend_id(platform_name)
         self._client = client if client is not None else self._build_client()
 
@@ -173,6 +188,9 @@ class KipuRPCHandler:
         }
         if self._url:
             kwargs["base_url"] = self._url
+        httpx_client = _build_httpx_client(self._proxies)
+        if httpx_client is not None:
+            kwargs["httpx_client"] = httpx_client
         return qhub["client"](**kwargs)
 
     @property
