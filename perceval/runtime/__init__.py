@@ -41,6 +41,7 @@ from .local_computer import LocalComputer
 from .simulated_computer import SimulatedComputer
 from .remote_computer import RemoteComputer, CommunicationLayer
 from .quandela_computer import QuandelaComputer, QuandelaCommunicationLayer
+from .execution import Execution
 
 # Legacy
 from .session import ISession

@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from copy import copy
+from copy import copy, deepcopy
 from typing import Any
 
 from perceval.utils.constants import KEY_EXPERIMENT, KEY_CIRCUIT, KEY_RESULT_MAPPING, KEY_MAPPING_PARAMETERS, \
@@ -63,15 +63,24 @@ class PayloadUpdater:
         if target_payload_version < 0 or target_payload_version > PayloadUpdater.max_version:
             raise ValueError(f"Unknown target version (received {target_payload_version}, expected it between 0 and {PayloadUpdater.max_version})")
 
-        if version < 1 <= target_payload_version:
-            payload = PayloadUpdater._update_to_v1(payload)
-            version = 1
-        if version < 2 <= target_payload_version:
-            if computer is None:
-                raise RuntimeError("Can't update a payload to version 2 if no Computer is given")
-            payload = PayloadUpdater._update_to_v2(payload, computer)
+        if version < target_payload_version:
+            if version < 1 <= target_payload_version:
+                payload = PayloadUpdater._update_to_v1(payload)
+                version = 1
+            if version < 2 <= target_payload_version:
+                if computer is None:
+                    raise RuntimeError("Can't update a payload to version 2 if no Computer is given")
+                payload = PayloadUpdater._update_to_v2(payload, computer)
 
-        # TODO: be able to downgrade payload, at least from version 2 to version 1 (PCVL-1252)
+        elif version > target_payload_version:
+            if target_payload_version == 0:
+                raise NotImplementedError("Downgrade to payload version 0 is not implemented")
+
+            if version > 1 >= target_payload_version:
+                if computer is None:
+                    raise RuntimeError("Can't downgrade a payload to version 1 if no Computer/RemoteProcessor is given")
+                payload = PayloadUpdater._downgrade_to_v1(payload, computer.available_commands)
+
         return payload
 
     @staticmethod
@@ -124,6 +133,62 @@ class PayloadUpdater:
 
         res[KEY_EXPERIMENT] = experiment
         return res
+
+    _METHOD_MAPPING = {
+        'probs':        {'sample_count': "sample_count_to_probs", 'samples': "samples_to_probs"},
+        'sample_count': {'probs': "probs_to_sample_count",        'samples': "samples_to_sample_count"},
+        'samples':      {'probs': "probs_to_samples",             'sample_count': "sample_count_to_samples"}
+    }
+
+    @staticmethod
+    def _get_primitive_converter(method: str, available_commands: list[str]) -> tuple[str, str | None]:
+        if method in available_commands:
+            return method, None
+        if method in PayloadUpdater._METHOD_MAPPING:
+            pmap = PayloadUpdater._METHOD_MAPPING[method]
+            for k, converter in pmap.items():
+                if k in available_commands:
+                    return k, converter
+        return method, None
+
+    @staticmethod
+    def _downgrade_to_v1(payload: dict[str, Any], available_commands: list[str]) -> dict[str, Any]:
+        if KEY_COMPUTATION not in payload:
+            return payload
+
+        payload = deepcopy(payload)
+        computation: Computation | ComputationIterator = payload.pop(KEY_COMPUTATION)
+
+        if KEY_NOISE in payload:
+            computation.experiment.noise = payload.pop(KEY_NOISE)
+        payload[KEY_EXPERIMENT] = computation.experiment
+        if isinstance(computation, ComputationIterator):
+            payload[KEY_ITERATOR] = computation.iterations
+
+        payload |= computation.parameters
+
+        command_name = computation.command.name
+        primitive, converter = PayloadUpdater._get_primitive_converter(command_name, available_commands)
+        if converter is None:
+            job_context = None
+        else:
+            method_is_probs = (command_name.find('sample') == -1)
+            primitive_is_probs = (primitive.find('sample') == -1)
+            job_context = {"result_mapping": ['perceval.utils', converter]}
+
+            if not method_is_probs and primitive_is_probs:
+                job_context["mapping_delta_parameters"] = {}
+                if KEY_MAX_SAMPLES in payload:
+                    job_context["mapping_delta_parameters"][KEY_MAX_SAMPLES] = payload.pop(KEY_MAX_SAMPLES)
+                if KEY_MAX_SHOTS:
+                    # The pop here reproduces the Sampler's behavior, but this is strange as Quandela cloud expects the max_shots to have a value
+                    # Anyway, this case never appears as it only appears if the platform can only do probs, which corresponds to no platform
+                    job_context["mapping_delta_parameters"][KEY_MAX_SHOTS] = payload.pop(KEY_MAX_SHOTS)
+
+        payload[KEY_COMMAND] = primitive
+        payload[KEY_JOB_CONTEXT] = job_context
+
+        return payload
 
     @staticmethod
     def _update_to_v2(payload: dict[str, Any], computer: AbstractComputer) -> dict[str, Any]:

@@ -41,13 +41,13 @@ from .remote_processor import PERFS_KEY
 from .rpc_handler import RPCHandler
 from .computation import Computation
 from .payload_generator import PayloadGenerator
+from .payload_updater import PayloadUpdater
 
 from perceval.serialization import deserialize, serialize
 from perceval.utils import ContextManager
 from perceval.utils.logging import get_logger, channel
 from perceval.utils.constants import KEY_JOB_CONTEXT, KEY_RESULT_MAPPING, KEY_RESULTS_LIST, KEY_MAPPING_PARAMETERS, \
-    KEY_ITERATION, KEY_RESULTS, KEY_COMPUTATION, KEY_PLATFORM_NAME, KEY_JOB_NAME, KEY_JOB_GROUP_NAME, KEY_COMMAND, \
-    KEY_MAX_SHOTS
+    KEY_ITERATION, KEY_RESULTS, KEY_PLATFORM_NAME, KEY_JOB_NAME, KEY_JOB_GROUP_NAME, KEY_COMMAND, KEY_MAX_SHOTS
 
 
 class QuandelaCommunicationLayer(CommunicationLayer):
@@ -94,12 +94,17 @@ class QuandelaCommunicationLayer(CommunicationLayer):
         return self._specs
 
     def send(self, payload: dict) -> RemoteId:
-        # TODO: how to be compatible with old format to receive names?
-        computation = payload[KEY_COMPUTATION]
+        computation = PayloadGenerator.get_computation(payload)
 
         # Needed for display - Should not be used anywhere else. The cloud expects these so they must be filled
         payload[KEY_COMMAND] = computation.command.name
         payload[KEY_MAX_SHOTS] = computation.parameters[KEY_MAX_SHOTS]
+
+        if "commands" not in self._specs:  # We have a worker that knows only payloads up to version 1
+            # Using self._specs is a bit of a trick, since internally,
+            # we only needs the argument to have "available_commands" when downgrading to version 1
+            # This might not be true anymore if we introduce a version 3 someday
+            payload = PayloadUpdater.update_payload(payload, self._specs, target_payload_version = 1)
 
         global_data = PayloadGenerator.generate_global_data(payload,
                                                             {KEY_PLATFORM_NAME: self._rpc_handler.name,
@@ -225,7 +230,6 @@ class QuandelaComputer(RemoteComputer):
 
     def __init__(self,
                  name: str,
-                 *,
                  token: str = None,
                  url: str = None,
                  proxies: dict[str,str] = None):
