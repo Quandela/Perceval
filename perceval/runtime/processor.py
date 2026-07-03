@@ -74,15 +74,17 @@ class Processor(AProcessor):
     def _noise_changed_observer(self):
         self._source = None
 
-    @AProcessor.noise.getter
+    @property
     def noise(self):
         noise = super(Processor, type(self)).noise.fget(self)
         if noise is None:
             return self._computer.noise
         return noise
 
-    @AProcessor.noise.setter
+    @noise.setter
     def noise(self, noise: NoiseModel):
+        if self._experiment.noise is not None:
+            self._experiment.noise = noise
         self._computer.noise = noise
 
     @property
