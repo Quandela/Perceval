@@ -32,28 +32,16 @@ import warnings
 from copy import copy, deepcopy
 from typing import Callable
 
-from perceval.utils import (
-    BSDistribution,
-    ConversionHelper,
-    FockState,
-    NoiseModel,
-)
-from perceval.utils.constants import (
-    KEY_GLOBAL_PERF,
-    KEY_MAX_SAMPLES,
-    KEY_MAX_SHOTS,
-    KEY_LOGICAL_PERF,
-    KEY_PHYSICAL_PERF,
-    KEY_RESULTS,
-    KEY_SHOTS_USED,
-)
+from perceval.utils import BSDistribution, ConversionHelper, FockState, NoiseModel
+from perceval.utils.constants import KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_SHOTS_USED, KEY_GLOBAL_PERF, KEY_PHYSICAL_PERF, \
+    KEY_LOGICAL_PERF, KEY_RESULTS
 
 from ..computation import Computation
 from .abstract_mitigation import AbstractMitigation
 from .utils._photon_error_mitigation import (
     _generate_obb_partition, _generate_obb_states,
     _apply_detection_filter,
-    _extract_photon_number
+    _filter_extra_photons
 )
 
 
@@ -91,9 +79,11 @@ class PhotonErrorMitigation(AbstractMitigation):
         computation: Computation,
         noise: NoiseModel
     ) -> list[Computation]:
-        input_state = self._validate_input_state(
-            computation.experiment.input_state
-        )
+        """Add computations for every possible sub-n photon number up to a
+        given specified order of correction.
+        """
+        input_state = computation.experiment.input_state
+        input_state = self._validate_input_state(input_state)
 
         resolved_order = self._resolve_order(input_state.n)
         new_input_states = _generate_obb_states(input_state, resolved_order)
@@ -112,11 +102,13 @@ class PhotonErrorMitigation(AbstractMitigation):
         )
 
         state_idx = {}
+        states_by_photon_count = {}
         sub_parameters = []
 
         sub_computations = []
         for i, state in enumerate(new_input_states):
             state_idx[state] = i
+            states_by_photon_count.setdefault(state.n, []).append(i)
 
             comp = self._copy_computation(
                 computation,
@@ -133,7 +125,8 @@ class PhotonErrorMitigation(AbstractMitigation):
             input_state,
             resolved_order,
             state_idx,
-            sub_parameters
+            states_by_photon_count,
+            sub_parameters,
         )
 
         return sub_computations
@@ -144,28 +137,42 @@ class PhotonErrorMitigation(AbstractMitigation):
         results: list[dict],
         noise: NoiseModel
     ) -> dict:
-        input_state, order, state_idx, sub_parameters = self._settings[computation]
+        """Mitigate distinguishability & lossy g2 contributions. Post-select
+        out g2 states.
 
+        NOTE:
+        - Assumes that any heralds in the computation experiments have been
+        represented as real photons in previous post-processing layers.
+
+        - Assumes as well that input results contain vacuum counts.
+
+        - Assumes that QPU results are not de-compiled towards user's requested
+        experiment size.
+
+        - g2 states are post-selected out - but all states compliant with min-
+        photon filter are kept.
+
+        TODO: Does not work if noise defined as part of Experiment.
+        """
+        input_state, order, state_idx, states_by_photon_count, sub_parameters = (
+            self._settings.pop(computation)
+        )
         if len(results) == 1 and state_idx is None:
             return results[0]
 
-        mitigation_noise = computation.experiment.noise or noise
-
-        # TODO: Access PNR per mode in a way that supports local & QPU computation
-        pnr_per_mode = ...
+        pnr_per_mode = [] # TODO: Find a way of setting PNR per mode for Remote & Local computations
 
         dist_batch = self._prepare_distribution_batch(
             results,
             sub_parameters,
             state_idx,
         )
-
         mitigated = self._mitigate_hom(
             dist_batch,
             order,
             state_idx,
             input_state,
-            mitigation_noise,
+            noise,
             pnr_per_mode,
         )
         dist_batch[0] = mitigated
@@ -173,57 +180,55 @@ class PhotonErrorMitigation(AbstractMitigation):
         mitigated = self._mitigate_g2(
             dist_batch,
             order,
-            state_idx,
+            states_by_photon_count,
             input_state,
-            mitigation_noise,
+            noise,
             pnr_per_mode,
         )
+        # Filter out g2 states. Remove states below photon filter
+        mitigated = _filter_extra_photons(mitigated, input_state.n)
+        mitigated = type(mitigated)({
+            state: value
+            for state, value in mitigated.items()
+            if state.n >= computation.experiment.min_photons_filter
+        })
         mitigated.normalize()
+
+        # For sample count, adjust norm so that there are max_samples sample
+        # counts for states with n > photon_filter
+        if computation.job_name == "sample_count":
+            max_samples = computation.parameters[KEY_MAX_SAMPLES]
+            mitigated = max_samples * mitigated
 
         parsed = copy(results[0])
         parsed[KEY_RESULTS] = mitigated
 
-        n_samples = computation.parameters.get(KEY_MAX_SAMPLES)
-        max_shots = computation.parameters.get(KEY_MAX_SHOTS)
-        if n_samples is None or (
-                max_shots is not None and max_shots < n_samples):
-            n_samples = max_shots
+        metrics = self._compute_performance_metrics(
+            computation,
+            results,
+            sub_parameters,
+        )
 
-        n_clocks = 0
-        n_physical = 0
-        shots_used = 0
-        for result, parameters in zip(results, sub_parameters):
-            sub_samples = parameters.get(KEY_MAX_SAMPLES)
-            sub_shots = parameters.get(KEY_MAX_SHOTS)
-            if sub_samples is None or (
-                    sub_shots is not None and sub_shots < sub_samples):
-                sub_samples = sub_shots
+        if (
+            metrics["n_samples"] is not None
+            and metrics["n_clocks"] is not None
+            and metrics["n_clocks"] > 0
+        ):
+            parsed[KEY_GLOBAL_PERF] = (
+                metrics["n_samples"] / metrics["n_clocks"]
+            )
 
-            if sub_samples is None:
-                n_clocks = None
-            if n_clocks is not None:
-                sub_n_clocks = sub_samples / result[KEY_GLOBAL_PERF]
-                n_clocks += sub_n_clocks
+            if metrics["n_physical"] is not None:
+                parsed[KEY_PHYSICAL_PERF] = (
+                    metrics["n_physical"] / metrics["n_clocks"]
+                )
+                parsed[KEY_LOGICAL_PERF] = (
+                    metrics["n_samples"] / metrics["n_physical"]
+                )
 
-                if n_physical is not None and KEY_PHYSICAL_PERF in result:
-                    n_physical += sub_n_clocks * result[KEY_PHYSICAL_PERF]
-                else:
-                    n_physical = None
+        if metrics["shots_used"] is not None:
+            parsed[KEY_SHOTS_USED] = metrics["shots_used"]
 
-            if shots_used is not None and KEY_SHOTS_USED in result:
-                shots_used += result[KEY_SHOTS_USED]
-            else:
-                shots_used = None
-
-        if n_samples is not None and n_clocks:
-            parsed[KEY_GLOBAL_PERF] = n_samples / n_clocks
-
-            if n_physical is not None:
-                parsed[KEY_PHYSICAL_PERF] = n_physical / n_clocks
-                parsed[KEY_LOGICAL_PERF] = n_samples / n_physical
-
-        if shots_used is not None:
-            parsed[KEY_SHOTS_USED] = shots_used
         return parsed
 
     def _copy_computation(
@@ -234,6 +239,8 @@ class PhotonErrorMitigation(AbstractMitigation):
         shots: int | None,
         job_name: str
     ) -> Computation:
+        """Copy a computation with a new input state & samples/shots.
+        """
         comp = deepcopy(computation)
         comp.job_name = job_name
         if samples is not None:
@@ -253,17 +260,17 @@ class PhotonErrorMitigation(AbstractMitigation):
         sub_parameters: list[dict],
         state_idx: dict[FockState, int],
     ) -> list[BSDistribution]:
+        """Convert distributions to probability distributions.
+        """
         dist_batch = [BSDistribution() for _ in results]
-        for state, idx in state_idx.items():
+        for idx in state_idx.values():
             converted = ConversionHelper.convert_to(
                 "probs",
                 results[idx][KEY_RESULTS],
                 **sub_parameters[idx],
             )
             dist = BSDistribution(dict(converted.items()))
-            if len(dist):
-                dist.normalize()
-            dist_batch[idx] = _extract_photon_number(dist, state.n)
+            dist_batch[idx] = dist
 
         return dist_batch
 
@@ -302,7 +309,7 @@ class PhotonErrorMitigation(AbstractMitigation):
     def _resolve_order(self, photon_count: int) -> int:
         """Resolve int/callable order and clamp it to the photon count.
 
-        Order ``n - 1`` is promoted to ``n`` because it has no extra cost.
+        Order `n-1` is promoted to `n` because it has no extra cost.
         """
         order = (
             self._order(photon_count)
@@ -324,8 +331,8 @@ class PhotonErrorMitigation(AbstractMitigation):
         noise: NoiseModel,
         pnr_per_mode: list[int]
     ) -> BSDistribution:
-        """Mitigate distinguishability in a single results with respect to
-        its helper batch.
+        """Mitigate distinguishability by subtracting contributions where
+        photons statistics are independent.
         """
         photon_count = input_state.n
         order = min(photon_count, order)
@@ -343,7 +350,6 @@ class PhotonErrorMitigation(AbstractMitigation):
                     merge_modes=True
                 )
                 convolved = _apply_detection_filter(convolved, pnr_per_mode)
-                convolved = _extract_photon_number(convolved, photon_count)
                 corrections.append(convolved)
 
         weights_hom = [
@@ -354,8 +360,8 @@ class PhotonErrorMitigation(AbstractMitigation):
 
         if len(corrections) != len(weights_hom):
             raise RuntimeError(
-                "Number of indistinguishability corrections does not "
-                "match number of weights."
+                "Number of indistinguishability corrections does not match the"
+                " number of weights."
             )
 
         return sum(
@@ -368,37 +374,40 @@ class PhotonErrorMitigation(AbstractMitigation):
         cls,
         dist_batch: list[BSDistribution],
         order: int,
-        state_idx: dict[FockState, int],
+        states_by_photon_count: dict[int, list[int]],
         input_state: FockState,
         noise: NoiseModel,
         pnr_per_mode: list[int]
     ) -> BSDistribution:
+        """Mitigate g2 in computation by subtracting statistics due to extra
+        distinguishable photon in lossy subspace.
+        """
         photon_count = input_state.n
         order = min(order, max(photon_count - 1, 0))
         weights_g2 = cls._compute_weights_g2(noise, photon_count, order)
         corrections = [dist_batch[0]]
 
         for i in range(1, order + 1):
-            signal_dists = []
-            noise_dists = []
-            for state, idx in state_idx.items():
-                if state.n == i:
-                    noise_dists.append(dist_batch[idx])
-                if state.n == photon_count - i:
-                    signal_dists.append(dist_batch[idx])
+            signal_dists = [
+                dist_batch[idx]
+                for idx in states_by_photon_count.get(photon_count - i, [])
+            ]
+            noise_dists = [
+                dist_batch[idx]
+                for idx in states_by_photon_count.get(i, [])
+            ]
 
-            # 1 * dist makes a copy to avoid in place mutation
-            convolved = BSDistribution.list_tensor_product(
-                [sum((1 * dist for dist in signal_dists), BSDistribution()),
-                 sum((1 * dist for dist in noise_dists), BSDistribution())],
-                merge_modes=True)
+            # 1 * dist makes a copy to avoid in-place mutation
+            convolved = BSDistribution.list_tensor_product([
+                    sum((1 * dist for dist in signal_dists), BSDistribution()),
+                    sum((1 * dist for dist in noise_dists), BSDistribution()),
+                ], merge_modes=True,
+            )
             convolved = _apply_detection_filter(convolved, pnr_per_mode)
-            convolved = _extract_photon_number(convolved, photon_count)
             corrections.append(convolved)
 
-        return sum((
-                weight * dist
-                for dist, weight in zip(corrections, weights_g2)),
+        return sum(
+            (weight * dist for dist, weight in zip(corrections, weights_g2)),
             BSDistribution(),
         )
 
@@ -455,6 +464,8 @@ class PhotonErrorMitigation(AbstractMitigation):
 
     @staticmethod
     def _split_integer(total: int | None, ratios: list[float], name: str):
+        """Split an integer `total` into amounts determined by `ratios`.
+        """
         if total is None:
             return [None] * len(ratios)
 
@@ -464,9 +475,10 @@ class PhotonErrorMitigation(AbstractMitigation):
                 f"{len(ratios)} sub-computations"
             )
 
-        assert sum(ratios) > 0, "Split ratios are negative."
+        total_ratio = sum(ratios)
+        assert total_ratio > 0, "Split ratios are negative."
 
-        ratios = [ratio / sum(ratios) for ratio in ratios]
+        ratios = [ratio / total_ratio for ratio in ratios]
 
         # Give every sub-computation one unit, then apportion the rest.
         values = [1] * len(ratios)
@@ -489,3 +501,49 @@ class PhotonErrorMitigation(AbstractMitigation):
             values[i] += 1
 
         return values
+
+    def _compute_performance_metrics(
+        self,
+        computation: Computation,
+        results: list[dict],
+        sub_parameters: list[dict],
+    ) -> dict:
+        n_samples = computation.parameters.get(KEY_MAX_SAMPLES)
+        max_shots = computation.parameters.get(KEY_MAX_SHOTS)
+
+        if n_samples is None or (max_shots is not None and max_shots < n_samples):
+            n_samples = max_shots
+
+        n_clocks = 0
+        n_physical = 0
+        shots_used = 0
+
+        for result, parameters in zip(results, sub_parameters):
+            sub_samples = parameters.get(KEY_MAX_SAMPLES)
+            sub_shots = parameters.get(KEY_MAX_SHOTS)
+
+            if sub_samples is None or (sub_shots is not None and sub_shots < sub_samples):
+                sub_samples = sub_shots
+
+            if sub_samples is None:
+                n_clocks = None
+            if n_clocks is not None:
+                sub_n_clocks = sub_samples / result[KEY_GLOBAL_PERF]
+                n_clocks += sub_n_clocks
+
+                if n_physical is not None and KEY_PHYSICAL_PERF in result:
+                    n_physical += sub_n_clocks * result[KEY_PHYSICAL_PERF]
+                else:
+                    n_physical = None
+
+            if shots_used is not None and KEY_SHOTS_USED in result:
+                shots_used += result[KEY_SHOTS_USED]
+            else:
+                shots_used = None
+
+        return {
+            "n_samples": n_samples,
+            "n_clocks": n_clocks,
+            "n_physical": n_physical,
+            "shots_used": shots_used,
+        }

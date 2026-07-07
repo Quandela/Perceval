@@ -35,10 +35,12 @@ from typing import Iterable
 from perceval.utils import FockState, BSDistribution
 
 
-def _extract_photon_number(dist: BSDistribution, n: int) -> BSDistribution:
+def _filter_extra_photons(dist: BSDistribution, n: int) -> BSDistribution:
+    """Filter out states with more than `n` photons.
+    """
     extracted = BSDistribution()
     for state, prob in dist.items():
-        if state.n == n:
+        if state.n <= n:
             extracted.add(state, prob)
 
     return extracted
