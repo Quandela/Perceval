@@ -37,13 +37,13 @@ from perceval import Detector
 from perceval.algorithm import Sampler
 from perceval.components import Processor
 from perceval.runtime import RemoteJob, RunningStatus
-from perceval.runtime.rpc_handler import RPCHandler
+from perceval.providers.quandela.rpc_handler import RPCHandler
 from perceval.utils.dist_metrics import tvd_dist
 from perceval.utils.conversion import sample_count_to_probs
 from perceval.utils.logging import channel
 
-from .._test_utils import LogChecker
-from tests.runtime._mock_rpc_handler import RPCHandlerResponsesBuilder, get_rpc_handler_for_tests, _TIMESTAMP
+from tests._test_utils import LogChecker
+from tests.providers.quandela._mock_rpc_handler import RPCHandlerResponsesBuilder, get_rpc_handler_for_tests, _TIMESTAMP
 
 SIMPLE_PAYLOAD = {"command": "probs", "circuit": ":PCVL:zip:eJyzCnAO87FydM4sSi7NLLFydfTM9K9wdI7MSg52DsyO9AkNCtWu9DANqMj3cg50hAPP9GwvBM+xEKgWwXPxRFNrEegYlu/jDNTj7mzoGhZQnGEWYkF1ewCY7jxM",
                   "input_state": ":PCVL:BasicState:|1,1>", "parameters": {"min_detected_photons": 2}, "max_shots": 10000, "job_context": None}

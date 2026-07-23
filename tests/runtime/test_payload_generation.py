@@ -32,7 +32,7 @@ import pytest
 from perceval import RemoteProcessor, BasicState, catalog, PayloadGenerator, SimulatedComputer, NoiseModel
 from perceval.serialization._constants import ZIP_PREFIX
 
-from tests.runtime._mock_rpc_handler import get_rpc_handler_for_tests
+from tests.providers.quandela._mock_rpc_handler import get_rpc_handler_for_tests
 
 
 COMMAND_NAME = 'my_command'

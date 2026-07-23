@@ -29,7 +29,7 @@
 from requests import HTTPError
 
 from perceval.runtime import PayloadGenerator
-from perceval.runtime.rpc_handler import RPCHandler
+from providers.quandela.rpc_handler import RPCHandler
 from perceval.runtime.communication_layer import RPCBasedCommunicationLayer, RemoteId
 
 from perceval.utils.logging import get_logger, channel

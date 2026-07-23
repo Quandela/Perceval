@@ -35,11 +35,11 @@ from unittest.mock import MagicMock, patch
 import responses
 
 from perceval.runtime import JobGroup, RemoteJob, RunningStatus
-from perceval.runtime.rpc_handler import RPCHandler
+from perceval.providers.quandela.rpc_handler import RPCHandler
 from perceval.components import Processor, catalog
 from perceval.algorithm import Sampler
 from perceval.utils import BasicState
-from tests.runtime._mock_rpc_handler import RPCHandlerResponsesBuilder, CloudEndpoint
+from tests.providers.quandela._mock_rpc_handler import RPCHandlerResponsesBuilder, CloudEndpoint
 
 TEST_JG_NAME = 'UnitTest_Job_Group'
 

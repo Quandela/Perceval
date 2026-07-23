@@ -32,9 +32,9 @@ import threading
 
 from perceval.utils.logging import get_logger, channel
 from perceval.utils import ProgressCallback
-from .job import Job
-from .job_status import JobStatus, RunningStatus
 
+from .job import Job
+from ..job_status import JobStatus, RunningStatus
 
 class LocalJob(Job):
     r"""

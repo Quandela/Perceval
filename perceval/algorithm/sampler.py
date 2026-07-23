@@ -33,9 +33,8 @@ from perceval.utils import samples_to_sample_count, samples_to_probs, sample_cou
     sample_count_to_probs, probs_to_samples, probs_to_sample_count, ProgressCallback
 from perceval.utils.logging import get_logger, channel
 from perceval.utils.constants import KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_RESULTS_LIST, KEY_ITERATION
-from perceval.runtime.parameter_iterator import ParameterIterator
-from perceval.runtime.abstract_processor import AProcessor
-from perceval.runtime import Job, RemoteJob, LocalJob
+from perceval.runtime.legacy.parameter_iterator import ParameterIterator
+from perceval.runtime.legacy import Job, RemoteJob, LocalJob, AProcessor
 
 
 class Sampler(AAlgorithm):

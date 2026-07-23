@@ -35,7 +35,6 @@ from perceval.utils import (NoiseModel, BasicState, FockState, BSDistribution, S
 from perceval.utils.logging import channel
 from perceval.components.feed_forward_configurator import AFFConfigurator
 from perceval.backends import AStrongSimulationBackend, IFFBackend
-from perceval.runtime import Processor
 
 from .simulator_interface import ISimulator
 
@@ -56,7 +55,8 @@ class FFSimulator(ISimulator):
         if value:
             get_logger().warn("Only the global performance can be computed for a feed-forward simulator.")
 
-    def set_circuit(self, circuit: Processor | Experiment | list[tuple[tuple, AComponent]], m=None):
+    def set_circuit(self, circuit: Experiment | list[tuple[tuple, AComponent]], m=None):
+        from perceval.runtime import Processor  # TODO: remove (deprecated since 1.3)
         if isinstance(circuit, (Processor, Experiment)):
             self._components = circuit.components
             min_detected_photons = circuit._min_detected_photons_filter
@@ -214,7 +214,7 @@ class FFSimulator(ISimulator):
 
     def _get_sim_params(self,
                        input_state: SVDistribution | tuple[Source, BasicState],
-                       components: list[tuple[tuple, AComponent | Processor | Experiment]],
+                       components: list[tuple[tuple, AComponent | Experiment]],
                        m: int,
                        detectors: list[IDetector] = None,
                        filter_states: bool = False,
@@ -232,57 +232,56 @@ class FFSimulator(ISimulator):
 
         if detectors is None:
             detectors = m * [None]
-        proc = Processor(self._backend, m)
-        if self._noise_model is not None:
-            proc.noise = self._noise_model
+        exp = Experiment(m)
 
         for r, c in components:
-            proc.add(r, c)
+            exp.add(r, c)
 
-        # Now the Processor has only the heralds that were possibly added by adding Processors as input, all at the end
+        # Now the Experiment has only the heralds that were possibly added by adding Experiment as input, all at the end
         if isinstance(input_state, SVDistribution):
-            heralded_dist = proc.generate_noisy_heralds()
-            if len(heralded_dist):
-                input_state = input_state * heralded_dist  # Must not change the original object
+            if exp.in_heralds:
+                heralds_perfect_state = FockState([v for k, v in sorted(exp.in_heralds.items())])
+                source = Source.from_noise_model(self._noise_model)
+                input_state = input_state * source.generate_distribution(heralds_perfect_state)  # Must not change the original object
         else:
-            proc.with_input(input_state[1])
-            input_state = (input_state[0], proc.input_state)
+            exp.with_input(input_state[1])
+            input_state = (input_state[0], exp.input_state)
 
         sum_new_heralds = 0
         if new_heralds is not None:
             for r, v in new_heralds.items():
-                proc.add_port(r, Herald(v), PortLocation.OUTPUT)
+                exp.add_port(r, Herald(v), PortLocation.OUTPUT)
                 sum_new_heralds += v
 
         if filter_states:
 
             if self._heralds is not None:
                 for r, v in self._heralds.items():
-                    proc.add_port(r, Herald(v), PortLocation.OUTPUT)
+                    exp.add_port(r, Herald(v), PortLocation.OUTPUT)
 
             if self._postselect.has_condition:
                 postselect = copy.copy(self._postselect)
-                postselect.merge(proc.post_select_fn)
-                proc.set_postselection(postselect)
+                postselect.merge(exp.post_select_fn)
+                exp.set_postselection(postselect)
 
             # We need to retrieve the new heralds as they are actually counting user photons
-            proc.min_detected_photons_filter(self._min_detected_photons_filter - sum_new_heralds)
+            exp.min_detected_photons_filter(self._min_detected_photons_filter - sum_new_heralds)
 
         else:
             # In that case, the new heralds are user-defined heralds that we can safely simulate.
             # We can't filter more due to potential losses that would depend on the FF parts of the circuit
-            proc.min_detected_photons_filter(0)
+            exp.min_detected_photons_filter(0)
 
         from .simulator_factory import SimulatorFactory  # Avoids a circular import
 
-        sim = SimulatorFactory.build(proc)
+        sim = SimulatorFactory.build(exp, self._backend, self._noise_model)
         if self._precision is not None:
             sim.set_precision(self._precision)
         sim.set_silent(True)
-        return sim, input_state, detectors + proc.detectors[m:]
+        return sim, input_state, detectors + exp.detectors[m:]
 
     def _simulate(self, input_state: SVDistribution | tuple[Source, BasicState],
-                  components: list[tuple[tuple, AComponent | Processor]],
+                  components: list[tuple[tuple, AComponent | Experiment]],
                   m: int,
                   detectors: list[IDetector],
                   prog_cb: ProgressCallback = None,

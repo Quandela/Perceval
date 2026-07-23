@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2026 Kipu Quantum GmbH
+# Copyright (c) 2022 Quandela
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -27,25 +27,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.runtime import ISession
-from perceval.providers import ProviderFactory
-
-
-def test_kipu_in_provider_list():
-    assert "Kipu" in ProviderFactory.list()
-
-
-def test_get_kipu_provider():
-    session = ProviderFactory.get_provider(
-        "Kipu",
-        platform_name="quandela.sim.belenos",
-        token="t",
-        organization_id="org-1",
-    )
-    assert isinstance(session, ISession)
-
-
-def test_kipu_package_exports():
-    from perceval.providers.kipu import Session, KipuRPCHandler
-    assert Session is not None
-    assert KipuRPCHandler is not None
+from .abstract_processor import AProcessor
+from .processor import Processor
+from .remote_processor import RemoteProcessor
+from .session import ISession
+from .job import Job
+from .local_job import LocalJob
+from .remote_job import RemoteJob
+from .job_group import JobGroup

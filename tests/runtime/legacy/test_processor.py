@@ -38,8 +38,8 @@ from perceval.utils import BasicState, StateVector, SVDistribution, Encoding, No
 from perceval.backends import Clifford2017Backend
 from perceval.runtime import Processor
 
-from ._mock_rpc_handler import get_rpc_handler_for_tests
-from .._test_utils import LogChecker, assert_svd_close, assert_bsd_close
+from tests.providers.quandela._mock_rpc_handler import get_rpc_handler_for_tests
+from tests._test_utils import LogChecker, assert_svd_close, assert_bsd_close
 
 
 @patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")

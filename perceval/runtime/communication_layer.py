@@ -42,10 +42,24 @@ from perceval.utils.logging import channel, get_logger
 from .job_status import JobStatus, RunningStatus
 from .command import Command
 from .platform_specs import PlatformSpecs
-from .remote_job import _retrieve_from_response
-from .remote_processor import PERFS_KEY
 from .payload_updater import PayloadUpdater
 from .payload_generator import PayloadGenerator
+
+
+PERFS_KEY = "perfs"
+T = TypeVar('T')
+
+def _retrieve_from_response(response: dict, field: str, default_value: T = '', value_type: Type[T] = str) -> T:
+    if field not in response:
+        get_logger().error(f"Missing field '{field}' from server response. Using default value {default_value}.", channel.general)
+        return default_value
+    try:
+        result = value_type(response[field])
+    except (ValueError, TypeError):
+        get_logger().error(f"The field '{field}' from server response contains the wrong value '{response[field]}'. Using default value {default_value}.", channel.general)
+        result = default_value
+    return result
+
 
 RemoteId = TypeVar("RemoteId")
 

@@ -56,47 +56,25 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.runtime.legacy import ISession, RemoteProcessor
-from perceval.utils.logging import get_logger, channel
-
-from .kipu_rpc_handler import KipuRPCHandler
+from perceval.runtime import ISession
+from perceval.providers import ProviderFactory
 
 
-class Session(ISession):
-    """
-    Kipu Quantum Hub session.
+def test_kipu_in_provider_list():
+    assert "Kipu" in ProviderFactory.list()
 
-    :param platform_name: Hub backend id or alias (e.g. "quandela.sim.belenos")
-    :param token: optional Kipu Personal Access Token (PAT); when omitted it is
-        resolved from the environment or the `qhubctl login` config file
-    :param organization_id: optional Kipu organization id; when omitted your
-        personal account is used
-    :param url: optional Hub base URL; when omitted the qhub-api client uses its
-        own default Hub endpoint
-    :param proxies: optional protocol->URL proxy mapping
-    """
 
-    def __init__(self, platform_name: str, token: str = None,
-                 organization_id: str = None, url: str = None,
-                 proxies: dict = None):
-        if not platform_name:
-            raise ValueError("platform_name cannot be None")
-        self._platform_name = platform_name
-        self._token = token
-        self._organization_id = organization_id
-        self._url = url
-        self._proxies = proxies or {}
-        get_logger().info(
-            f"Creating Kipu Session to {self._url or 'default Hub endpoint'}",
-            channel.general)
+def test_get_kipu_provider():
+    session = ProviderFactory.get_provider(
+        "Kipu",
+        platform_name="quandela.sim.belenos",
+        token="t",
+        organization_id="org-1",
+    )
+    assert isinstance(session, ISession)
 
-    def build_remote_processor(self) -> RemoteProcessor:
-        """Build a RemoteProcessor wired to the Kipu Hub."""
-        handler = KipuRPCHandler(
-            platform_name=self._platform_name,
-            url=self._url,
-            token=self._token,
-            organization_id=self._organization_id,
-            proxies=self._proxies,
-        )
-        return RemoteProcessor(rpc_handler=handler)
+
+def test_kipu_package_exports():
+    from perceval.providers.kipu import Session, KipuRPCHandler
+    assert Session is not None
+    assert KipuRPCHandler is not None

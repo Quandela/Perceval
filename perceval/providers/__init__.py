@@ -28,7 +28,7 @@
 # SOFTWARE.
 """Provider related imports and classes"""
 
-from perceval.runtime import ISession
+from perceval.runtime.legacy import ISession
 
 from .quandela import Session as QuandelaSession
 from .scaleway import Session as ScalewaySession

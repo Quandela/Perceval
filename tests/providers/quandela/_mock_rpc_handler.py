@@ -37,7 +37,7 @@ from enum import Enum
 import requests
 import responses
 
-from perceval.runtime.rpc_handler import (
+from perceval.providers.quandela.rpc_handler import (
     RPCHandler,
     _ENDPOINT_JOB_CANCEL,
     _ENDPOINT_JOB_CREATE,
