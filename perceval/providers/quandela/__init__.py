@@ -28,3 +28,4 @@
 # SOFTWARE.
 
 from .quandela_session import Session
+from .quandela_communication_layer import QuandelaCommunicationLayer
