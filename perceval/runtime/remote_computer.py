@@ -103,6 +103,7 @@ class RemoteComputer(AbstractComputer):
         self._perfs = communication_layer.get_performances()
         self._custom_noise: NoiseModel | None = None
         self.use_mitigations_remotely: bool = True  # TODO: detect if the target supports mitigations ?
+        self._available_jobs = 0
         # TODO: how to get default mitigations ?
 
     @property
@@ -215,12 +216,17 @@ class RemoteComputer(AbstractComputer):
         self._take_resource()
         return _RemoteGetter(self._communication_layer, self._communication_layer.send(payload))
 
+    @property
+    def available_jobs(self) -> int:
+        self._available_jobs = self._communication_layer.get_availability()
+        return self._available_jobs
+
     def _take_resource(self):
         start = time.time()
         start_warn = time.time()
         start_info = start_warn
+        self._available_jobs = self._communication_layer.get_availability()
         while self._available_jobs <= 0:
-            self._available_jobs = self._communication_layer.get_availability()
             time.sleep(1)
             if time.time() - start_warn > self.WARN_INTERVAL:
                 start_warn = time.time()
@@ -228,6 +234,7 @@ class RemoteComputer(AbstractComputer):
             elif time.time() - start_info > self.INFO_INTERVAL:
                 start_info = time.time()
                 get_logger().info(f"Couldn't find a way to send any job for {int(start_info - start)} seconds - queue is full")
+            self._available_jobs = self._communication_layer.get_availability()
 
         self._available_jobs -= 1
 

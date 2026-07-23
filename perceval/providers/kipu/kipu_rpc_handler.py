@@ -58,7 +58,7 @@
 
 from datetime import datetime
 
-from utils.constants import KEY_VERSION, KEY_PROCESS_ID, KEY_JOB_NAME, KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_PAYLOAD
+from perceval.utils.constants import KEY_VERSION, KEY_PROCESS_ID, KEY_JOB_NAME, KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_PAYLOAD
 
 _MISSING_QHUB_MSG = (
     "The Kipu Quantum Hub provider requires the 'qhub-api' package. "

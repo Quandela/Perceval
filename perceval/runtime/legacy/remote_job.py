@@ -33,12 +33,12 @@ import time
 
 from requests.exceptions import HTTPError, ConnectionError
 
-from runtime.job_status import JobStatus, RunningStatus
 from perceval.serialization import deserialize
 from perceval.serialization._serialized_containers import make_serialized, SerializedDict
 from perceval.utils.logging import get_logger, channel
 
 from .job import Job
+from ..job_status import JobStatus, RunningStatus
 from ..communication_layer import _retrieve_from_response
 
 class RemoteJob(Job):
