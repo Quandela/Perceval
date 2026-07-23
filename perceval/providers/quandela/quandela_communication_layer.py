@@ -28,29 +28,16 @@
 # SOFTWARE.
 from requests import HTTPError
 
-from perceval.runtime import PayloadGenerator
-from providers.quandela.rpc_handler import RPCHandler
-from perceval.runtime.communication_layer import RPCBasedCommunicationLayer, RemoteId
-
+from perceval.runtime.communication_layer import RPCBasedCommunicationLayer
 from perceval.utils.logging import get_logger, channel
-from perceval.utils.constants import KEY_COMMAND, KEY_MAX_SHOTS
 
+from .rpc_handler import RPCHandler
 
 class QuandelaCommunicationLayer(RPCBasedCommunicationLayer):
 
     def __init__(self, name: str, token: str, url: str, proxies: dict[str, str] = None):
         super().__init__(RPCHandler(name, url, token, proxies))
         get_logger().info(f"Connected to Cloud platform {name}", channel.general)
-
-    def send(self, payload: dict) -> RemoteId:
-        computation = PayloadGenerator.get_computation(payload)
-
-        # Needed for display - Should not be used anywhere else. The cloud expects these so they must be filled
-        payload[KEY_COMMAND] = computation.command.name
-        assert KEY_MAX_SHOTS in computation.parameters, f"Missing '{KEY_MAX_SHOTS}' parameter"
-        payload[KEY_MAX_SHOTS] = computation.parameters[KEY_MAX_SHOTS]
-
-        return super().send(payload)
 
     def get_availability(self) -> int:
         try:

@@ -30,13 +30,14 @@
 import json
 import time
 from abc import ABC, abstractmethod
-from typing import TypeVar
+from typing import TypeVar, Type
 
 from requests import HTTPError
 
 from perceval.serialization import deserialize, serialize
 from perceval.utils.constants import KEY_JOB_NAME, KEY_JOB_CONTEXT, KEY_RESULT_MAPPING, \
-    KEY_MAPPING_PARAMETERS, KEY_RESULTS_LIST, KEY_ITERATION, KEY_RESULTS, KEY_PLATFORM_NAME, KEY_JOB_GROUP_NAME
+    KEY_MAPPING_PARAMETERS, KEY_RESULTS_LIST, KEY_ITERATION, KEY_RESULTS, KEY_PLATFORM_NAME, KEY_JOB_GROUP_NAME, \
+    KEY_COMMAND, KEY_MAX_SHOTS, KEY_MAX_SAMPLES
 from perceval.utils.logging import channel, get_logger
 
 from .job_status import JobStatus, RunningStatus
@@ -169,6 +170,12 @@ class RPCBasedCommunicationLayer(CommunicationLayer):
 
     def send(self, payload: dict) -> RemoteId:
         computation = PayloadGenerator.get_computation(payload)
+
+        # Needed for display - Should not be used anywhere else. The cloud expects these so they must be filled
+        payload[KEY_COMMAND] = computation.command.name
+        assert KEY_MAX_SHOTS in computation.parameters, f"Missing '{KEY_MAX_SHOTS}' parameter"
+        payload[KEY_MAX_SHOTS] = computation.parameters[KEY_MAX_SHOTS]
+        payload[KEY_MAX_SAMPLES] = computation.parameters.get(KEY_MAX_SAMPLES, 0)
 
         if "commands" not in self._specs:  # We have a worker that knows only payloads up to version 1
             # Using self._specs is a bit of a trick, since internally,

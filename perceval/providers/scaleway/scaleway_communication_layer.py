@@ -27,11 +27,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.runtime import PayloadGenerator
-from perceval.runtime.communication_layer import RPCBasedCommunicationLayer, RemoteId
-
+from perceval.runtime.communication_layer import RPCBasedCommunicationLayer
 from perceval.utils.logging import get_logger, channel
-from perceval.utils.constants import KEY_COMMAND, KEY_MAX_SAMPLES
 
 from .scaleway_rpc_handler import RPCHandler
 
@@ -61,15 +58,6 @@ class ScalewayCommunicationLayer(RPCBasedCommunicationLayer):
             provider_name=provider_name,
         ))
         get_logger().info(f"Connected to Scaleway Cloud platform {platform_name}", channel.general)
-
-    def send(self, payload: dict) -> RemoteId:
-        computation = PayloadGenerator.get_computation(payload)
-
-        # Needed for display - Should not be used anywhere else. The cloud expects these so they must be filled
-        payload[KEY_COMMAND] = computation.command.name
-        payload[KEY_MAX_SAMPLES] = computation.parameters.get(KEY_MAX_SAMPLES, 0)
-
-        return super().send(payload)
 
     def start_session(self) -> None:
         self._rpc_handler.create_session(

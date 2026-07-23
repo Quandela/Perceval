@@ -26,11 +26,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from perceval.runtime import PayloadGenerator
-from perceval.runtime.communication_layer import RPCBasedCommunicationLayer, RemoteId
+from perceval.runtime.communication_layer import RPCBasedCommunicationLayer
 
 from perceval.utils.logging import get_logger, channel
-from perceval.utils.constants import KEY_COMMAND
 
 from .kipu_rpc_handler import KipuRPCHandler
 
@@ -53,11 +51,3 @@ class KipuCommunicationLayer(RPCBasedCommunicationLayer):
         ))
 
         get_logger().info(f"Connected to Kipu Cloud platform {platform_name}", channel.general)
-
-    def send(self, payload: dict) -> RemoteId:
-        computation = PayloadGenerator.get_computation(payload)
-
-        # Needed for display - Should not be used anywhere else. The cloud expects these so they must be filled
-        payload[KEY_COMMAND] = computation.command.name
-
-        return super().send(payload)
