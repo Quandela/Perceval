@@ -28,72 +28,23 @@
 # SOFTWARE.
 
 import time
-from abc import ABC, abstractmethod
 from copy import deepcopy
-from typing import TypeVar, Callable
+from typing import Callable
 
-from .command import Command
+from .communication_layer import CommunicationLayer, RemoteId
 from .computation import Computation
 from .abstract_computer import AbstractComputer
 from .computation_iterator import ComputationIterator
 from .platform_specs import PlatformSpecs
 from .error_mitigation import AbstractMitigation
-from .job_status import JobStatus, RunningStatus
+from .job_status import RunningStatus
 from .simulated_computer import SimulatedComputer
 from .async_getter import AsyncGetter
 from .payload_generator import PayloadGenerator
 
-from perceval.utils import perf_dict_to_noise, ProgressCallback, NoiseModel, PostSelect
+from perceval.utils import perf_dict_to_noise, ProgressCallback, NoiseModel, PostSelect, ContextManager
 from perceval.utils.logging import channel, get_logger
 from perceval.components import PortLocation, Experiment
-
-RemoteId = TypeVar("RemoteId")
-
-
-class CommunicationLayer(ABC):
-    """
-    This class is responsible for the communication with the distant computer.
-    """
-
-    @abstractmethod
-    def get_specs(self) -> PlatformSpecs:
-        """
-        :return: The specs of the target platform
-        """
-        pass
-
-    @abstractmethod
-    def send(self, payload: dict) -> RemoteId:
-        pass
-
-    @abstractmethod
-    def get_results(self, remote_id: RemoteId) -> dict:
-        pass
-
-    @abstractmethod
-    def get_job_status(self, remote_id: RemoteId, refresh_errors: int = 0) -> JobStatus | None:
-        """
-        :param remote_id:
-        :param refresh_errors: The number of times in a row where this method returned None
-        :return: The Job Status if it was available, None otherwise
-        """
-        pass
-
-    @abstractmethod
-    def get_remote_status(self) -> str:
-        pass
-
-    @abstractmethod
-    def get_performances(self) -> dict:
-        pass
-
-    @abstractmethod
-    def get_commands(self) -> list[Command]:
-        pass
-
-    @abstractmethod
-    def cancel(self, remote_id: RemoteId) -> None:
-        pass
 
 
 class _RemoteGetter(AsyncGetter):
@@ -140,6 +91,9 @@ class _RemoteGetter(AsyncGetter):
 
 
 class RemoteComputer(AbstractComputer):
+
+    WARN_INTERVAL = 1800
+    INFO_INTERVAL = 10
 
     def __init__(self, communication_layer: CommunicationLayer):
         super().__init__()
@@ -257,9 +211,31 @@ class RemoteComputer(AbstractComputer):
         return async_getter.get_results()
 
     def _execute_command_async(self, computation: Computation) -> _RemoteGetter:
-        # Subclasses may implement something here to ask for availability before sending to the cloud
         payload = self.prepare_payload(computation)
+        self._take_resource()
         return _RemoteGetter(self._communication_layer, self._communication_layer.send(payload))
+
+    def _take_resource(self):
+        start = time.time()
+        start_warn = time.time()
+        start_info = start_warn
+        while self._available_jobs <= 0:
+            self._available_jobs = self._communication_layer.get_availability()
+            time.sleep(1)
+            if time.time() - start_warn > self.WARN_INTERVAL:
+                start_warn = time.time()
+                get_logger().warn(f"Couldn't find a way to send any job for {int(start_warn - start)} seconds - queue is full")
+            elif time.time() - start_info > self.INFO_INTERVAL:
+                start_info = time.time()
+                get_logger().info(f"Couldn't find a way to send any job for {int(start_info - start)} seconds - queue is full")
+
+        self._available_jobs -= 1
+
+    def _release_resource(self):
+        self._available_jobs += 1
+
+    def _reserve_resource(self) -> ContextManager:
+        return ContextManager(self._take_resource, self._release_resource)
 
     def prepare_payload(self, computation: Computation) -> dict:
         if self._error_mitigations is not None:
@@ -274,6 +250,25 @@ class RemoteComputer(AbstractComputer):
                                                  remote_mitigations,
                                                  self._parameters,
                                                  self._custom_noise)
+
+    # TODO: add these methods to the Abstract class ?
+    def start(self) -> None:
+        """May be used to start a non-interrupted session. May do nothing for stateless providers"""
+        self._communication_layer.start_session()
+
+    def stop(self) -> None:
+        """May be used to stop a non-interrupted session. May do nothing for stateless providers"""
+        self._communication_layer.stop_session()
+
+    def delete(self) -> None:
+        """May be used to delete a non-interrupted session. May do nothing for stateless providers"""
+        self._communication_layer.delete_session()
+
+    def acquire(self) -> ContextManager:
+        """
+        :return: A context manager that starts the computer at enter and stops it at exit
+        """
+        return ContextManager(self.start, self.stop)
 
     @property
     def is_remote(self) -> bool:

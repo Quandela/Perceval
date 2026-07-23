@@ -35,6 +35,7 @@ from datetime import datetime, timedelta
 from requests import HTTPError
 
 from perceval.utils.logging import get_logger, channel
+from perceval.utils.constants import KEY_JOB_NAME, KEY_PAYLOAD
 
 _ENDPOINT_PLATFORM = "/qaas/v1alpha1/platforms"
 _ENDPOINT_JOB = "/qaas/v1alpha1/jobs"
@@ -51,10 +52,10 @@ class RPCHandler:
         self,
         project_id: str,
         secret_key: str,
-        url: str,
-        proxies: dict,
+        url: str | None,
+        proxies: dict | None,
         platform_name: str,
-        provider_name: str,
+        provider_name: str | None,
     ):
         self._project_id = project_id
         self._url = url or _DEFAULT_URL
@@ -186,8 +187,8 @@ class RPCHandler:
             raise Exception("Cannot create job because session_id is None")
 
         scw_payload = {
-            "name": payload.get("job_name"),
-            "circuit": {"percevalCircuit": json.dumps(payload.get("payload", {}))},
+            "name": payload.get(KEY_JOB_NAME),
+            "circuit": {"percevalCircuit": json.dumps(payload.get(KEY_PAYLOAD, {}))},
             "project_id": self._project_id,
             "session_id": self._session_id,
         }
@@ -200,8 +201,8 @@ class RPCHandler:
         try:
             request.raise_for_status()
             job = request.json()
+            assert "id" in job
 
-            self.instance_id = job["id"]
         except Exception:
             raise HTTPError(request.json())
 

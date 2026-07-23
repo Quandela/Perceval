@@ -48,6 +48,7 @@ _ENDPOINT_JOB_AVAILABILITY = '/api/jobs/availability/'
 _JOB_ID_KEY = 'job_id'
 
 
+# TODO: move this class to providers/quandela
 class RPCHandler:
     """Remote Call Procedure Handler
 

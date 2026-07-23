@@ -1,5 +1,34 @@
 # MIT License
 #
+# Copyright (c) 2022 Quandela
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+# MIT License
+#
 # Copyright (c) 2026 Kipu Quantum GmbH
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,6 +57,8 @@
 # SOFTWARE.
 
 from datetime import datetime
+
+from utils.constants import KEY_VERSION, KEY_PROCESS_ID, KEY_JOB_NAME, KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_PAYLOAD
 
 _MISSING_QHUB_MSG = (
     "The Kipu Quantum Hub provider requires the 'qhub-api' package. "
@@ -214,8 +245,8 @@ class KipuRPCHandler:
     def create_job(self, payload: dict) -> str:
         """Submit a Perceval job payload to the Hub. Returns the Hub job id."""
         qhub = _import_qhub()
-        inner = payload.get("payload") or {}
-        shots = inner.get("max_shots") or inner.get("max_samples") or 0
+        inner = payload.get(KEY_PAYLOAD) or {}
+        shots = inner.get(KEY_MAX_SHOTS) or inner.get(KEY_MAX_SAMPLES) or 0
 
         input_cls = qhub["input"][self._backend_id]
         params_cls = qhub["params"][self._backend_id]
@@ -226,11 +257,11 @@ class KipuRPCHandler:
             input=input_cls(value=inner),
             input_format="PERCEVAL",
             input_params=params_cls(
-                pcvl_version=payload.get("pcvl_version"),
-                process_id=payload.get("process_id"),
+                pcvl_version=payload.get(KEY_VERSION),
+                process_id=payload.get(KEY_PROCESS_ID),
             ),
             sdk_provider="PERCEVAL",
-            name=payload.get("job_name"),
+            name=payload.get(KEY_JOB_NAME),
         )
         return job.id
 

@@ -202,15 +202,15 @@ class Execution:
             return self._results  # Problem here if we try to reuse a job with different args and kwargs
 
         self._status.start_run()
-        with self._computer.acquire():
-            try:
-                self._transmit_args(*args, **kwargs)
-                self._computer.execute(self._computation, self._results, progress_callback=self._progress_callback)
-            except Exception as e:
-                if not allow_partial_results:
-                    self._results = {}
-                    self._status.stop_run(RunningStatus.ERROR, f"{type(e).__name__}: {e}")
-                    raise e
+        try:
+            self._transmit_args(*args, **kwargs)
+            self._computer.execute(self._computation, self._results, progress_callback=self._progress_callback)
+        except Exception as e:
+            if not allow_partial_results:
+                self._results = {}
+                self._status.stop_run(RunningStatus.ERROR, f"{type(e).__name__}: {e}")
+                raise e
+
         if self._status.canceled:
             self._status.stop_run(RunningStatus.CANCELED, "Canceled")
         else:

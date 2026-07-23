@@ -26,26 +26,38 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from perceval.runtime import PayloadGenerator
+from perceval.runtime.communication_layer import RPCBasedCommunicationLayer, RemoteId
 
-from .job_status import JobStatus, RunningStatus
-from .job import Job
-from .local_job import LocalJob
-from .remote_job import RemoteJob
-from .abstract_processor import AProcessor
-from .processor import Processor
-from .session import ISession
-from .remote_config import RemoteConfig
-from .job_group import JobGroup
-from .check_cancel import cancel_requested
-from .payload_generator import PayloadGenerator
-from .payload_updater import PayloadUpdater
-from .computation import Computation
-from .computation_iterator import ComputationIterator
-from .command import Command, CommandFactory
-from .error_mitigation import *
-from .abstract_computer import AbstractComputer
-from .local_computer import LocalComputer
-from .simulated_computer import SimulatedComputer
-from .remote_computer import RemoteComputer, CommunicationLayer
-from providers.quandela.quandela_communication_layer import QuandelaComputer
-from .execution import Execution
+from perceval.utils.logging import get_logger, channel
+from perceval.utils.constants import KEY_COMMAND
+
+from .kipu_rpc_handler import KipuRPCHandler
+
+
+class KipuCommunicationLayer(RPCBasedCommunicationLayer):
+
+    def __init__(self,
+                 platform_name: str,
+                 token: str = None,
+                 organization_id: str = None,
+                 url: str = None,
+                 proxies: dict = None):
+
+        super().__init__(KipuRPCHandler(
+            platform_name=platform_name,
+            url=url,
+            token=token,
+            organization_id=organization_id,
+            proxies=proxies,
+        ))
+
+        get_logger().info(f"Connected to Kipu Cloud platform {platform_name}", channel.general)
+
+    def send(self, payload: dict) -> RemoteId:
+        computation = PayloadGenerator.get_computation(payload)
+
+        # Needed for display - Should not be used anywhere else. The cloud expects these so they must be filled
+        payload[KEY_COMMAND] = computation.command.name
+
+        return super().send(payload)

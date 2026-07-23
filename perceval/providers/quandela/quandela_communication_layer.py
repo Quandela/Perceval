@@ -26,26 +26,36 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from requests import HTTPError
 
-from .job_status import JobStatus, RunningStatus
-from .job import Job
-from .local_job import LocalJob
-from .remote_job import RemoteJob
-from .abstract_processor import AProcessor
-from .processor import Processor
-from .session import ISession
-from .remote_config import RemoteConfig
-from .job_group import JobGroup
-from .check_cancel import cancel_requested
-from .payload_generator import PayloadGenerator
-from .payload_updater import PayloadUpdater
-from .computation import Computation
-from .computation_iterator import ComputationIterator
-from .command import Command, CommandFactory
-from .error_mitigation import *
-from .abstract_computer import AbstractComputer
-from .local_computer import LocalComputer
-from .simulated_computer import SimulatedComputer
-from .remote_computer import RemoteComputer, CommunicationLayer
-from providers.quandela.quandela_communication_layer import QuandelaComputer
-from .execution import Execution
+from perceval.runtime import PayloadGenerator
+from perceval.runtime.rpc_handler import RPCHandler
+from perceval.runtime.communication_layer import RPCBasedCommunicationLayer, RemoteId
+
+from perceval.utils.logging import get_logger, channel
+from perceval.utils.constants import KEY_COMMAND, KEY_MAX_SHOTS
+
+
+class QuandelaCommunicationLayer(RPCBasedCommunicationLayer):
+
+    def __init__(self, name: str, token: str, url: str, proxies: dict[str, str] = None):
+        super().__init__(RPCHandler(name, url, token, proxies))
+        get_logger().info(f"Connected to Cloud platform {name}", channel.general)
+
+    def send(self, payload: dict) -> RemoteId:
+        computation = PayloadGenerator.get_computation(payload)
+
+        # Needed for display - Should not be used anywhere else. The cloud expects these so they must be filled
+        payload[KEY_COMMAND] = computation.command.name
+        assert KEY_MAX_SHOTS in computation.parameters, f"Missing '{KEY_MAX_SHOTS}' parameter"
+        payload[KEY_MAX_SHOTS] = computation.parameters[KEY_MAX_SHOTS]
+
+        return super().send(payload)
+
+    def get_availability(self) -> int:
+        try:
+            availability = self._rpc_handler.get_job_availability()
+            return availability["max_jobs_in_queue"] - availability["num_jobs_in_queue"]
+        except HTTPError:
+            get_logger().warn("Impossible to determine whether there is room for a new job")
+            return 0
