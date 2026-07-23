@@ -57,7 +57,7 @@ class RemoteProcessor(AProcessor):
             token: str = None,
             url: str = None,
             proxies: dict[str,str] = None,
-            rpc_handler: "RPCHandler" = None):
+            rpc_handler = None):
         rp = RemoteProcessor(
             name=name,
             token=token,
@@ -76,7 +76,7 @@ class RemoteProcessor(AProcessor):
                  token: str = None,
                  url: str = None,
                  proxies: dict[str,str] = None,
-                 rpc_handler: "RPCHandler" = None,
+                 rpc_handler = None,
                  m: int = None,
                  noise: NoiseModel = None):
         """
