@@ -248,10 +248,10 @@ class RPCBasedCommunicationLayer(CommunicationLayer):
 
         job_status = JobStatus()
         job_status.status = RunningStatus.from_server_response(_retrieve_from_response(response, 'status'))
-        if job_status.running:
+        if job_status.running or job_status.completed:
             job_status.update_progress(_retrieve_from_response(response, 'progress', 0., float),
                                        _retrieve_from_response(response, 'progress_message'))
-        elif job_status.failed:
+        if job_status.failed:
             job_status._stop_message = _retrieve_from_response(response, 'status_message')
 
         self._extract_job_times(job_status, response)

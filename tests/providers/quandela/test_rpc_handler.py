@@ -33,7 +33,7 @@ import requests
 
 import responses
 
-from tests.providers.quandela._mock_rpc_handler import RPCHandlerResponsesBuilder, DEFAULT_PLATFORM_INFO, ARCHITECTURE_PLATFORM_INFO
+from ._mock_rpc_handler import RPCHandlerResponsesBuilder, DEFAULT_PLATFORM_INFO, ARCHITECTURE_PLATFORM_INFO
 
 from perceval.providers.quandela.rpc_handler import (
     RPCHandler,

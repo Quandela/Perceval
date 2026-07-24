@@ -258,7 +258,6 @@ class RemoteComputer(AbstractComputer):
                                                  self._parameters,
                                                  self._custom_noise)
 
-    # TODO: add these methods to the Abstract class ?
     def start(self) -> None:
         """May be used to start a non-interrupted session. May do nothing for stateless providers"""
         self._communication_layer.start_session()
@@ -270,12 +269,6 @@ class RemoteComputer(AbstractComputer):
     def delete(self) -> None:
         """May be used to delete a non-interrupted session. May do nothing for stateless providers"""
         self._communication_layer.delete_session()
-
-    def acquire(self) -> ContextManager:
-        """
-        :return: A context manager that starts the computer at enter and stops it at exit
-        """
-        return ContextManager(self.start, self.stop)
 
     @property
     def is_remote(self) -> bool:
