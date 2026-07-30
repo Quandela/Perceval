@@ -30,7 +30,6 @@
 from collections import Counter
 from itertools import combinations_with_replacement
 from math import comb
-from typing import Iterable
 
 from perceval.utils import FockState, BSDistribution
 
@@ -67,58 +66,73 @@ def _apply_detection_filter(distribution: BSDistribution, pnr_per_mode: list[int
 
 
 def _generate_obb_partition(input_state: FockState, order: int):
-    """Generate one-bad-basis partitions for a given OBB order."""
+    """
+    Generate one-bad-basis partitions for a given OBB order.
+    Yields the cells, and the multiplicity for each of them (i.e. the number of times they should be accounted for)
+    """
     order = min(order, input_state.n)
     if order == 0:
-        return [[input_state]]
+        yield [input_state], 1
 
     modes = len(input_state)
-    eligible = [mode for mode, count in enumerate(input_state) if count > 0]
-    partitions = []
+    non_empty_modes = [mode for mode, count in enumerate(input_state) if count > 0]
 
-    for positions in combinations_with_replacement(eligible, order):
+    single_fs = {mode: FockState([1 if m == mode else 0 for m in range(modes)]) for mode in non_empty_modes}
+
+    for positions in combinations_with_replacement(non_empty_modes, order):
         counts = Counter(positions)
         if any(input_state[mode] < count for mode, count in counts.items()):
             continue
 
+        remaining = list(input_state)
         multiplicity = 1
+        cell = []
         for mode, count in counts.items():
+            remaining[mode] -= count
             multiplicity *= comb(input_state[mode], count)
+
+            for _ in range(count):
+                cell.append(single_fs[mode])
+
+        if order != input_state.n:
+            cell.append(FockState(remaining))
+
+        yield cell, multiplicity
+
+
+def _generate_obb_set(input_state: FockState, order: int, out: set[FockState]):
+    """Generate all one-bad-basis states for a given OBB order."""
+
+    order = min(order, input_state.n)
+    if order == 0:
+        out.add(input_state)
+
+    modes = len(input_state)
+    non_empty_modes = [mode for mode, count in enumerate(input_state) if count > 0]
+
+    for mode in non_empty_modes:
+        state = [0] * modes
+        state[mode] = 1
+        out.add(FockState(state))
+
+    for positions in combinations_with_replacement(non_empty_modes, order):
+        counts = Counter(positions)
+        if any(input_state[mode] < count for mode, count in counts.items()):
+            continue
 
         remaining = list(input_state)
         for mode, count in counts.items():
             remaining[mode] -= count
 
-        cell = []
-        if sum(remaining) > 0:
-            cell.append(FockState(remaining))
-        for mode in positions:
-            state = [0] * modes
-            state[mode] = 1
-            cell.append(FockState(state))
-        partitions.extend([cell] * multiplicity)
-
-    return partitions
+        if any(remaining):
+            out.add(FockState(remaining))
 
 
-def _flatten_fock_states(obj: Iterable | FockState):
-    """Helper function to flatten nested lists of FockStates in
-    _generate_obb_states.
-    """
-    if isinstance(obj, FockState):
-        yield obj
-        return
-
-    for item in obj:
-        yield from _flatten_fock_states(item)
-
-
-def _generate_obb_states(input_state: FockState, order: int) -> list[FockState]:
-    """Generate all input states needed by the OBB corrections.
+def _generate_obb_states(input_state: FockState, order: int) -> set[FockState]:
+    """Generate all input states needed by the OBB corrections, without multiplicity.
     """
     states = set()
     for current_order in range(order + 1):
-        partition = _generate_obb_partition(input_state, current_order)
-        states.update(_flatten_fock_states(partition))
+        _generate_obb_set(input_state, current_order, states)
 
-    return sorted(states, key=tuple, reverse=True)
+    return states

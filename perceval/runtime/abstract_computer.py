@@ -156,7 +156,7 @@ class AbstractComputer(ABC):
                      noise: NoiseModel,
                      emts: list[AbstractMitigation] = None,
                      progress_callback: ProgressCallback = None) -> dict:
-        if original_computation.command.apply_emt:
+        if not original_computation.command.apply_emt:
             emts = None
         return self._post_process(original_computation, emts or [], results, noise, progress_callback)[0]
 

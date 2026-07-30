@@ -34,7 +34,7 @@ from exqalibur import BSCount, BSSamples
 from ..computation import Computation
 
 from perceval.utils import NoiseModel, ConversionHelper, apply_min_photons, apply_post_select, BSDistribution
-from perceval.utils.constants import KEY_RESULTS, KEY_GLOBAL_PERF, KEY_PHYSICAL_PERF, KEY_LOGICAL_PERF
+from perceval.utils.constants import KEY_RESULTS, KEY_GLOBAL_PERF, KEY_PHYSICAL_PERF, KEY_LOGICAL_PERF, KEY_SHOTS_USED
 from perceval.components import Experiment
 
 
@@ -84,6 +84,16 @@ class AbstractMitigation(ABC):
             result[KEY_PHYSICAL_PERF] *= physical_perf
         if KEY_LOGICAL_PERF in result:
             result[KEY_LOGICAL_PERF] *= logical_perf
+
+        shots_used = 0
+        for sub_res in results:
+            if shots_used is not None and KEY_SHOTS_USED in sub_res:
+                shots_used += sub_res[KEY_SHOTS_USED]
+            else:
+                shots_used = None
+
+        if shots_used is not None:
+            result[KEY_SHOTS_USED] = shots_used
 
         return result
 

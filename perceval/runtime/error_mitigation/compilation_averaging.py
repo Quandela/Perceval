@@ -109,17 +109,11 @@ class CompilationAveraging(AbstractMitigation):
         # global_perf = n_samples / n_clock; phys_perf = n_phys / n_clock; log_perf = n_samples / n_phys
         n_clocks = 0
         n_physical = 0
-        shots_used = 0
 
         for res in results:
             res_bsc: BSCount = res[KEY_RESULTS]
             for state, count in res_bsc.items():
                 bsc[state] += count
-
-            if shots_used is not None and KEY_SHOTS_USED in res:
-                shots_used += res[KEY_SHOTS_USED]
-            else:
-                shots_used = None
 
             sub_n_clocks = res_bsc.total() / res[KEY_GLOBAL_PERF]
             n_clocks += sub_n_clocks
@@ -137,8 +131,5 @@ class CompilationAveraging(AbstractMitigation):
         if n_physical is not None:
             res[KEY_PHYSICAL_PERF] = n_physical / n_clocks
             res[KEY_LOGICAL_PERF] = n_samples / n_physical
-
-        if shots_used is not None:
-            res[KEY_SHOTS_USED] = shots_used
 
         return res
