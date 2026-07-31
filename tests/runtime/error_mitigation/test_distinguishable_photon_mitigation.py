@@ -28,10 +28,10 @@
 # SOFTWARE.
 import pytest
 
-from perceval import Experiment, BS, SimulatedComputer, PhotonErrorMitigation, FockState, NoiseModel, Computation, \
+from perceval import Experiment, BS, SimulatedComputer, DistinguishablePhotonMitigation, FockState, NoiseModel, Computation, \
     tvd_dist
 from tests._test_utils import assert_bsd_close, assert_unordered_lists_equal
-from perceval.runtime.error_mitigation._helpers.photon_error_mitigation import generate_obb_partition, generate_obb_states
+from perceval.runtime.error_mitigation._helpers.distinguishable_photon_mitigation import generate_obb_partition, generate_obb_states
 
 
 def test_state_generation():
@@ -110,7 +110,7 @@ def test_state_generation_equivalence(input_state, order):
 
 
 def test_overhead():
-    assert PhotonErrorMitigation(2).overhead(FockState([1, 1])) == 3
+    assert DistinguishablePhotonMitigation(2).overhead(FockState([1, 1])) == 3
 
 
 def test_basic_hom_mitigation():
@@ -124,7 +124,12 @@ def test_basic_hom_mitigation():
     perfect_res = c.execute(computation)
 
     c.noise = NoiseModel(indistinguishability=0.8)
-    c.mitigations = [PhotonErrorMitigation(2)]
+    unmitigated_res = c.execute(computation)
+
+    with pytest.raises(AssertionError):
+        assert_bsd_close(unmitigated_res["results"], perfect_res["results"])
+
+    c.mitigations = [DistinguishablePhotonMitigation(2)]
     corrected_res = c.execute(computation)
 
     # In the HOM experiment case, we can perfectly correct the errors
@@ -142,7 +147,12 @@ def test_g2_mitigation():
     perfect_res = c.execute(computation)
 
     c.noise = NoiseModel(g2=0.05)
-    c.mitigations = [PhotonErrorMitigation(2)]
+    unmitigated_res = c.execute(computation)
+
+    with pytest.raises(AssertionError):
+        assert_bsd_close(unmitigated_res["results"], perfect_res["results"])
+
+    c.mitigations = [DistinguishablePhotonMitigation(2)]
     corrected_res = c.execute(computation)
 
     # In the HOM experiment case, we can perfectly correct the errors
@@ -163,7 +173,7 @@ def test_full_noise():
     c.noise = NoiseModel(indistinguishability= 0.8, g2=0.05, transmittance=0.06)
     non_corrected_res = c.execute(computation)
 
-    c.mitigations = [PhotonErrorMitigation(2)]
+    c.mitigations = [DistinguishablePhotonMitigation(2)]
     corrected_res = c.execute(computation)
 
     tvd_non_corrected = tvd_dist(perfect_res["results"], non_corrected_res["results"])

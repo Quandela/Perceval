@@ -35,20 +35,18 @@ from perceval.utils.constants import KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_RESULTS
 
 from ..computation import Computation
 from .abstract_mitigation import AbstractMitigation
-from ._helpers.photon_error_mitigation import (generate_obb_states, apply_detection_filter, filter_extra_photons,
-                                               generate_obb_partition)
+from ._helpers.distinguishable_photon_mitigation import (generate_obb_states, apply_detection_filter, filter_extra_photons,
+                                                         generate_obb_partition)
 
 
-class PhotonErrorMitigation(AbstractMitigation):  # Rename to DistinguishablePhotonMitigation ?
+class DistinguishablePhotonMitigation(AbstractMitigation):
     """
     Partial distinguishability and g2 mitigation.
-
-    Mitigates distinguishability and g2 errors by preparing jobs with fewer
-    photons and recombining them through corrections based on the partial
-    distinguishability 'orthogonal bad bits' model.
-
-    All output states having more than the input number of photons are filtered out.
     Only FockState inputs are supported.
+    All output states having more than the input number of photons are filtered out.
+
+    Mitigates errors associated with noise photons errors (distinguishability and g2) by preparing jobs with fewer
+    photons and recombining them through corrections based on the partial distinguishability 'orthogonal bad bits' model.
 
     :param order: Extent of photon error mitigation. If an integer is given,
         the correction is fixed up to ``order`` or the input photon number.
@@ -382,7 +380,7 @@ class PhotonErrorMitigation(AbstractMitigation):  # Rename to DistinguishablePho
         else:
             p2 = 0
 
-        # The loss is not exactly this product, but this will be enough for now
+        # The loss is not exactly this product, but this is accurate enough for our needs
         loss = 1 - noise.transmittance * noise.brightness
         return [1] + [
             -(p2 * loss) ** i * (1 - p2) ** (photon_count - i)
