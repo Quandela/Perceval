@@ -31,20 +31,20 @@ import pytest
 from perceval import Experiment, BS, SimulatedComputer, PhotonErrorMitigation, FockState, NoiseModel, Computation, \
     tvd_dist
 from tests._test_utils import assert_bsd_close, assert_unordered_lists_equal
-from perceval.runtime.error_mitigation.utils._photon_error_mitigation import _generate_obb_partition, _generate_obb_states
+from perceval.runtime.error_mitigation._helpers.photon_error_mitigation import generate_obb_partition, generate_obb_states
 
 
 def test_state_generation():
     input_state = FockState(3 * [1])
     order = 0
 
-    all_cells = list(_generate_obb_partition(input_state, order))
+    all_cells = list(generate_obb_partition(input_state, order))
     assert len(all_cells) == 1
     assert all_cells[0][0] == [input_state]
     assert all_cells[0][1] == 1
 
     order = 1
-    all_cells = list(_generate_obb_partition(input_state, order))
+    all_cells = list(generate_obb_partition(input_state, order))
     assert len(all_cells) == 3
     expected = [([FockState([1, 0, 0]), FockState([0, 1, 1])], 1),
                 ([FockState([0, 1, 0]), FockState([1, 0, 1])], 1),
@@ -52,12 +52,12 @@ def test_state_generation():
     assert_unordered_lists_equal(all_cells, expected)
 
     order = 2
-    all_cells = list(_generate_obb_partition(input_state, order))
+    all_cells = list(generate_obb_partition(input_state, order))
     expected = [([FockState([1, 0, 0]), FockState([0, 1, 0]), FockState([0, 0, 1])], 3)]
     assert all_cells == expected
 
     order = 3
-    all_cells = list(_generate_obb_partition(input_state, order))
+    all_cells = list(generate_obb_partition(input_state, order))
     expected = [([FockState([1, 0, 0]), FockState([0, 1, 0]), FockState([0, 0, 1])], 1)]
     assert all_cells == expected
 
@@ -66,7 +66,7 @@ def test_state_generation():
     input_state = FockState(3 * [1, 0])
 
     order = 1
-    all_cells = list(_generate_obb_partition(input_state, order))
+    all_cells = list(generate_obb_partition(input_state, order))
     assert len(all_cells) == 3
     expected = [([FockState([1, 0, 0, 0, 0, 0]), FockState([0, 0, 1, 0, 1, 0])], 1),
                 ([FockState([0, 0, 1, 0, 0, 0]), FockState([1, 0, 0, 0, 1, 0])], 1),
@@ -77,14 +77,14 @@ def test_state_generation():
     # Test with multiple photons in an input mode
     input_state = FockState([2, 1])
     order = 1
-    all_cells = list(_generate_obb_partition(input_state, order))
+    all_cells = list(generate_obb_partition(input_state, order))
     assert len(all_cells) == 2
     expected = [([FockState([1, 0]), FockState([1, 1])], 2),
                 ([FockState([0, 1]), FockState([2, 0])], 1)]
     assert_unordered_lists_equal(all_cells, expected)
 
     order = 2
-    all_cells = list(_generate_obb_partition(input_state, order))
+    all_cells = list(generate_obb_partition(input_state, order))
     expected = [([FockState([1, 0]), FockState([1, 0]), FockState([0, 1])], 3)]
     assert all_cells == expected
 
@@ -102,8 +102,8 @@ def test_state_generation():
                                                 (FockState([2, 1, 0]), 3),
                                                 ])
 def test_state_generation_equivalence(input_state, order):
-    state_set = set((st for i in range(order + 1) for state in _generate_obb_partition(input_state, i) for st in state[0]))
-    state_list = _generate_obb_states(input_state, order)
+    state_set = set((st for i in range(order + 1) for state in generate_obb_partition(input_state, i) for st in state[0]))
+    state_list = generate_obb_states(input_state, order)
 
     assert len(state_set) == len(state_list)
     assert set(state_list) == state_set

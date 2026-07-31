@@ -34,7 +34,7 @@ from math import comb
 from perceval.utils import FockState, BSDistribution
 
 
-def _filter_extra_photons(dist: BSDistribution, n: int) -> BSDistribution:
+def filter_extra_photons(dist: BSDistribution, n: int) -> BSDistribution:
     """Filter out states with more than `n` photons.
     """
     extracted = BSDistribution()
@@ -45,7 +45,7 @@ def _filter_extra_photons(dist: BSDistribution, n: int) -> BSDistribution:
     return extracted
 
 
-def _apply_detection_filter(distribution: BSDistribution, pnr_per_mode: list[int]) -> BSDistribution:
+def apply_detection_filter(distribution: BSDistribution, pnr_per_mode: list[int]) -> BSDistribution:
     """Apply a detection pattern to a set of results matching the PNR.
     """
     if not pnr_per_mode:
@@ -65,7 +65,7 @@ def _apply_detection_filter(distribution: BSDistribution, pnr_per_mode: list[int
     return detected
 
 
-def _generate_obb_partition(input_state: FockState, order: int):
+def generate_obb_partition(input_state: FockState, order: int):
     """
     Generate one-bad-basis partitions for a given OBB order.
     Yields the cells, and the multiplicity for each of them (i.e. the number of times they should be accounted for)
@@ -107,7 +107,7 @@ def _generate_obb_partition(input_state: FockState, order: int):
         yield cell, multiplicity
 
 
-def _generate_obb_states(input_state: FockState, order: int) -> list[FockState]:
+def generate_obb_states(input_state: FockState, order: int) -> list[FockState]:
     """
     Generate all input states needed by the OBB corrections up to the given order.
     Every state is inserted exactly once in the resulting list

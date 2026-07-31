@@ -39,7 +39,7 @@ from perceval.utils.logging import get_logger, channel
 
 from ..computation import Computation
 from .abstract_mitigation import AbstractMitigation
-from .utils._photon_recycling import _gen_lossy_dists, _get_avg_exp_from_uni_dist, _generate_one_photon_per_mode_mapping
+from ._helpers.photon_recycling import gen_lossy_dists, get_avg_exp_from_uni_dist, generate_one_photon_per_mode_mapping
 
 
 def _validate_noisy_input(noisy_input: BSCount | BSDistribution, ideal_photon_count: int):
@@ -74,11 +74,11 @@ def photon_recycling(noisy_input: BSCount | BSDistribution, ideal_photon_count: 
     _validate_noisy_input(noisy_input, ideal_photon_count)
 
     m = next(iter(noisy_input)).m  # number of modes
-    pattern_map = _generate_one_photon_per_mode_mapping(m, ideal_photon_count)
-    noisy_distributions = _gen_lossy_dists(noisy_input, ideal_photon_count, pattern_map)
+    pattern_map = generate_one_photon_per_mode_mapping(m, ideal_photon_count)
+    noisy_distributions = gen_lossy_dists(noisy_input, ideal_photon_count, pattern_map)
 
     # GET AVERAGE EXPONENT USING AVERAGE DISTANCE FROM UNIFORM PROBABILITY
-    z = _get_avg_exp_from_uni_dist(noisy_distributions, m, ideal_photon_count)
+    z = get_avg_exp_from_uni_dist(noisy_distributions, m, ideal_photon_count)
     median_of_means = z[0]
 
     # Generating the mitigated distribution using the decay parameter.

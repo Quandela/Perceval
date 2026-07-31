@@ -35,8 +35,8 @@ from perceval.utils.constants import KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_RESULTS
 
 from ..computation import Computation
 from .abstract_mitigation import AbstractMitigation
-from .utils._photon_error_mitigation import (_generate_obb_states, _apply_detection_filter, _filter_extra_photons,
-                                             _generate_obb_partition)
+from ._helpers.photon_error_mitigation import (generate_obb_states, apply_detection_filter, filter_extra_photons,
+                                               generate_obb_partition)
 
 
 class PhotonErrorMitigation(AbstractMitigation):  # Rename to DistinguishablePhotonMitigation ?
@@ -68,7 +68,7 @@ class PhotonErrorMitigation(AbstractMitigation):  # Rename to DistinguishablePho
         input_state = self._validate_input_state(input_state)
 
         order = self._resolve_order(input_state.n)
-        return len(_generate_obb_states(input_state, order))
+        return len(generate_obb_states(input_state, order))
 
     def extend_computation(
         self,
@@ -91,7 +91,7 @@ class PhotonErrorMitigation(AbstractMitigation):  # Rename to DistinguishablePho
         resolved_order = self._resolve_order(input_state.n)
 
         # Note: We need the extension to be deterministic
-        new_input_states = _generate_obb_states(input_state, resolved_order)
+        new_input_states = generate_obb_states(input_state, resolved_order)
         ratios = self._split_ratios(new_input_states, noise.transmittance * noise.brightness)
 
         samples = self._split_integer(
@@ -302,12 +302,12 @@ class PhotonErrorMitigation(AbstractMitigation):  # Rename to DistinguishablePho
         res = weights_hom[0] * dist_batch[state_idx[input_state]]
         for i in range(1, order + 1):
             # TODO: avoid tensor product for order n (cell is identical to order n-1)
-            for cell, multiplicity in _generate_obb_partition(input_state, i):
+            for cell, multiplicity in generate_obb_partition(input_state, i):
                 convolved = BSDistribution.list_tensor_product(
                     [dist_batch[state_idx[state]] for state in cell],
                     merge_modes=True
                 )
-                convolved = _apply_detection_filter(convolved, pnr_per_mode)
+                convolved = apply_detection_filter(convolved, pnr_per_mode)
                 res += weights_hom[i] * multiplicity * convolved
 
         return res
@@ -348,11 +348,11 @@ class PhotonErrorMitigation(AbstractMitigation):  # Rename to DistinguishablePho
                 sum(noise_dists, BSDistribution()),
                 merge_modes=True,
             )
-            convolved = _apply_detection_filter(convolved, pnr_per_mode)
+            convolved = apply_detection_filter(convolved, pnr_per_mode)
             res += weights_g2[i] * convolved
 
         # Filter out g2 states. In theory, there shouldn't be any left, but it's better to be sure about that
-        return _filter_extra_photons(res, input_state.n)
+        return filter_extra_photons(res, input_state.n)
 
     @staticmethod
     def _compute_weights_hom(

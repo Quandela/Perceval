@@ -40,12 +40,12 @@ def check_no_collision(state) -> bool:
     return all(i <= 1 for i in state)
 
 
-def _handle_zero_photon_lost_dist(noisy_distributions, pattern_map, noisy_state, count):
+def handle_zero_photon_lost_dist(noisy_distributions, pattern_map, noisy_state, count):
     index = pattern_map[tuple(noisy_state)]
     noisy_distributions[0][index] += count
 
 
-def _handle_one_photon_lost_dist(noisy_distributions, pattern_map, noisy_state, count):
+def handle_one_photon_lost_dist(noisy_distributions, pattern_map, noisy_state, count):
     for t in range(noisy_state.m):  # loop through each bit in string and +1 in each place
         n_ls = list(noisy_state)
         n_ls[t] += 1
@@ -54,7 +54,7 @@ def _handle_one_photon_lost_dist(noisy_distributions, pattern_map, noisy_state, 
             noisy_distributions[1][index] += count
 
 
-def _handle_two_photons_lost_dist(noisy_distributions, pattern_map, noisy_state, count):
+def handle_two_photons_lost_dist(noisy_distributions, pattern_map, noisy_state, count):
     for t in range(noisy_state.m):
         n_ls = list(noisy_state)
         n_ls[t] += 1
@@ -68,7 +68,7 @@ def _handle_two_photons_lost_dist(noisy_distributions, pattern_map, noisy_state,
                 noisy_distributions[2][index] += count
 
 
-def _generate_one_photon_per_mode_mapping(m, n):
+def generate_one_photon_per_mode_mapping(m, n):
     combos = combinations(range(m), m - n)
     ones_photons = [1] * n
     char_cyc = cycle(ones_photons)
@@ -77,7 +77,7 @@ def _generate_one_photon_per_mode_mapping(m, n):
     return {perm: index for perm, index in zip(perms, range(len(perms)))}
 
 
-def _gen_lossy_dists(noisy_input, ideal_photon_count, pattern_map):
+def gen_lossy_dists(noisy_input, ideal_photon_count, pattern_map):
     # Takes non-collision (no bunching) samples as input and
     # outputs approximate distributions for each number of lost photon statistics.
     # MAX_LOST_PHOTONS controls upto how many are considered
@@ -90,13 +90,13 @@ def _gen_lossy_dists(noisy_input, ideal_photon_count, pattern_map):
         actual_photon_count = noisy_state.n
 
         if actual_photon_count == ideal_photon_count:
-            _handle_zero_photon_lost_dist(noisy_distributions, pattern_map, noisy_state, count)
+            handle_zero_photon_lost_dist(noisy_distributions, pattern_map, noisy_state, count)
 
         elif actual_photon_count == ideal_photon_count - 1:
-            _handle_one_photon_lost_dist(noisy_distributions, pattern_map, noisy_state, count)
+            handle_one_photon_lost_dist(noisy_distributions, pattern_map, noisy_state, count)
 
         elif actual_photon_count == ideal_photon_count - 2:
-            _handle_two_photons_lost_dist(noisy_distributions, pattern_map, noisy_state, count)
+            handle_two_photons_lost_dist(noisy_distributions, pattern_map, noisy_state, count)
 
     for i in range(MAX_LOST_PHOTONS + 1):
         summed = sum(noisy_distributions[i])
@@ -105,7 +105,7 @@ def _gen_lossy_dists(noisy_input, ideal_photon_count, pattern_map):
     return noisy_distributions
 
 
-def _get_avg_exp_from_uni_dist(noisy_distributions, m, n):
+def get_avg_exp_from_uni_dist(noisy_distributions, m, n):
     # fits a noisy data to provide parameters to generate mitigated distribution
     def func(x, b):
         return uni_value * np.exp(-b * x)
