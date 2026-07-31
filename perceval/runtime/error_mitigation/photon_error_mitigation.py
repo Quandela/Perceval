@@ -47,6 +47,9 @@ class PhotonErrorMitigation(AbstractMitigation):  # Rename to DistinguishablePho
     photons and recombining them through corrections based on the partial
     distinguishability 'orthogonal bad bits' model.
 
+    All output states having more than the input number of photons are filtered out.
+    Only FockState inputs are supported.
+
     :param order: Extent of photon error mitigation. If an integer is given,
         the correction is fixed up to ``order`` or the input photon number.
         If a dict is given, it the input photon number as key and the corresponding order as value.
@@ -87,9 +90,8 @@ class PhotonErrorMitigation(AbstractMitigation):  # Rename to DistinguishablePho
 
         resolved_order = self._resolve_order(input_state.n)
 
-        # We need the extension to be deterministic
-        # Note: it would be interesting/faster to directly generate the states as a list without repetition
-        new_input_states = sorted(_generate_obb_states(input_state, resolved_order), key=tuple, reverse=True)
+        # Note: We need the extension to be deterministic
+        new_input_states = _generate_obb_states(input_state, resolved_order)
         ratios = self._split_ratios(new_input_states, noise.transmittance * noise.brightness)
 
         samples = self._split_integer(
@@ -131,7 +133,6 @@ class PhotonErrorMitigation(AbstractMitigation):  # Rename to DistinguishablePho
             return results[0]
 
         sub_comps = self.extend_computation(computation, noise)
-        sub_parameters = [comp.parameters for comp in sub_comps]
 
         state_idx: dict[FockState, int] = {}
         states_by_photon_count: dict[int, list[int]] = {}
@@ -164,9 +165,6 @@ class PhotonErrorMitigation(AbstractMitigation):  # Rename to DistinguishablePho
             noise,
             pnr_per_mode,
         )
-
-        # Filter out g2 states  # TODO: is it possible to keep them?
-        mitigated = _filter_extra_photons(mitigated, input_state.n)
         mitigated.normalize()
 
         parsed = copy(results[0])
@@ -295,16 +293,16 @@ class PhotonErrorMitigation(AbstractMitigation):  # Rename to DistinguishablePho
         photons statistics are independent.
         """
         if indistinguishability == 1:
-            return dist_batch[0]
+            return dist_batch[state_idx[input_state]]
 
         photon_count = input_state.n
         order = min(photon_count, order)
         weights_hom = cls._compute_weights_hom(indistinguishability, photon_count, order)
 
-        res = weights_hom[0] * dist_batch[0]
+        res = weights_hom[0] * dist_batch[state_idx[input_state]]
         for i in range(1, order + 1):
+            # TODO: avoid tensor product for order n (cell is identical to order n-1)
             for cell, multiplicity in _generate_obb_partition(input_state, i):
-                # TODO: find equivalent cells and do the convolution only once (Note: this can only happen for n==2)
                 convolved = BSDistribution.list_tensor_product(
                     [dist_batch[state_idx[state]] for state in cell],
                     merge_modes=True
@@ -328,13 +326,13 @@ class PhotonErrorMitigation(AbstractMitigation):  # Rename to DistinguishablePho
         distinguishable photon in lossy subspace.
         """
         if noise.g2 == 0:
-            return dist_batch[0]
+            return dist_batch[idx_by_photon_count[input_state.n][0]]
 
         photon_count = input_state.n
         order = min(order, max(photon_count - 1, 0))
         weights_g2 = cls._compute_weights_g2(noise, photon_count, order)
 
-        res = weights_g2[0] * dist_batch[0]
+        res = weights_g2[0] * dist_batch[idx_by_photon_count[input_state.n][0]]
         for i in range(1, order + 1):
             signal_dists = [
                 dist_batch[idx]
@@ -353,7 +351,8 @@ class PhotonErrorMitigation(AbstractMitigation):  # Rename to DistinguishablePho
             convolved = _apply_detection_filter(convolved, pnr_per_mode)
             res += weights_g2[i] * convolved
 
-        return res
+        # Filter out g2 states. In theory, there shouldn't be any left, but it's better to be sure about that
+        return _filter_extra_photons(res, input_state.n)
 
     @staticmethod
     def _compute_weights_hom(

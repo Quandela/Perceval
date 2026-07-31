@@ -55,6 +55,18 @@ def strip_line_12(s: str) -> str:
     return s.strip().replace("            ", "")
 
 
+def assert_unordered_lists_equal(left: list, right: list):
+    # This algorithm is inefficient for hashable or sortable values, but can be used with anything
+    right = list(right)   # make a mutable copy
+    for elem in left:
+        try:
+            right.remove(elem)
+        except ValueError:
+            raise ValueError(f"Unordered list comparison failed: right argument is missing {elem}")
+    if len(right):
+        raise ValueError(f"Unordered list comparison failed: left argument is missing {right[0]}")
+
+
 def check_sv_close(sv1: StateVector, sv2: StateVector) -> bool:
     sv1.normalize()
     sv2.normalize()

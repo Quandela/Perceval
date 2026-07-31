@@ -73,11 +73,18 @@ def _generate_obb_partition(input_state: FockState, order: int):
     order = min(order, input_state.n)
     if order == 0:
         yield [input_state], 1
+        return
 
     modes = len(input_state)
     non_empty_modes = [mode for mode, count in enumerate(input_state) if count > 0]
 
     single_fs = {mode: FockState([1 if m == mode else 0 for m in range(modes)]) for mode in non_empty_modes}
+
+    if order == input_state.n - 1:
+        # Merge all cells into one, as they are all identical with only 1-photon states
+        cell = [single_fs[input_state.photon2mode(i)] for i in range(input_state.n)]
+        yield cell, input_state.n
+        return
 
     for positions in combinations_with_replacement(non_empty_modes, order):
         counts = Counter(positions)
@@ -100,39 +107,38 @@ def _generate_obb_partition(input_state: FockState, order: int):
         yield cell, multiplicity
 
 
-def _generate_obb_set(input_state: FockState, order: int, out: set[FockState]):
-    """Generate all one-bad-basis states for a given OBB order."""
+def _generate_obb_states(input_state: FockState, order: int) -> list[FockState]:
+    """
+    Generate all input states needed by the OBB corrections up to the given order.
+    Every state is inserted exactly once in the resulting list
+    """
+    states = [input_state]  # order = 0
 
     order = min(order, input_state.n)
     if order == 0:
-        out.add(input_state)
+        return states
 
-    modes = len(input_state)
+    m = input_state.m
     non_empty_modes = [mode for mode, count in enumerate(input_state) if count > 0]
 
-    for mode in non_empty_modes:
-        state = [0] * modes
+    for mode in non_empty_modes:  # order = n - 1, but these states are also needed for any order > 0
+        state = [0] * m
         state[mode] = 1
-        out.add(FockState(state))
+        states.append(FockState(state))
 
-    for positions in combinations_with_replacement(non_empty_modes, order):
-        counts = Counter(positions)
-        if any(input_state[mode] < count for mode, count in counts.items()):
-            continue
+    for current_order in range(1, min(order + 1, input_state.n - 1)):
 
-        remaining = list(input_state)
-        for mode, count in counts.items():
-            remaining[mode] -= count
+        for positions in combinations_with_replacement(non_empty_modes, current_order):
+            counts = Counter(positions)
+            if any(input_state[mode] < count for mode, count in counts.items()):
+                continue
 
-        if any(remaining):
-            out.add(FockState(remaining))
+            remaining = list(input_state)
+            for mode, count in counts.items():
+                remaining[mode] -= count
 
+            states.append(FockState(remaining))
 
-def _generate_obb_states(input_state: FockState, order: int) -> set[FockState]:
-    """Generate all input states needed by the OBB corrections, without multiplicity.
-    """
-    states = set()
-    for current_order in range(order + 1):
-        _generate_obb_set(input_state, current_order, states)
+    # order n corresponds to the empty state, which is never included
 
     return states

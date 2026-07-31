@@ -26,12 +26,94 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import pytest
 
-from perceval import Experiment, BS, SimulatedComputer, PhotonErrorMitigation, FockState, NoiseModel, Computation
-from tests._test_utils import assert_bsd_close
+from perceval import Experiment, BS, SimulatedComputer, PhotonErrorMitigation, FockState, NoiseModel, Computation, \
+    tvd_dist
+from tests._test_utils import assert_bsd_close, assert_unordered_lists_equal
+from perceval.runtime.error_mitigation.utils._photon_error_mitigation import _generate_obb_partition, _generate_obb_states
 
 
-def test_basic():
+def test_state_generation():
+    input_state = FockState(3 * [1])
+    order = 0
+
+    all_cells = list(_generate_obb_partition(input_state, order))
+    assert len(all_cells) == 1
+    assert all_cells[0][0] == [input_state]
+    assert all_cells[0][1] == 1
+
+    order = 1
+    all_cells = list(_generate_obb_partition(input_state, order))
+    assert len(all_cells) == 3
+    expected = [([FockState([1, 0, 0]), FockState([0, 1, 1])], 1),
+                ([FockState([0, 1, 0]), FockState([1, 0, 1])], 1),
+                ([FockState([0, 0, 1]), FockState([1, 1, 0])], 1)]
+    assert_unordered_lists_equal(all_cells, expected)
+
+    order = 2
+    all_cells = list(_generate_obb_partition(input_state, order))
+    expected = [([FockState([1, 0, 0]), FockState([0, 1, 0]), FockState([0, 0, 1])], 3)]
+    assert all_cells == expected
+
+    order = 3
+    all_cells = list(_generate_obb_partition(input_state, order))
+    expected = [([FockState([1, 0, 0]), FockState([0, 1, 0]), FockState([0, 0, 1])], 1)]
+    assert all_cells == expected
+
+
+    # Test holes in the state
+    input_state = FockState(3 * [1, 0])
+
+    order = 1
+    all_cells = list(_generate_obb_partition(input_state, order))
+    assert len(all_cells) == 3
+    expected = [([FockState([1, 0, 0, 0, 0, 0]), FockState([0, 0, 1, 0, 1, 0])], 1),
+                ([FockState([0, 0, 1, 0, 0, 0]), FockState([1, 0, 0, 0, 1, 0])], 1),
+                ([FockState([0, 0, 0, 0, 1, 0]), FockState([1, 0, 1, 0, 0, 0])], 1)]
+    assert_unordered_lists_equal(all_cells, expected)
+
+
+    # Test with multiple photons in an input mode
+    input_state = FockState([2, 1])
+    order = 1
+    all_cells = list(_generate_obb_partition(input_state, order))
+    assert len(all_cells) == 2
+    expected = [([FockState([1, 0]), FockState([1, 1])], 2),
+                ([FockState([0, 1]), FockState([2, 0])], 1)]
+    assert_unordered_lists_equal(all_cells, expected)
+
+    order = 2
+    all_cells = list(_generate_obb_partition(input_state, order))
+    expected = [([FockState([1, 0]), FockState([1, 0]), FockState([0, 1])], 3)]
+    assert all_cells == expected
+
+
+@pytest.mark.parametrize("input_state, order", [(FockState(3 * [1]), 0),
+                                                (FockState(3 * [1]), 1),
+                                                (FockState(3 * [1]), 2),
+                                                (FockState(3 * [1]), 3),
+                                                (FockState(5 * [1, 0]), 0),
+                                                (FockState(5 * [1, 0]), 2),
+                                                (FockState(5 * [1, 0]), 5),
+                                                (FockState([2, 1, 0]), 0),
+                                                (FockState([2, 1, 0]), 1),
+                                                (FockState([2, 1, 0]), 2),
+                                                (FockState([2, 1, 0]), 3),
+                                                ])
+def test_state_generation_equivalence(input_state, order):
+    state_set = set((st for i in range(order + 1) for state in _generate_obb_partition(input_state, i) for st in state[0]))
+    state_list = _generate_obb_states(input_state, order)
+
+    assert len(state_set) == len(state_list)
+    assert set(state_list) == state_set
+
+
+def test_overhead():
+    assert PhotonErrorMitigation(2).overhead(FockState([1, 1])) == 3
+
+
+def test_basic_hom_mitigation():
     e = Experiment(BS())
     e.with_input(FockState([1, 1]))
     e.min_detected_photons_filter(2)
@@ -47,3 +129,44 @@ def test_basic():
 
     # In the HOM experiment case, we can perfectly correct the errors
     assert_bsd_close(corrected_res["results"], perfect_res["results"])
+
+
+def test_g2_mitigation():
+    e = Experiment(BS())
+    e.with_input(FockState([1, 1]))
+    e.min_detected_photons_filter(2)
+
+    c = SimulatedComputer("SLOS")
+    computation = Computation(c.get_command("probs"), e)
+
+    perfect_res = c.execute(computation)
+
+    c.noise = NoiseModel(g2=0.05)
+    c.mitigations = [PhotonErrorMitigation(2)]
+    corrected_res = c.execute(computation)
+
+    # In the HOM experiment case, we can perfectly correct the errors
+    assert_bsd_close(corrected_res["results"], perfect_res["results"])
+
+
+def test_full_noise():
+    e = Experiment(BS())
+    e.with_input(FockState([1, 1]))
+    e.min_detected_photons_filter(1)
+
+    c = SimulatedComputer("SLOS")
+    computation = Computation(c.get_command("probs"), e)
+
+    c.noise = NoiseModel(transmittance=0.06)
+    perfect_res = c.execute(computation)
+
+    c.noise = NoiseModel(indistinguishability= 0.8, g2=0.05, transmittance=0.06)
+    non_corrected_res = c.execute(computation)
+
+    c.mitigations = [PhotonErrorMitigation(2)]
+    corrected_res = c.execute(computation)
+
+    tvd_non_corrected = tvd_dist(perfect_res["results"], non_corrected_res["results"])
+    tvd_corrected = tvd_dist(perfect_res["results"], corrected_res["results"])
+
+    assert tvd_corrected < tvd_non_corrected
