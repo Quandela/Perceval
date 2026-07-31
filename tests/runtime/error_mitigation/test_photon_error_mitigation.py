@@ -31,7 +31,7 @@ import pytest
 from perceval import Experiment, BS, SimulatedComputer, PhotonErrorMitigation, FockState, NoiseModel, Computation, \
     tvd_dist
 from tests._test_utils import assert_bsd_close, assert_unordered_lists_equal
-from perceval.runtime.error_mitigation._mitigation_helpers.photon_error_mitigation import generate_obb_partition, generate_obb_states
+from perceval.runtime.error_mitigation._helpers.photon_error_mitigation import generate_obb_partition, generate_obb_states
 
 
 def test_state_generation():
