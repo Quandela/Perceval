@@ -73,7 +73,7 @@ def fidelity_op_process_tomography(op, op_proc):
 @pytest.mark.long_test
 def test_fidelity_klm_cnot():
     # set operator circuit, num qubits
-    cnot_p = catalog["klm cnot"].build_processor()
+    cnot_p = Processor("SLOS", catalog["klm cnot"].build_experiment())
     cnot_fidelity = fidelity_op_process_tomography(CNOT_TARGET, cnot_p)
     assert cnot_fidelity == pytest.approx(1)
 
@@ -81,7 +81,7 @@ def test_fidelity_klm_cnot():
 @pytest.mark.long_test
 def test_fidelity_postprocessed_cnot():
     # set operator circuit, num qubits
-    cnot_p = catalog["postprocessed cnot"].build_processor()
+    cnot_p = Processor("SLOS", catalog["postprocessed cnot"].build_experiment())
     cnot_fidelity = fidelity_op_process_tomography(CNOT_TARGET, cnot_p)
     assert cnot_fidelity == pytest.approx(1)
 
@@ -117,7 +117,7 @@ def test_processor_odd_modes():
 
 @pytest.mark.long_test
 def test_chi_cnot_is_physical():
-    cnot_p = catalog["klm cnot"].build_processor()
+    cnot_p = Processor("SLOS", catalog["klm cnot"].build_experiment())
 
     qpt = ProcessTomography(operator_processor=cnot_p)
 
@@ -174,7 +174,7 @@ def test_matrix_basis_n_decomp():
 
 @pytest.mark.skip(reason='3 qubit tests takes a long time to compute')
 def test_avg_fidelity_postprocessed_ccz_gate():
-    ccz_p = catalog["postprocessed ccz"].build_processor()
+    ccz_p = Processor("SLOS", catalog["postprocessed ccz"].build_experiment())
     op_CCZ = np.array([[1, 0, 0, 0, 0, 0, 0, 0],
                        [0, 1, 0, 0, 0, 0, 0, 0],
                        [0, 0, 1, 0, 0, 0, 0, 0],

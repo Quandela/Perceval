@@ -32,11 +32,12 @@ from perceval.utils import SVDistribution, BasicState, FockState, AnnotatedFockS
                            ProcessorType, ProgressCallback
 from perceval.utils.logging import get_logger, channel
 
-from perceval.runtime.abstract_processor import AProcessor
 from perceval.components.experiment import Experiment
 from perceval.components.linear_circuit import ACircuit, Circuit
 from perceval.components.source import Source
 from perceval.backends import ExqaliburBackendWrapper, ASamplingBackend
+
+from .abstract_processor import AProcessor
 
 
 class Processor(AProcessor):

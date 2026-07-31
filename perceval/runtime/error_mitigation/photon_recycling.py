@@ -161,7 +161,7 @@ class PhotonRecycling(AbstractMitigation):
 
         return [comp]
 
-    def _parse_results(self, computation: Computation, results: list[dict], noise: NoiseModel) -> dict:
+    def _parse_results(self, computation: Computation, results: list[dict], misc: object) -> dict:
         ideal_photon_count = self._ideal_photon_number(computation)
         res = results[0]
 

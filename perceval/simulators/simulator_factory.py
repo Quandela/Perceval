@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from perceval.utils import NoiseModel
 from perceval.utils.postselect import PostSelect
 
 from .feed_forward_simulator import FFSimulator
@@ -37,7 +38,6 @@ from .polarization_simulator import PolarizationSimulator
 from ._simulator_utils import _unitary_components_to_circuit
 from perceval.components import ACircuit, TD, LC, Experiment, AFFConfigurator
 from perceval.backends import ABackend, SLOSExqaliburBackend, BACKEND_LIST, ExqaliburBackendWrapper
-from perceval.runtime import Processor
 
 
 class SimulatorFactory:
@@ -48,8 +48,9 @@ class SimulatorFactory:
     """
 
     @staticmethod
-    def build(circuit: ACircuit | Processor | Experiment | list,
+    def build(circuit: ACircuit | Experiment | list,
               backend: ABackend | str = None,
+              noise: NoiseModel = None,
               **kwargs) -> ISimulator:
         """
         :param circuit: The optical circuit to build the simulation layers around.
@@ -58,6 +59,7 @@ class SimulatorFactory:
         :param backend: (Optional) Any probampli capable backend instance or name. If no backend is passed, then the
             processor backend name is used if the first parameter's type is Processor. Ultimately, the fallback is a
             SLOS backend instantiated without any configuration (i.e. no mask)
+        :param noise: The noise to transmit to the Simulator, if relevant
         :param kwargs: If backend is a string, the kwargs are transmitted to the instantiation of the backend.
         :return: A simulator object with the input circuit set
         """
@@ -69,8 +71,10 @@ class SimulatorFactory:
         min_detected_photons = None
         post_select = PostSelect()
         heralds = None
-        noise = None
+        noise = noise
         m = None
+
+        from perceval.runtime import Processor  # TODO: remove (deprecated since 1.3)
 
         if isinstance(circuit, Processor):
             if backend is None:
@@ -85,7 +89,8 @@ class SimulatorFactory:
                 min_detected_photons = circuit.min_photons_filter
                 post_select = circuit.post_select_fn
                 heralds = circuit.heralds
-                noise = circuit.noise
+                if circuit.noise is not None:
+                    noise = circuit.noise
                 if circuit.is_unitary:
                     circuit = circuit.unitary_circuit()
                 else:

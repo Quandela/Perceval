@@ -1,0 +1,112 @@
+# MIT License
+#
+# Copyright (c) 2022 Quandela
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+# MIT License
+#
+# Copyright (c) 2026 Kipu Quantum GmbH
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+import pytest
+# qhub is a namespace package; guard on the concrete submodule so the suite skips when [kipu] is absent.
+pytest.importorskip("qhub.api.quantum")
+from unittest.mock import patch
+
+from perceval.providers.kipu.kipu_session import Session
+from perceval.runtime import RemoteProcessor
+
+_PLATFORM_DETAILS = {
+    "name": "quandela.sim.belenos",
+    "status": "available",
+    "type": "simulator",
+    "specs": {
+        "available_commands": ["probs"],
+        "constraints": {
+            "max_mode_count": 20,
+            "max_photon_count": 6,
+            "min_mode_count": 1,
+            "min_photon_count": 1,
+        },
+    },
+    "perfs": {},
+}
+
+
+def test_session_token_is_optional():
+    session = Session(platform_name="quandela.sim.belenos", token=None)
+    assert session is not None
+
+
+def test_session_requires_platform_name():
+    with pytest.raises(ValueError):
+        Session(platform_name=None, token="t")
+
+
+@patch("perceval.providers.kipu.kipu_rpc_handler.KipuRPCHandler.fetch_platform_details",
+       return_value=_PLATFORM_DETAILS)
+def test_session_organization_id_is_optional(mock_fetch):
+    session = Session(platform_name="quandela.sim.belenos", token="t")
+    processor = session.build_remote_processor()
+    assert isinstance(processor, RemoteProcessor)
+    assert processor.name == "quandela.sim.belenos"
+    mock_fetch.assert_called_once()
+
+
+@patch("perceval.providers.kipu.kipu_rpc_handler.KipuRPCHandler.fetch_platform_details",
+       return_value=_PLATFORM_DETAILS)
+def test_session_builds_remote_processor_with_org(mock_fetch):
+    session = Session(platform_name="quandela.sim.belenos", token="t",
+                      organization_id="org-1")
+    processor = session.build_remote_processor()
+    assert isinstance(processor, RemoteProcessor)
+    assert processor.name == "quandela.sim.belenos"
+    mock_fetch.assert_called_once()

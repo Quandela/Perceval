@@ -33,9 +33,9 @@ import requests
 
 import responses
 
-from tests.runtime._mock_rpc_handler import RPCHandlerResponsesBuilder, DEFAULT_PLATFORM_INFO, ARCHITECTURE_PLATFORM_INFO
+from ._mock_rpc_handler import RPCHandlerResponsesBuilder, DEFAULT_PLATFORM_INFO, ARCHITECTURE_PLATFORM_INFO
 
-from perceval.runtime.rpc_handler import (
+from perceval.providers.quandela.rpc_handler import (
     RPCHandler,
     _ENDPOINT_JOB_CANCEL,
     _ENDPOINT_JOB_CREATE,

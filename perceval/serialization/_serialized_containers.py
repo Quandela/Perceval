@@ -33,6 +33,7 @@ from .serialize import serialize
 from multipledispatch import dispatch
 
 
+# Possibly deprecated since 1.3, no longer needed in the Computer workflow
 class SerializedDict(dict):
     """
     Class that mimics a python dict, but internally stores serialized versions of the perceval objects given to it,

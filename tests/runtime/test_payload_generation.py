@@ -32,7 +32,7 @@ import pytest
 from perceval import RemoteProcessor, BasicState, catalog, PayloadGenerator, SimulatedComputer, NoiseModel
 from perceval.serialization._constants import ZIP_PREFIX
 
-from tests.runtime._mock_rpc_handler import get_rpc_handler_for_tests
+from tests.providers.quandela._mock_rpc_handler import get_rpc_handler_for_tests
 
 
 COMMAND_NAME = 'my_command'
@@ -74,8 +74,8 @@ def test_payload_parameters():
 def test_payload_cnot():
     """test payload with cnot"""
     rp = _get_remote_processor()
-    heralded_cnot = catalog['heralded cnot'].build_processor()
-    pp_cnot = catalog['postprocessed cnot'].build_processor()
+    heralded_cnot = catalog['heralded cnot'].build_experiment()
+    pp_cnot = catalog['postprocessed cnot'].build_experiment()
     rp.add(0, heralded_cnot)
     rp.add(0, pp_cnot)
     rp.add(4, pp_cnot)

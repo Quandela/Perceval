@@ -30,30 +30,16 @@ from __future__ import annotations  # Python 3.11 : Replace using Self typing
 
 import json
 import time
-from typing import TypeVar, Type
 
 from requests.exceptions import HTTPError, ConnectionError
 
-from .job import Job
-from .job_status import JobStatus, RunningStatus
 from perceval.serialization import deserialize
 from perceval.serialization._serialized_containers import make_serialized, SerializedDict
 from perceval.utils.logging import get_logger, channel
-from .rpc_handler import RPCHandler
 
-T = TypeVar('T')
-
-def _retrieve_from_response(response: dict, field: str, default_value: T = '', value_type: Type[T] = str) -> T:
-    if field not in response:
-        get_logger().error(f"Missing field '{field}' from server response. Using default value {default_value}.", channel.general)
-        return default_value
-    try:
-        result = value_type(response[field])
-    except (ValueError, TypeError):
-        get_logger().error(f"The field '{field}' from server response contains the wrong value '{response[field]}'. Using default value {default_value}.", channel.general)
-        result = default_value
-    return result
-
+from .job import Job
+from ..job_status import JobStatus, RunningStatus
+from ..communication_layer import _retrieve_from_response
 
 class RemoteJob(Job):
     r"""
@@ -87,7 +73,7 @@ class RemoteJob(Job):
     STATUS_REFRESH_DELAY = 1  # minimum job status refresh period (in s)
     _MAX_ERROR = 5
 
-    def __init__(self, request_data: dict, rpc_handler: RPCHandler, job_name: str,
+    def __init__(self, request_data: dict, rpc_handler, job_name: str,
                  delta_parameters: dict = None, job_context: dict = None,
                  command_param_names: list = None, refresh_progress_delay: int = 3):
         super().__init__(command_param_names=command_param_names)
@@ -124,7 +110,7 @@ class RemoteJob(Job):
         return self._id
 
     @staticmethod
-    def from_id(job_id: str, rpc_handler: RPCHandler) -> RemoteJob:
+    def from_id(job_id: str, rpc_handler) -> RemoteJob:
         """
         Recreate an existing RemoteJob from its unique identifier, and a RPCHandler.
 

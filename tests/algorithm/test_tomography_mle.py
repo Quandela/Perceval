@@ -54,14 +54,14 @@ def fidelity_op_mle_process_tomography(op_proc):
 
 @pytest.mark.long_test
 def test_fidelity_heralded_cnot():
-    cnot_p = catalog["heralded cnot"].build_processor()
+    cnot_p = Processor("SLOS", catalog["heralded cnot"].build_experiment())
     cnot_fidelity_mle = fidelity_op_mle_process_tomography(cnot_p)
 
     assert cnot_fidelity_mle == pytest.approx(1)
 
 @pytest.mark.long_test
 def test_ghz_state_tomography_mle():
-    h_cnot_circ = catalog["klm cnot"].build_processor()
+    h_cnot_circ = catalog["klm cnot"].build_experiment()
 
     ghz_state_proc = Processor("SLOS", 6)
     ghz_state_proc.add(0, BS.H())
@@ -79,7 +79,7 @@ def test_ghz_state_tomography_mle():
 
 @pytest.mark.long_test
 def test_chi_cnot_from_mle_is_physical():
-    cnot_p = catalog["klm cnot"].build_processor()
+    cnot_p = Processor("SLOS", catalog["klm cnot"].build_experiment())
 
     qpt = ProcessTomographyMLE(operator_processor=cnot_p)
 

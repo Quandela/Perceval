@@ -311,7 +311,7 @@ def test_experiment_serialization():
     e.min_detected_photons_filter(2)
 
     # Includes components, heralds, postselection, ports
-    e.add(0, catalog["postprocessed cnot"].build_processor())
+    e.add(0, catalog["postprocessed cnot"].build_experiment())
     e.add(0, LC(.1))  # With non-unitary component
     e.with_input(BasicState([1, 0, 1, 0]))
 

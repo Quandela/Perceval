@@ -33,7 +33,6 @@ from typing import Any
 
 from perceval.components import Experiment
 from perceval.utils import NoiseModel, PostSelect, BasicState
-from perceval.serialization import register_to_serialization
 
 
 @dataclasses.dataclass

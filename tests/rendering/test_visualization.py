@@ -298,22 +298,22 @@ def test_svg_decomposition_symb_compact(tmp_path, save_figs):
 
 @pytest.mark.rendering
 def test_svg_processor_with_heralds_phys(tmp_path, save_figs):
-    p = catalog['klm cnot'].build_processor()
+    e = catalog['klm cnot'].build_experiment()
     c = Circuit(2, "Test circuit") // BS() // PS(0.3) // BS()
-    pc = Processor('SLOS', c)
-    pc.add_herald(1, 0)
-    p.add(2, pc)
-    _save_or_check(p, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
+    pe = Experiment(c)
+    pe.add_herald(1, 0)
+    e.add(2, pe)
+    _save_or_check(e, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
 
 
 @pytest.mark.rendering
 def test_svg_processor_with_heralds_phys_not_recursive(tmp_path, save_figs):
-    p = catalog['klm cnot'].build_processor()
+    e = catalog['klm cnot'].build_experiment()
     c = Circuit(2, "Test circuit") // BS() // PS(0.3) // BS()
-    pc = Processor('SLOS', c)
-    pc.add_herald(1, 0)
-    p.add(2, pc)
-    _save_or_check(p, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=False)
+    pe = Experiment(c)
+    pe.add_herald(1, 0)
+    e.add(2, pe)
+    _save_or_check(e, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=False)
 
 
 @pytest.mark.rendering

@@ -48,6 +48,7 @@ _ENDPOINT_JOB_AVAILABILITY = '/api/jobs/availability/'
 _JOB_ID_KEY = 'job_id'
 
 
+# TODO: move this class to providers/quandela
 class RPCHandler:
     """Remote Call Procedure Handler
 
@@ -127,7 +128,7 @@ class RPCHandler:
         try:
             response = self.get_request(endpoint)
             # TEMPORARY CODE
-            # TODO: to be removed in version 1.2
+            # TODO: to be removed in version 1.3
             if 'architecture' not in response.get('specs', {}):
                 raise requests.HTTPError("Missing required 'architecture' field, falling back to the old endpoint "
                                          "containing the 'specific_circuit' field.")

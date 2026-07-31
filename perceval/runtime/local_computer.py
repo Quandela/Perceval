@@ -48,7 +48,7 @@ class _ThreadedExecution(AsyncGetter):
         super().__init__()
         self._thread = Thread(target=self._encapsulate(method), args=args, kwargs=kwargs)
         self._canceled = False
-        self._user_callback = None  # Do we want to pass a user callback if this is async ?
+        self._user_callback: ProgressCallback | None = None  # Do we want to pass a user callback if this is async ?
         self._thread.start()
 
     def _update_status(self) -> None:
@@ -60,6 +60,7 @@ class _ThreadedExecution(AsyncGetter):
 
     def _encapsulate(self, method: Callable):
         def custom_method(*args, **kwargs):
+            self.status.start_run()
             try:
                 try:
                     self._results = method(*args, **kwargs, progress_callback = self._progress_callback)
@@ -75,8 +76,8 @@ class _ThreadedExecution(AsyncGetter):
             except Exception as e:
                 msg = f"{type(e).__name__}: {e}"
                 self._results = {"results": msg}
-                self._status.stop_run(RunningStatus.ERROR, e)
-                raise e
+                self._status.stop_run(RunningStatus.ERROR, msg)
+                raise e  # Keep this ? This makes messages I'm unable to catch in the tests
 
         return custom_method
 

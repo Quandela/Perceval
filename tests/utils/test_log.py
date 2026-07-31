@@ -34,7 +34,7 @@ import perceval as pcvl
 from perceval.utils import LoggerConfig
 from perceval.utils.logging import ExqaliburLogger, PythonLogger, level, channel
 
-from tests.runtime._mock_rpc_handler import get_rpc_handler_for_tests
+from tests.providers.quandela._mock_rpc_handler import get_rpc_handler_for_tests
 
 DEFAULT_CONFIG = {'use_python_logger': False, 'enable_file': False,
                   'channels': {'general': {'level': 'off'}, 'resources': {'level': 'off'}, 'user': {'level': 'warn'}}}

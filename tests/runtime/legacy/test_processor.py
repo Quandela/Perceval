@@ -38,8 +38,8 @@ from perceval.utils import BasicState, StateVector, SVDistribution, Encoding, No
 from perceval.backends import Clifford2017Backend
 from perceval.runtime import Processor
 
-from ._mock_rpc_handler import get_rpc_handler_for_tests
-from .._test_utils import LogChecker, assert_svd_close, assert_bsd_close
+from tests.providers.quandela._mock_rpc_handler import get_rpc_handler_for_tests
+from tests._test_utils import LogChecker, assert_svd_close, assert_bsd_close
 
 
 @patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
@@ -154,7 +154,7 @@ def test_processor_samples_max_shots():
         assert len(samples['results']) == min(max_samples, max_shots)
 
     p = Processor(Clifford2017Backend(), 4)
-    p.add(0, catalog['postprocessed cnot'].build_processor())
+    p.add(0, catalog['postprocessed cnot'].build_experiment())
     p.with_input(FockState([0, 1, 0, 1]))
     max_samples = 100
     result_len = {}
@@ -355,19 +355,19 @@ def test_flatten_processor():
     group_sizes = [Encoding.QUDIT2, Encoding.QUDIT2]
     layers = ["Y"]
     phases = None
-    p = ansatz.build_processor(
+    e = ansatz.build_experiment(
         group_sizes=group_sizes,
         layers=layers,
         phases=phases,
         ctype="cz"
     )
 
-    level_0_components = p.flatten(0)
-    level_1_components = p.flatten(1)
-    level_2_components = p.flatten(2)
-    level_3_components = p.flatten(3)
-    level_4_components = p.flatten(4)
-    all_components = p.flatten()
+    level_0_components = e.flatten(0)
+    level_1_components = e.flatten(1)
+    level_2_components = e.flatten(2)
+    level_3_components = e.flatten(3)
+    level_4_components = e.flatten(4)
+    all_components = e.flatten()
 
     assert len(level_0_components) == 1 # 1 sub-circuit
     assert len(level_1_components) == 15 # 13 sub-sub-circuits (8 RYQUDIT2, 4 CZ2, 1 POSTPROCESSED CZ) + 2 PERM

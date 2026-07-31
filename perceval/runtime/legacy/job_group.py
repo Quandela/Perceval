@@ -34,8 +34,9 @@ from datetime import datetime
 from requests import HTTPError
 from tqdm import tqdm
 
-from perceval.runtime import Job, RemoteJob, RunningStatus
-from perceval.runtime.rpc_handler import RPCHandler
+from .remote_job import RemoteJob
+from .local_job import Job, RunningStatus
+
 from perceval.utils import PersistentData, FileFormat
 from perceval.utils.logging import get_logger, channel
 
@@ -134,6 +135,8 @@ class JobGroup:
         """
         metadata = job_entry['metadata']
         user_token = metadata['headers']['Authorization'].split(' ')[1]
+
+        from perceval.providers.quandela.rpc_handler import RPCHandler  # TODO: deprecated since 1.3
         rpc_handler = RPCHandler(metadata['platform'], metadata['url'], user_token, metadata.get('proxies'))
         return RemoteJob._from_dict(job_entry, rpc_handler)
 

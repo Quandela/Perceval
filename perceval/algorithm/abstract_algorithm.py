@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.runtime.abstract_processor import AProcessor
+from perceval.runtime import AProcessor
 
 
 class AAlgorithm:

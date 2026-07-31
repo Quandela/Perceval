@@ -36,7 +36,7 @@ from perceval.simulators import SimulatorFactory
 from perceval.components import catalog, BS, get_basic_state_from_ports
 
 
-def check_controlled_gates_and_get_performance(n, alpha, processor, herald_states, error=1E-6):
+def check_controlled_gates_and_get_performance(n, alpha, experiment, herald_states, error=1E-6):
     """Check if the CC..Z(alpha) is correct
 
     Meaning checking that the CC...Z(alpha) gate probability amplitude matrix should be:
@@ -52,7 +52,7 @@ def check_controlled_gates_and_get_performance(n, alpha, processor, herald_state
     ports = [Port(Encoding.DUAL_RAIL, "")] * n
     states = [get_basic_state_from_ports(
         ports, state) * herald_states for state in generate_all_logical_states(n)]
-    sim = SimulatorFactory().build(processor)
+    sim = SimulatorFactory().build(experiment)
 
     data_state = BasicState("|0,1"+(n-1)*",0,1"+">") * herald_states
     modulus_value = None
@@ -88,30 +88,30 @@ def test_controlled_gates():
 
             # Testing phases and modulus of CCZ
             check_controlled_gates_and_get_performance(n, alpha,
-                                                       catalog['postprocessed controlled gate'].build_processor(n=n, alpha=alpha), BasicState("|0"+(2*n-1)*",0"+">"))
+                                                       catalog['postprocessed controlled gate'].build_experiment(n=n, alpha=alpha), BasicState("|0"+(2*n-1)*",0"+">"))
 
 
 def test_ccz_and_toffoli_phases_and_modulus():
     # Testing phases and modulus of CCZ
     modulus_ccz = check_controlled_gates_and_get_performance(3,
                                                              cm.pi,
-                                                             catalog['postprocessed ccz'].build_processor(), BasicState("|0,0,0,0,0,0>"))
+                                                             catalog['postprocessed ccz'].build_experiment(), BasicState("|0,0,0,0,0,0>"))
 
     # Testing phases and modulus of Toffoli by transforming it in a CCZ gate with Hadamard gates
     ccz = Processor("SLOS", 6)
     ccz.add(4, BS.H()) \
-        .add(0, catalog["toffoli"].build_processor()) \
+        .add(0, catalog["toffoli"].build_experiment()) \
         .add(4, BS.H())
     modulus_ccz_with_toffoli = check_controlled_gates_and_get_performance(3,
                                                                           cm.pi,
-                                                                          catalog['postprocessed ccz'].build_processor(), BasicState("|0,0,0,0,0,0>"))
+                                                                          catalog['postprocessed ccz'].build_experiment(), BasicState("|0,0,0,0,0,0>"))
     assert modulus_ccz == pytest.approx(modulus_ccz_with_toffoli)
 
     # Testing truth table of Toffoli (redundant with above test)
-    toffoli = catalog['toffoli'].build_processor()
-    state_dict = {get_basic_state_from_ports(toffoli.experiment._out_ports, state): str(
+    toffoli = catalog['toffoli'].build_experiment()
+    state_dict = {get_basic_state_from_ports(toffoli._out_ports, state): str(
         state) for state in generate_all_logical_states(3)}
-    a_toffoli = Analyzer(toffoli, input_states=state_dict)
+    a_toffoli = Analyzer(Processor("SLOS", toffoli), input_states=state_dict)
     a_toffoli.compute(expected={"|000>": "|000>", "|001>": "|001>", "|010>": "|010>", "|011>": "|011>",
                                 "|100>": "|100>", "|101>": "|101>", "|110>": "|111>", "|111>": "|110>"})
     assert a_toffoli.fidelity == 1
@@ -124,7 +124,7 @@ def test_inverted_sub_cnot():
     """Heralding ctrl one after the other to do the same test as test_inverted_cnot
     in tests/test_2qbits_gates.py
     """
-    toffoli = catalog["toffoli"].build_processor()
+    toffoli = catalog["toffoli"].build_experiment()
     toffoli.remove_port(2) \
         .add_herald(2, 0)\
         .add_herald(3, 1)
@@ -143,7 +143,7 @@ def test_inverted_sub_cnot():
     a_cnot0.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
     assert a_cnot0.fidelity == 1
 
-    toffoli = catalog["toffoli"].build_processor()
+    toffoli = catalog["toffoli"].build_experiment()
     toffoli.remove_port(0) \
         .add_herald(0, 0)\
         .add_herald(1, 1)

@@ -39,7 +39,7 @@ class DummyMitigation(AbstractMitigation):
     def extend_computation(self, computation: Computation, noise: NoiseModel) -> list[Computation]:
         return [computation]
 
-    def _parse_results(self, computation: Computation, results: list[dict], noise) -> dict:
+    def _parse_results(self, computation: Computation, results: list[dict], misc) -> dict:
         return results[0]
 
 

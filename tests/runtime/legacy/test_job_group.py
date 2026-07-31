@@ -35,11 +35,11 @@ from unittest.mock import MagicMock, patch
 import responses
 
 from perceval.runtime import JobGroup, RemoteJob, RunningStatus
-from perceval.runtime.rpc_handler import RPCHandler
-from perceval.components import catalog
+from perceval.providers.quandela.rpc_handler import RPCHandler
+from perceval.components import Processor, catalog
 from perceval.algorithm import Sampler
 from perceval.utils import BasicState
-from tests.runtime._mock_rpc_handler import RPCHandlerResponsesBuilder, CloudEndpoint
+from tests.providers.quandela._mock_rpc_handler import RPCHandlerResponsesBuilder, CloudEndpoint
 
 TEST_JG_NAME = 'UnitTest_Job_Group'
 
@@ -136,9 +136,9 @@ def test_add(mock_write_file):
 @patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
 def test_add_errors(mock_write_file):
     # creating a local job - sampling
-    p = catalog["postprocessed cnot"].build_processor()
-    p.with_input(BasicState([0, 1, 0, 1]))
-    sampler = Sampler(p)
+    e = catalog["postprocessed cnot"].build_experiment()
+    e.with_input(BasicState([0, 1, 0, 1]))
+    sampler = Sampler(Processor("SLOS", e))
 
     jg = JobGroup(TEST_JG_NAME)
     assert mock_write_file.call_count == 1

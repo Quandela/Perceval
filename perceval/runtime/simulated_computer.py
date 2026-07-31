@@ -144,7 +144,7 @@ class SimulatedComputer(LocalComputer):
         """
         if isinstance(self._backend, AStrongSimulationBackend):
             experiment = experiment.use_phase_noise(self.noise, compilation_seed)
-            simulator = SimulatorFactory.build(experiment, self._backend)
+            simulator = SimulatorFactory.build(experiment, self._backend, self.noise)
 
             precision = self._parse_precision(precision, max_shots, max_samples)
             if precision is not None:

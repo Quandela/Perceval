@@ -35,7 +35,7 @@ import perceval as pcvl
 from perceval.runtime.job_status import RunningStatus
 from perceval.algorithm import Sampler
 
-from .._test_utils import LogChecker
+from tests._test_utils import LogChecker
 
 
 PERIOD = 0.1

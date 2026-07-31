@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from perceval.runtime.platform_specs import PlatformSpecs
-from perceval.runtime.remote_processor import AProcessor, RemoteProcessor, TRANSMITTANCE_KEY
+from perceval.runtime.legacy.remote_processor import AProcessor, RemoteProcessor, TRANSMITTANCE_KEY
 from perceval.components import Unitary, BS, PS, Experiment, Detector, FFCircuitProvider, Circuit
 from perceval.utils import Matrix, BasicState, P
 import random

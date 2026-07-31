@@ -26,51 +26,126 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
 import json
 import time
+from abc import ABC, abstractmethod
+from typing import TypeVar, Type
 
 from requests import HTTPError
 
+from perceval.serialization import deserialize, serialize
+from perceval.utils.constants import KEY_JOB_NAME, KEY_JOB_CONTEXT, KEY_RESULT_MAPPING, \
+    KEY_MAPPING_PARAMETERS, KEY_RESULTS_LIST, KEY_ITERATION, KEY_RESULTS, KEY_PLATFORM_NAME, KEY_JOB_GROUP_NAME, \
+    KEY_COMMAND, KEY_MAX_SHOTS, KEY_MAX_SAMPLES
+from perceval.utils.logging import channel, get_logger
+
+from .job_status import JobStatus, RunningStatus
 from .command import Command
 from .platform_specs import PlatformSpecs
-from .remote_computer import RemoteComputer, CommunicationLayer, RemoteId, _RemoteGetter
-from .remote_config import RemoteConfig
-from .job_status import RunningStatus, JobStatus
-from .remote_job import _retrieve_from_response
-from .remote_processor import PERFS_KEY
-from .rpc_handler import RPCHandler
-from .computation import Computation
+from .payload_updater import PayloadUpdater
 from .payload_generator import PayloadGenerator
 
-from perceval.serialization import deserialize, serialize
-from perceval.utils import ContextManager
-from perceval.utils.logging import get_logger, channel
-from perceval.utils.constants import KEY_JOB_CONTEXT, KEY_RESULT_MAPPING, KEY_RESULTS_LIST, KEY_MAPPING_PARAMETERS, \
-    KEY_ITERATION, KEY_RESULTS, KEY_COMPUTATION, KEY_PLATFORM_NAME, KEY_JOB_NAME, KEY_JOB_GROUP_NAME, KEY_COMMAND, \
-    KEY_MAX_SHOTS
+
+PERFS_KEY = "perfs"
+T = TypeVar('T')
+
+def _retrieve_from_response(response: dict, field: str, default_value: T = '', value_type: Type[T] = str) -> T:
+    if field not in response:
+        get_logger().error(f"Missing field '{field}' from server response. Using default value {default_value}.", channel.general)
+        return default_value
+    try:
+        result = value_type(response[field])
+    except (ValueError, TypeError):
+        get_logger().error(f"The field '{field}' from server response contains the wrong value '{response[field]}'. Using default value {default_value}.", channel.general)
+        result = default_value
+    return result
 
 
-class QuandelaCommunicationLayer(CommunicationLayer):
+RemoteId = TypeVar("RemoteId")
 
+
+class CommunicationLayer(ABC):
+    """
+    This class is responsible for the communication with the distant computer, with .
+    Implementations of this class must remain const, except for potential non-job-related cache
+    """
+
+    @abstractmethod
+    def get_specs(self) -> PlatformSpecs:
+        """
+        :return: The specs of the target platform
+        """
+        pass
+
+    @abstractmethod
+    def send(self, payload: dict) -> RemoteId:
+        pass
+
+    @abstractmethod
+    def get_results(self, remote_id: RemoteId) -> dict:
+        pass
+
+    @abstractmethod
+    def get_job_status(self, remote_id: RemoteId, refresh_errors: int = 0) -> JobStatus | None:
+        """
+        :param remote_id:
+        :param refresh_errors: The number of times in a row where this method returned None
+        :return: The Job Status if it was available, None otherwise
+        """
+        pass
+
+    @abstractmethod
+    def get_remote_status(self) -> str:
+        pass
+
+    @abstractmethod
+    def get_performances(self) -> dict:
+        pass
+
+    @abstractmethod
+    def get_commands(self) -> list[Command]:
+        pass
+
+    @abstractmethod
+    def cancel(self, remote_id: RemoteId) -> None:
+        pass
+
+    @abstractmethod
+    def get_availability(self) -> int:
+        """Returns the number of concurrent jobs currently available to be sent"""
+        pass
+
+    def start_session(self) -> None:
+        """May be used to start a non-interrupted session. May do nothing on stateless implementations"""
+        pass
+
+    def stop_session(self) -> None:
+        """May be used to stop a non-interrupted session. May do nothing on stateless implementations"""
+        pass
+
+    def delete_session(self) -> None:
+        """May be used to delete a non-interrupted session. May do nothing on stateless implementations"""
+        pass
+
+
+class RPCBasedCommunicationLayer(CommunicationLayer):
     MINIMUM_FETCH_INTERVAL = 5
     _MAX_ERROR = 6
 
-    def __init__(self, name: str, token: str, url: str, proxies: dict[str, str] = None):
-        self.name = name
-        self.token = token
-        self.url = url
-        self.proxies: dict[str, str] = proxies if proxies is not None else {}
+    # Use duck-typing for RPCHandler. See the quandela RPCHandler for an example
+    def __init__(self, rpc_handler):
+        self._rpc_handler = rpc_handler
+
         self._specs = PlatformSpecs()
         self._status: str = ""
         self._perfs: dict[str, str] = {}
         self._last_fetch_time = None
-        self._rpc_handler = RPCHandler(name, url, token, proxies)
 
         self.fetch_data()
-        get_logger().info(f"Connected to Cloud platform {self.name}", channel.general)
 
     def fetch_data(self):
-        # Quandela specific: the same endpoint gives the specs, perfs and platform status
+        # RPCHandler specific: the same method gives the specs, perfs and platform status
         if self._last_fetch_time is None or time.time() - self._last_fetch_time > self.MINIMUM_FETCH_INTERVAL:
             try:
                 platform_details = self._rpc_handler.fetch_platform_details()
@@ -94,12 +169,19 @@ class QuandelaCommunicationLayer(CommunicationLayer):
         return self._specs
 
     def send(self, payload: dict) -> RemoteId:
-        # TODO: how to be compatible with old format to receive names?
-        computation = payload[KEY_COMPUTATION]
+        computation = PayloadGenerator.get_computation(payload)
 
         # Needed for display - Should not be used anywhere else. The cloud expects these so they must be filled
         payload[KEY_COMMAND] = computation.command.name
+        assert KEY_MAX_SHOTS in computation.parameters, f"Missing '{KEY_MAX_SHOTS}' parameter"
         payload[KEY_MAX_SHOTS] = computation.parameters[KEY_MAX_SHOTS]
+        payload[KEY_MAX_SAMPLES] = computation.parameters.get(KEY_MAX_SAMPLES, 0)
+
+        if "commands" not in self._specs:  # We have a worker that knows only payloads up to version 1
+            # Using self._specs is a bit of a trick, since internally,
+            # we only needs the argument to have "available_commands" when downgrading to version 1
+            # This might not be true anymore if we introduce a version 3 someday
+            payload = PayloadUpdater.update_payload(payload, self._specs, target_payload_version=1)
 
         global_data = PayloadGenerator.generate_global_data(payload,
                                                             {KEY_PLATFORM_NAME: self._rpc_handler.name,
@@ -150,7 +232,7 @@ class QuandelaCommunicationLayer(CommunicationLayer):
                 409,  # Conflict in the current state of the resource
                 421,  # Misdirected request
                 423,  # Resource locked
-                429   # Too many requests
+                429  # Too many requests
             ]:
                 get_logger().error(f"Got HTTP error {error_code} when updating job {remote_id} status. Ignoring...",
                                    channel.general)
@@ -166,10 +248,10 @@ class QuandelaCommunicationLayer(CommunicationLayer):
 
         job_status = JobStatus()
         job_status.status = RunningStatus.from_server_response(_retrieve_from_response(response, 'status'))
-        if job_status.running:
+        if job_status.running or job_status.completed:
             job_status.update_progress(_retrieve_from_response(response, 'progress', 0., float),
                                        _retrieve_from_response(response, 'progress_message'))
-        elif job_status.failed:
+        if job_status.failed:
             job_status._stop_message = _retrieve_from_response(response, 'status_message')
 
         self._extract_job_times(job_status, response)
@@ -206,81 +288,4 @@ class QuandelaCommunicationLayer(CommunicationLayer):
             raise HTTPError(f"Error while trying to cancel job: {e}") from None
 
     def get_availability(self) -> int:
-        """
-        :return: The number of jobs available in the queue
-        """
-        try:
-            availability = self._rpc_handler.get_job_availability()
-            return availability["max_jobs_in_queue"] - availability["num_jobs_in_queue"]
-        except HTTPError:
-            get_logger().warn("Impossible to determine whether there is room for a new job")
-            return 0
-
-
-class QuandelaComputer(RemoteComputer):
-    _communication_layer: QuandelaCommunicationLayer  # Used for type hinting only
-
-    WARN_INTERVAL = 1800
-    INFO_INTERVAL = 10
-
-    def __init__(self,
-                 name: str,
-                 *,
-                 token: str = None,
-                 url: str = None,
-                 proxies: dict[str,str] = None):
-        """
-        A Computer meant to access Quandela remote services.
-
-        All parameters but the name of the target platform have to be explicitly named to be set.
-
-        :param name: Platform name.
-        :param token: Token value to authenticate the user. If not provided, it is taken from the stored RemoteConfig
-        :param url: Base URL for the Cloud API to connect to
-        :param proxies: Dictionary mapping protocol to the URL of the proxy
-        """
-
-        remote = RemoteConfig()
-        if token is None:
-            token = remote.get_token()
-        if not token:
-            raise ConnectionError("No token found")
-        if url is None:
-            url = remote.get_url()
-        if proxies is None:
-            proxies = remote.get_proxies()
-        self.name = name
-        communication_layer = QuandelaCommunicationLayer(name, token, url, proxies)
-
-        super().__init__(communication_layer)
-        self._available_jobs = communication_layer.get_availability()
-
-    def validate_single(self, computation: Computation) -> None:
-        super().validate_single(computation)
-        assert KEY_MAX_SHOTS in computation.parameters, f"Missing '{KEY_MAX_SHOTS}' parameter"
-
-    def _take_resource(self):
-        start = time.time()
-        start_warn = time.time()
-        start_info = start_warn
-        while self._available_jobs <= 0:
-            self._available_jobs = self._communication_layer.get_availability()
-            time.sleep(1)
-            if time.time() - start_warn > self.WARN_INTERVAL:
-                start_warn = time.time()
-                get_logger().warn(f"Couldn't find a way to send any job for {int(start_warn - start)} seconds - queue is full")
-            elif time.time() - start_info > self.INFO_INTERVAL:
-                start_info = time.time()
-                get_logger().info(f"Couldn't find a way to send any job for {int(start_info - start)} seconds - queue is full")
-
-        self._available_jobs -= 1
-
-    def _release_resource(self):
-        self._available_jobs += 1
-
-    def _reserve_resource(self) -> ContextManager:
-        return ContextManager(self._take_resource, self._release_resource)
-
-    def _execute_command_async(self, computation: Computation) -> _RemoteGetter:
-        self._take_resource()
-        return super()._execute_command_async(computation)
+        return 1

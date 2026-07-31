@@ -61,17 +61,15 @@ class GenericInterferometer(Circuit):
     def __init__(self,
                  m: int,
                  fun_gen: Callable[[int], ACircuit],
-                 shape: InterferometerShape = InterferometerShape.RECTANGLE,
+                 shape: InterferometerShape | str = InterferometerShape.RECTANGLE,
                  depth: int = None,
                  phase_shifter_fun_gen: Callable[[int], ACircuit] = None,
                  phase_at_output: bool = False,
                  upper_component_gen: Callable[[int], ACircuit] = None,
                  lower_component_gen: Callable[[int], ACircuit] = None,
                  align_with_barriers: bool = True):
-        assert isinstance(shape, InterferometerShape),\
-            f"Wrong type for shape, expected InterferometerShape, got {type(shape)}"
         super().__init__(m)
-        self._shape = shape
+        self._shape = self._validate_shape(shape)
         self._depth = depth
         self._depth_per_mode = [0] * m
         self._pattern_generator = fun_gen
@@ -84,9 +82,9 @@ class GenericInterferometer(Circuit):
             for i in range(0, m):
                 self.add(i, phase_shifter_fun_gen(i), merge=True)
 
-        if shape == InterferometerShape.RECTANGLE:
+        if self._shape == InterferometerShape.RECTANGLE:
             self._build_rectangle()
-        elif shape == InterferometerShape.TRIANGLE:
+        elif self._shape == InterferometerShape.TRIANGLE:
             if upper_component_gen or lower_component_gen:
                 get_logger().warn(f"upper_component_gen or lower_component_gen cannot be applied for shape {shape}")
             self._build_triangle()
@@ -243,3 +241,15 @@ class GenericInterferometer(Circuit):
             raise ValueError("Cannot copy parameters from a circuit which isn't fully defined")
         param_list = [float(p) for p in other.get_parameters()]
         self.set_param_list(param_list, top_left_pos, other.m)
+
+    def _validate_shape(self, shape: InterferometerShape | str) -> InterferometerShape:
+        if isinstance(shape, str):
+            try:
+                shape = InterferometerShape[shape.upper()]
+            except:
+                raise ValueError(f"Unknown interferometer shape: {shape}")
+
+        assert isinstance(shape, InterferometerShape),\
+            f"Wrong type for shape, expected InterferometerShape, got {type(shape)}"
+
+        return shape

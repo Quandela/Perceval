@@ -30,7 +30,7 @@
 from exqalibur.exqalibur import FockState
 
 from perceval import SimulatedComputer, PayloadGenerator, Computation, Experiment, NoiseModel, ComputationIterator, PS, \
-    P, PostSelect, Circuit, BS, PayloadUpdater
+    P, PostSelect, Circuit, BS, PayloadUpdater, Processor, CommandFactory
 from .._test_utils import assert_experiment_equals
 from perceval.utils.constants import KEY_COMPUTATION, KEY_EXPERIMENT
 
@@ -103,6 +103,11 @@ def compare_payloads(left: dict, right: dict):
         comp_left = left.pop(KEY_COMPUTATION)
         comp_right = right.pop(KEY_COMPUTATION)
         compare_computations(comp_left, comp_right)
+
+    if KEY_EXPERIMENT in left:
+        exp_left = left.pop(KEY_EXPERIMENT)
+        exp_right = right.pop(KEY_EXPERIMENT)
+        assert_experiment_equals(exp_left, exp_right)
 
     assert left == right
 
@@ -191,3 +196,24 @@ def test_translation_from_v1():
 
     new_payload_iterations = PayloadUpdater.update_payload(payload_iterations, computer)
     compare_payloads(new_payload_iterations, get_expected_iterations())
+
+
+def test_downgrade_to_v1():
+    e = get_experiment()
+    p = Processor("CliffordClifford2017")  # Only has "samples" exposed
+
+    comp = Computation(CommandFactory.sample_count, e)
+    comp.add_params(max_shots = N_SHOTS, max_samples = N_SAMPLES)
+
+    parameters = {"compute_physical_logical_perf": True}
+    expected = {'command': 'samples',
+               'experiment': e,
+               'job_context': {'result_mapping': ['perceval.utils', 'samples_to_sample_count']},
+               'max_samples': N_SAMPLES,
+               'max_shots': N_SHOTS,
+               'parameters': parameters}
+
+    payload = PayloadGenerator.from_computation(comp, parameters=parameters)
+    payload = PayloadUpdater.update_payload(payload, p, target_payload_version=1)
+
+    compare_payloads(payload, expected)

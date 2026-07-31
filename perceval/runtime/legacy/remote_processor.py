@@ -37,15 +37,15 @@ from perceval.utils.logging import get_logger, channel
 from perceval.serialization import deserialize
 from perceval.utils.noise_model import TRANSMITTANCE_KEY, perf_dict_to_noise
 
-from .platform_specs import PlatformSpecs
 from .remote_job import RemoteJob
-from .rpc_handler import RPCHandler
-from .remote_config import RemoteConfig
-from .payload_generator import PayloadGenerator
 from .abstract_processor import AProcessor
 from .processor import Processor
 
-PERFS_KEY = "perfs"
+from ..communication_layer import PERFS_KEY
+from ..payload_generator import PayloadGenerator
+from ..remote_config import RemoteConfig
+from ..platform_specs import PlatformSpecs
+
 DEFAULT_TRANSMITTANCE = 0.06
 
 
@@ -57,7 +57,7 @@ class RemoteProcessor(AProcessor):
             token: str = None,
             url: str = None,
             proxies: dict[str,str] = None,
-            rpc_handler: RPCHandler = None):
+            rpc_handler = None):
         rp = RemoteProcessor(
             name=name,
             token=token,
@@ -76,7 +76,7 @@ class RemoteProcessor(AProcessor):
                  token: str = None,
                  url: str = None,
                  proxies: dict[str,str] = None,
-                 rpc_handler: RPCHandler = None,
+                 rpc_handler = None,
                  m: int = None,
                  noise: NoiseModel = None):
         """
@@ -100,6 +100,8 @@ class RemoteProcessor(AProcessor):
                     f"Initialised a RemoteProcessor with two different platform names ({self.name} vs {name})", channel.user)
             self.proxies = rpc_handler.proxies
         else:
+            from perceval.providers.quandela.rpc_handler import RPCHandler
+
             remote = RemoteConfig()
             if name is None:
                 raise ValueError("Parameter 'name' must have a value")

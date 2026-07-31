@@ -37,7 +37,7 @@ from enum import Enum
 import requests
 import responses
 
-from perceval.runtime.rpc_handler import (
+from perceval.providers.quandela.rpc_handler import (
     RPCHandler,
     _ENDPOINT_JOB_CANCEL,
     _ENDPOINT_JOB_CREATE,
@@ -77,7 +77,7 @@ DEFAULT_PLATFORM_INFO = {
 ARCHITECTURE_PLATFORM_INFO = {
     'id': str(uuid.uuid4()),
     'name': None,
-    'perfs': {},
+    'perfs': {"g2 (%)": 1.2},
     'specs': {
         'available_commands': ['probs'],
         'connected_input_modes': [0, 2, 4, 6, 8, 10],

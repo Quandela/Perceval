@@ -98,7 +98,7 @@ class CompilationAveraging(AbstractMitigation):
 
         return res
 
-    def _parse_results(self, computation: Computation, results: list[dict], noise: NoiseModel) -> dict:
+    def _parse_results(self, computation: Computation, results: list[dict], misc: object) -> dict:
         # First, do nothing if nothing was done - for example no compilation seed could be set
         if len(results) == 1:
             return results[0]
