@@ -35,8 +35,8 @@ from perceval.utils.constants import KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_RESULTS
 
 from ..computation import Computation
 from .abstract_mitigation import AbstractMitigation
-from ._helpers.photon_error_mitigation import (generate_obb_states, apply_detection_filter, filter_extra_photons,
-                                               generate_obb_partition)
+from ._mitigation_helpers.photon_error_mitigation import (generate_obb_states, apply_detection_filter, filter_extra_photons,
+                                                          generate_obb_partition)
 
 
 class PhotonErrorMitigation(AbstractMitigation):  # Rename to DistinguishablePhotonMitigation ?
