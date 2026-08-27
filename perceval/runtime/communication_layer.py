@@ -310,10 +310,6 @@ def _load_rpc_communication_layer(
     members,
     version: int,
 ):
-    if version != 0:
-        raise RuntimeError(
-            f"Unsupported RPCBasedCommunicationLayer serialization version {version}"
-        )
     archive.load_attr(communication_layer, members)
     communication_layer.fetch_data()  # Will not fetch if we are below MINIMUM_FETCH_INTERVAL
 

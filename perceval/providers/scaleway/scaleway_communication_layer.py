@@ -85,10 +85,6 @@ def _load_scaleway_communication_layer(
     members,
     version: int,
 ):
-    if version != 0:
-        raise RuntimeError(
-            f"Unsupported ScalewayCommunicationLayer serialization version {version}"
-        )
     values = {name: index for name, index in members}
     RPCBasedCommunicationLayer.__init__(communication_layer, archive.create(values.pop("_rpc_handler")))
     archive.load_attr(communication_layer, list(values.items()))

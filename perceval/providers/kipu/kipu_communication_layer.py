@@ -60,10 +60,6 @@ def _load_kipu_communication_layer(
     members,
     version: int,
 ):
-    if version != 0:
-        raise RuntimeError(
-            f"Unsupported KipuCommunicationLayer serialization version {version}"
-        )
     RPCBasedCommunicationLayer.__init__(communication_layer, archive.create(members[0][1]))
 
 

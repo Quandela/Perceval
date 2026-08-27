@@ -79,9 +79,6 @@ allocated:
 
 
    def load_connection(connection, archive, members, version):
-       if version != 0:
-           raise RuntimeError(f"Unsupported ServiceConnection version {version}")
-
        archive.load_attr(connection, members)
        connection.client = build_client(connection.endpoint, connection.token)
 

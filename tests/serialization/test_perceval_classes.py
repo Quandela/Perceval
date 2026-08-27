@@ -100,7 +100,6 @@ def _objects_and_descriptors():
         (BSDistribution(state), DescriptorString),
         (bs_count, DescriptorString),
         (bs_samples, DescriptorString),
-        (NoiseModel(.5), DescriptorString),
         (PostSelect("[0] == 1"), DescriptorString),
     )
 
@@ -163,3 +162,13 @@ def test_unregistered_component_subclass_is_rejected():
 
     with pytest.raises(RuntimeError, match="unhandled class 'DerivedCircuit'"):
         Serialization.serialize(DerivedCircuit(2), OutputArchive())
+
+def test_noise_model():
+    nm = NoiseModel(.5)
+    archive = OutputArchive()
+    Serialization.serialize(nm, archive)
+
+    assert archive.memo[archive.roots[0]][0] == "NoiseModel"
+
+    restored = Serialization.deserialize(InputArchive.from_text(archive.to_text()))
+    assert nm == restored

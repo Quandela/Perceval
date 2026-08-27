@@ -302,8 +302,6 @@ def _load_simulated_computer(
     members,
     version: int,
 ):
-    if version != 0:
-        raise RuntimeError(f"Unsupported SimulatedComputer serialization version {version}")
     values = {name: value for name, value in members}
     computer.__init__(archive.create(values.pop("_backend")))
     archive.load_attr(computer, list(values.items()))

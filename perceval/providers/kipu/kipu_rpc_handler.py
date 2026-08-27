@@ -325,8 +325,6 @@ def _load_kipu_rpc_handler(
     members,
     version: int,
 ):
-    if version != 0:
-        raise RuntimeError(f"Unsupported KipuRPCHandler serialization version {version}")
     values = {name: archive.create(index) for name, index in members}
     handler.__init__(
         platform_name=values["_platform_name"],

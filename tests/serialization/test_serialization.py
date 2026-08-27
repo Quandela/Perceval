@@ -173,6 +173,9 @@ def test_svdistribution_serialization():
     svd2 = deserialize(serialize(svd))
     assert svd == svd2
 
+    # Test no break from legacy
+    assert serialize(svd) == ":PCVL:SVDistribution:{(1,0)*|0,1>=0.2;(1,0)*|1,0>=0.3;(1,0)*|1,1>=0.5}"
+
     svd_empty = SVDistribution()
     deserialized_svd_empty = deserialize(serialize(svd_empty))
     assert deserialized_svd_empty == svd_empty
