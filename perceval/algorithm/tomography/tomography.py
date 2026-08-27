@@ -59,7 +59,7 @@ class StateTomography(AAlgorithm, metaclass=ProcessorCompatibilityMeta):
 
     def __init__(self, computer: AbstractComputer, experiment: Experiment, **kwargs):
         super().__init__(computer=computer, **kwargs)
-        self._experiment = experiment
+        self._experiment = experiment.copy()
         self._nqubit, odd_modes = divmod(experiment.m, 2)
         if odd_modes:
             raise ValueError(

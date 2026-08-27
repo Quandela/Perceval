@@ -57,7 +57,7 @@ class TomographyMLE(AAlgorithm, metaclass=ProcessorCompatibilityMeta):
         # experiment is needed due to multiple inheritance problems
         super().__init__(computer=computer, experiment=experiment, **kwargs)
         self._nqubit, odd_modes = divmod(experiment.m, 2)
-        self._experiment = experiment
+        self._experiment = experiment.copy()
         if odd_modes:
             raise ValueError(
                 f"Input processor has an odd mode count ({experiment.m}) and thus, is not a logical gate")

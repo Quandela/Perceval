@@ -63,7 +63,7 @@ class Analyzer(AAlgorithm, metaclass=ProcessorCompatibilityMeta):
         if mapping is None:
             mapping = {}
         super().__init__(computer, **kwargs)
-        self._experiment = experiment  # Make a copy ?
+        self._experiment = experiment.copy()
         self._mapping = mapping
         self.performance = None
         self.error_rate = None
