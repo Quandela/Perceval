@@ -32,9 +32,8 @@ from enum import Enum
 from time import time
 from typing import TypeAlias
 
-from perceval.serialization import DescriptorInteger, Serialization
+from perceval.serialization import DescriptorString, Serialization
 from perceval.utils.logging import get_logger, channel
-from serialization import DescriptorString
 
 
 class RunningStatus(Enum):
@@ -359,7 +358,7 @@ Serialization.register_class(
     class_write_custom=lambda status, ar: (DescriptorString(status.name), []),
     class_read_custom=lambda ar, desc, pre_recorder: RunningStatus[desc.value] if desc.value in RunningStatus.__members__
                                                                                        else RunningStatus.UNKNOWN,
-    descriptor_type=DescriptorInteger,
+    descriptor_type=DescriptorString,
 )
 
 Serialization.register_class(
