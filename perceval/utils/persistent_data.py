@@ -30,7 +30,6 @@ import os
 import json
 import tempfile
 import warnings
-from pathlib import Path
 
 from platformdirs import PlatformDirs
 
@@ -39,8 +38,8 @@ from ._enums import FileFormat
 
 _CONFIG_FILE_NAME = "config.json"
 
-# Keep execution_group and job_group ? The only use is an exclusion for the clear_all_data() method
-SUB_DIRECTORIES = ['logs', 'job_group', 'execution_groups']
+# Keep job_group ? The only use is an exclusion for the clear_all_data() method
+SUB_DIRECTORIES = ['logs', 'job_group']
 
 class PersistentData:
     r"""
@@ -57,7 +56,7 @@ class PersistentData:
     If the configured directory or the temporary directory cannot be created or read/write in, an error will be raised.
     """
 
-    def __init__(self, directory_path: str | Path = None):
+    def __init__(self, directory_path: str = None):
         is_default_folder = False
         # first, try the given argument, or the env var if not given
         self._directory = directory_path or os.getenv('PCVL_PERSISTENT_PATH')

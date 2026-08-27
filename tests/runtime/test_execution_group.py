@@ -32,11 +32,13 @@ from unittest.mock import patch
 
 import pytest
 import tqdm
+import contextlib
+import shutil
 
-from perceval import RunningStatus, RemoteComputer, FockState, ContextManager
+import perceval as pcvl
+from perceval import RunningStatus, RemoteComputer, FockState
 from perceval.components import Experiment
 from perceval.runtime import Computation, Execution, ExecutionGroup, SimulatedComputer
-from perceval.serialization import InputArchive, OutputArchive, Serialization
 from perceval.providers.quandela.rpc_handler import RPCHandler
 from perceval.runtime.communication_layer import RPCBasedCommunicationLayer
 
@@ -49,15 +51,24 @@ PLATFORM_NAME = "sim:test"
 URL = "https://test"
 
 GROUP_TEST_NAME = "_test_group"
+GROUP_TEST_PATH = "./_test_group_56784"  # Avoid any existing path, as it will be deleted
 
 RPC_HANDLER = RPCHandler(PLATFORM_NAME, URL, TOKEN)
 
 INITIAL_REFRESH_DELAY = ExecutionGroup.STATUS_REFRESH_DELAY
 
 
-def cleanup():
-    ExecutionGroup.delete_execution_group(GROUP_TEST_NAME)
-    ExecutionGroup.STATUS_REFRESH_DELAY = INITIAL_REFRESH_DELAY
+def get_group(name = GROUP_TEST_NAME, path = "./_test_execution_groups"):
+    return ExecutionGroup(name, path)
+
+@contextlib.contextmanager
+def group_context(name = GROUP_TEST_NAME, path = "./_test_execution_groups"):
+    group = get_group(name, path)
+    try:
+        yield group
+    finally:
+        shutil.rmtree(path, ignore_errors=True)
+        ExecutionGroup.STATUS_REFRESH_DELAY = INITIAL_REFRESH_DELAY
 
 
 def _execution(name="execution"):
@@ -69,31 +80,12 @@ def _execution(name="execution"):
     return Execution(computation, computer)
 
 
-def test_serialization():
-    with ContextManager(at_exit=lambda: cleanup()):
-        group = ExecutionGroup(GROUP_TEST_NAME)
-        group.add(_execution())
-
-        output = OutputArchive()
-        Serialization.serialize(group, output)
-        restored = Serialization.deserialize(InputArchive.from_text(output.to_text()))
-
-        assert isinstance(restored, ExecutionGroup)
-        assert restored.name == GROUP_TEST_NAME
-        assert len(restored) == 1
-        assert isinstance(restored[0], Execution)
-        assert restored.created_date == group.created_date
-
-
 def test_persists_and_loads():
-    with ContextManager(at_exit=lambda: cleanup()):
-        group = ExecutionGroup(GROUP_TEST_NAME)
-
+    with group_context() as group:
         execution = _execution()
         group.add(execution)
-        assert ExecutionGroup.list_locally_saved() == [GROUP_TEST_NAME]
 
-        restored = ExecutionGroup(GROUP_TEST_NAME)
+        restored = get_group()
 
         assert len(restored) == 1
         assert restored[0].name == execution.name
@@ -105,9 +97,7 @@ def test_persists_and_loads():
 
 
 def test_add_wrong_arguments():
-    with ContextManager(at_exit=lambda: cleanup()):
-        group = ExecutionGroup(GROUP_TEST_NAME)
-
+    with group_context() as group:
         with pytest.raises(TypeError, match="Only an Execution"):
             group.add(object())
 
@@ -117,12 +107,11 @@ def test_add_wrong_arguments():
             group.add(execution)
 
 
-@patch.object(ExecutionGroup._PERSISTENT_DATA, 'write_file')
+@patch.object(pcvl.PersistentData, 'write_file')
 @patch.object(tqdm.tqdm, "display")
 def test_classic_run(_, mock_write_file):
-    with ContextManager(at_exit=lambda: cleanup()):
+    with group_context() as eg:
         ExecutionGroup.STATUS_REFRESH_DELAY = 0
-        eg = ExecutionGroup(GROUP_TEST_NAME)
 
         rpc_handler_responses_builder = RPCHandlerResponsesBuilder(RPC_HANDLER)
         exec_nmb = 2
@@ -181,16 +170,14 @@ def test_classic_run(_, mock_write_file):
         assert mock_write_file.call_count == expected_write_call_count
 
         # Test complex load
-        new_jg = ExecutionGroup(GROUP_TEST_NAME)
+        _ = get_group()
         expected_write_call_count += 1
         assert mock_write_file.call_count == expected_write_call_count
 
 
 @patch.object(tqdm.tqdm, "display")
 def test_run_advance(_):
-    with ContextManager(at_exit=lambda: cleanup()):
-        eg = ExecutionGroup(GROUP_TEST_NAME)
-
+    with group_context() as eg:
         rpc_handler_responses_builder = RPCHandlerResponsesBuilder(RPC_HANDLER)
         rpc_handler_responses_builder.set_job_status_sequence(
             [RunningStatus.SUCCESS, RunningStatus.ERROR, RunningStatus.ERROR])
@@ -227,9 +214,7 @@ def test_run_advance(_):
 
 
 def test_cancel_all(execution):
-    with ContextManager(at_exit=lambda: cleanup()):
-        eg = ExecutionGroup(GROUP_TEST_NAME)
-
+    with group_context() as eg:
         period = 0.03
 
         for i in range(13):
@@ -250,3 +235,21 @@ def test_cancel_all(execution):
         assert eg.progress() == {'Total': 13,
                                  'Finished': [13, {'successful': 8, 'unsuccessful': 5}],
                                  'Unfinished': [0, {'sent': 0, 'not sent': 0}]}
+
+
+def test_separate_folders(execution):
+    with group_context() as eg:
+        execution = _execution()
+        eg.add(execution)
+
+        with group_context(path=GROUP_TEST_PATH + "Test") as eg2:
+            assert len(eg2) == 0
+
+
+def test_separate_names(execution):
+    with group_context() as eg:
+        execution = _execution()
+        eg.add(execution)
+
+        with group_context(name=GROUP_TEST_NAME + "Test") as eg2:
+            assert len(eg2) == 0

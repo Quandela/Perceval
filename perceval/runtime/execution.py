@@ -115,8 +115,8 @@ class Execution:
 
     @job_group_name.setter
     def job_group_name(self, new_name: str):
-        if not isinstance(new_name, str):
-            raise TypeError("A job name must be a string")
+        if not isinstance(new_name, str) or len(new_name) == 0:
+            raise TypeError("A job group name must be a non-empty string")
         self._job_group_name = new_name
 
     def set_job_group_name(self, new_name: str):  # TODO: legacy; remove ?

@@ -27,10 +27,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import os
 import time
 from datetime import datetime
-from pathlib import Path
 
 from tqdm import tqdm
 
@@ -43,7 +41,6 @@ from .execution_status import RunningStatus
 
 
 FILE_EXT_EGRP = "egrp"
-EGRP_DIR_NAME = "execution_groups"
 
 
 class ExecutionGroup:
@@ -61,28 +58,36 @@ class ExecutionGroup:
     :param name: Name uniquely identifying the group on disk.
     """
 
-    _PERSISTENT_DATA: PersistentData
-    _DIR_PATH: str
     STATUS_REFRESH_DELAY = 5
 
-    def __init__(self, name: str):
-        if not isinstance(name, str):
-            raise TypeError("An execution group name must be a string")
+    def __init__(self, name: str, folder_path: str = "./execution_groups"):
+        name = name.removesuffix(f".{FILE_EXT_EGRP}")
 
+        if not isinstance(name, str) or len(name) == 0:
+            raise TypeError("An execution group name must be a non-empty string")
+
+        self._persistent_data = PersistentData(folder_path)  # class used as utils provider - Makes the folder
+        self._folder_path = self._persistent_data.directory
         self._name = name
-        now = datetime.now()
-        self.created_date = now
-        self.modified_date = now
-        self._executions: list[Execution] = []
-        self._set_file_path()
+        self._filename = f"{self._name}.{FILE_EXT_EGRP}"
 
-        if self._exists_on_disk(name):
+        if self._persistent_data.has_file(self._filename):
             get_logger().info(
                 f"Execution Group with name {name} exists; subsequent executions will be appended to it",
                 channel.user,
             )
-            self._load_execution_group()
+            text = self._persistent_data.read_file(self._filename, FileFormat.TEXT)
+            archive = InputArchive.from_text(text)
+            self.created_date = datetime.fromtimestamp(Serialization.deserialize(archive))
+            self.modified_date = datetime.fromtimestamp(Serialization.deserialize(archive))
+            self._executions = Serialization.deserialize(archive)
         else:
+            now = datetime.now()
+
+            self.created_date = now
+            self.modified_date = now
+            self._executions: list[Execution] = []
+
             self._write_to_file()
 
     def __len__(self):
@@ -96,22 +101,17 @@ class ExecutionGroup:
         return self._name
 
     @property
+    def folder_path(self) -> str:
+        return self._folder_path
+
+    @property
+    def filename(self) -> str:
+        return self._filename
+
+    @property
     def executions(self) -> list[Execution]:
         """Return the executions in insertion order."""
         return list(self._executions)
-
-    @classmethod
-    def change_storage_path(cls, new_path: str | Path):
-        """
-        Changes the path in which the execution group will be saved. Beware this changes the setting for all new groups.
-        Groups that have already been created during this run will consequently be stored in the same location as before.
-        Loading a group that was stored after this change will require to restore the modified path before calling __init__.
-        """
-        cls._PERSISTENT_DATA = PersistentData(new_path)
-        cls._DIR_PATH = cls._PERSISTENT_DATA.create_sub_directory(EGRP_DIR_NAME)
-
-    def _set_file_path(self) -> None:
-        self._file_path = os.path.join(self._DIR_PATH, f"{self._name}.{FILE_EXT_EGRP}")
 
     def _write_to_file(self) -> None:
         """
@@ -119,38 +119,14 @@ class ExecutionGroup:
         """
         self.modified_date = datetime.now()
         archive = OutputArchive()
-        Serialization.serialize(self, archive)
-        # TODO: rather than serializing self, should we insert one value for each job into the archive and store only that?
-        # TODO: use json format so it is "more" readable? Compress? Leave the choice to the user?
-        self._PERSISTENT_DATA.write_file(self._file_path, archive.to_text(compress=True), FileFormat.TEXT)
-
-    def _load_execution_group(self) -> None:
-        """Load this group from its archive file."""
-        text = self._PERSISTENT_DATA.read_file(self._file_path, FileFormat.TEXT)
-        restored = Serialization.deserialize(InputArchive.from_text(text))
-        if not isinstance(restored, ExecutionGroup):
-            raise TypeError(f"Expected an ExecutionGroup archive, got {type(restored)}")
-        self._name = restored._name
-        self.created_date = restored.created_date
-        self.modified_date = restored.modified_date
-        self._executions = restored._executions
-
-    @classmethod
-    def list_locally_saved(cls) -> list[str]:
-        """Return the names of all execution groups saved on disk,
-        in the path specified by change_storage_path() if it was called, otherwise in the current directory."""
-        return [
-            os.path.splitext(filename)[0]
-            for filename in os.listdir(cls._DIR_PATH)
-            if filename.endswith(f".{FILE_EXT_EGRP}")
-        ]
-
-    @classmethod
-    def _exists_on_disk(cls, name: str) -> bool:
-        return cls._PERSISTENT_DATA.has_file(os.path.join(cls._DIR_PATH, f"{name}.{FILE_EXT_EGRP}"))
+        Serialization.serialize(self.created_date.timestamp(), archive)
+        Serialization.serialize(self.modified_date.timestamp(), archive)
+        Serialization.serialize(self._executions, archive)
+        # TODO: use JSON format so it is "more" readable? Compress? Leave the choice to the user?
+        self._persistent_data.write_file(self._filename, archive.to_text(compress=True), FileFormat.TEXT)
 
     def add(self, execution: Execution, **kwargs) -> None:
-        """Add an execution and saves the group.
+        """Add an execution then saves the group.
 
         :param execution: an execution to add to the list of current execution group
         :param kwargs: parameters to pass to the execution, that will be used when it is launched.
@@ -228,38 +204,7 @@ class ExecutionGroup:
             active_bar.close()
             inactive_bar.close()
 
-    @classmethod
-    def delete_all_execution_groups(cls) -> None:
-        """
-        Delete all existing groups on disk
-        """
-        for name in cls.list_locally_saved():
-            cls.delete_execution_group(name)
-
-    @classmethod
-    def delete_execution_group(cls, name: str) -> None:
-        """
-        Delete a single group by name.
-        This group must be stored at the location defined in change_storage_path() if defined, otherwise in the current directory.
-
-        :param name: name of the ExecutionGroup to delete
-        """
-        cls._PERSISTENT_DATA.delete_file(os.path.join(cls._DIR_PATH, f"{name}.{FILE_EXT_EGRP}"))
-
-    @classmethod
-    def delete_execution_groups_date(cls, del_before_date: datetime) -> None:
-        """
-        Delete all saved groups created before a date.
-
-        :param del_before_date: datetime of the oldest job group to keep. Anterior groups will be deleted.
-        """
-        names = [name for name in cls.list_locally_saved() if cls(name).created_date < del_before_date]
-        if not names:
-            get_logger().warn(f"No files found to delete before {del_before_date}", channel.user)
-        for name in names:
-            cls.delete_execution_group(name)
-
-    def _filter_by_status_type(self, statuses: list[RunningStatus]) -> list[Execution]:
+    def _filter_by_running_status(self, statuses: list[RunningStatus]) -> list[Execution]:
         self._update_execution_statuses()
         return [
             execution for execution in self._executions
@@ -270,20 +215,20 @@ class ExecutionGroup:
         """
         Returns a list of all Executions in the group that have run successfully.
         """
-        return self._filter_by_status_type([RunningStatus.SUCCESS])
+        return self._filter_by_running_status([RunningStatus.SUCCESS])
 
     def list_active_executions(self) -> list[Execution]:
         """
         Returns a list of all Executions in the group that are currently active - those with a Running or
         Waiting status.
         """
-        return self._filter_by_status_type([RunningStatus.RUNNING, RunningStatus.WAITING])
+        return self._filter_by_running_status([RunningStatus.RUNNING, RunningStatus.WAITING])
 
     def list_unsuccessful_executions(self) -> list[Execution]:
         """
         Returns a list of all Executions in the group that have run unsuccessfully - errored or canceled
         """
-        return self._filter_by_status_type([RunningStatus.ERROR, RunningStatus.CANCELED])
+        return self._filter_by_running_status([RunningStatus.ERROR, RunningStatus.CANCELED])
 
     def list_unsent_executions(self) -> list[Execution]:
         """
@@ -428,7 +373,7 @@ class ExecutionGroup:
             if launched == concurrent_execution_count:
                 break
 
-        if not launched:
+        if not launched and len(executions):
             get_logger().warn(f"{self.name}: no execution will be run as there is no slot available", channel.user)
         get_logger().info(
             f"{self.name}: {launched} executions launched / {len(self.list_unsent_executions())} unsent executions remaining",
@@ -470,7 +415,7 @@ class ExecutionGroup:
             if launched == concurrent_execution_count:
                 break
 
-        if not launched:
+        if not launched and len(executions):
             get_logger().warn(f"{self.name}: no execution will be run as there is no slot available", channel.user)
         get_logger().info(
             f"{self.name}: {launched} executions launched / {len(self.list_unsent_executions())} unsent executions remaining",
@@ -514,34 +459,3 @@ class ExecutionGroup:
             else:
                 results.append(None)
         return results
-
-
-ExecutionGroup.change_storage_path(".")  # Use a ./perceval_data folder ?
-
-
-def _save_execution_group(group: ExecutionGroup, archive: OutputArchive):
-    group._created_date = group.created_date.timestamp()
-    group._modified_date = group.modified_date.timestamp()
-    try:
-        return archive.save_attr(group, ["_name", "_created_date", "_modified_date", "_executions"])
-    finally:
-        del group._created_date
-        del group._modified_date
-
-
-def _load_execution_group(group: ExecutionGroup, archive: InputArchive, members, version: int) -> None:
-    if version != 0:
-        raise RuntimeError(f"Unsupported ExecutionGroup serialization version {version}")
-    archive.load_attr(group, members)
-    group.created_date = datetime.fromtimestamp(group._created_date)
-    group.modified_date = datetime.fromtimestamp(group._modified_date)
-    del group._created_date
-    del group._modified_date
-    group._set_file_path()
-
-
-Serialization.register_class(
-    ExecutionGroup,
-    class_serial_members_write=_save_execution_group,
-    class_serial_members_read=_load_execution_group,
-)
