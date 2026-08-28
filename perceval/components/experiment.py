@@ -779,7 +779,6 @@ class Experiment:
             self._out_ports.clear()
             self._out_mode_type = [ModeType.PHOTONIC if m not in self.detectors_injected else ModeType.CLASSICAL
                                    for m in range(self.circuit_size)]
-        self._circuit_changed()
 
     def is_mode_connectible(self, mode: int) -> bool:
         if mode < 0:
