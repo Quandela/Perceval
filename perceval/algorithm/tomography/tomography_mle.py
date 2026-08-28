@@ -31,31 +31,36 @@ from abc import abstractmethod
 import copy
 import numpy as np
 from scipy.linalg import sqrtm
-from .abstract_process_tomography import AProcessTomography
-from .tomography_utils import _state_to_dens_matrix, _matrix_to_vector, _get_fixed_basis_ops, _compute_probs, \
-    _generate_pauli_prep_index, _generate_pauli_index, _index_num_to_basis
+
 from perceval.utils import BasicState
 from perceval.utils.algorithms.norm import frobenius_inner_product
 from perceval.components import (PauliType, PauliEigenStateType, get_pauli_eigenvector_matrix,
-    get_pauli_eigenvectors)
-from perceval.runtime import AProcessor
+    get_pauli_eigenvectors, Experiment)
+from perceval.runtime import AbstractComputer
+
+from .abstract_process_tomography import AProcessTomography
+from .tomography_utils import _state_to_dens_matrix, _matrix_to_vector, _get_fixed_basis_ops, _compute_probs, \
+    _generate_pauli_prep_index, _generate_pauli_index, _index_num_to_basis
 from ..abstract_algorithm import AAlgorithm
+from ..processor_compatibility import ProcessorCompatibilityMeta
 
 
-class TomographyMLE(AAlgorithm):
+class TomographyMLE(AAlgorithm, metaclass=ProcessorCompatibilityMeta):
     """
     Maximum likelihood Estimation for Quantum Tomography with an
     Accelerated Projected Gradient descent algorithm which takes an input guess and
     uses measurements to reconstruct quantum maps - either state or process.
 
     """
-    def __init__(self, operator_processor: AProcessor, **kwargs):
+    def __init__(self, computer: AbstractComputer, experiment: Experiment, **kwargs):
 
-        super().__init__(processor=operator_processor, **kwargs)
-        self._nqubit, odd_modes = divmod(operator_processor.m, 2)
+        # experiment is needed due to multiple inheritance problems
+        super().__init__(computer=computer, experiment=experiment, **kwargs)
+        self._nqubit, odd_modes = divmod(experiment.m, 2)
+        self._experiment = experiment.copy()
         if odd_modes:
             raise ValueError(
-                f"Input processor has an odd mode count ({operator_processor.m}) and thus, is not a logical gate")
+                f"Input processor has an odd mode count ({experiment.m}) and thus, is not a logical gate")
 
         self._gate_logical_perf = None
 
@@ -248,8 +253,8 @@ class StateTomographyMLE(TomographyMLE):
     :param operator_processor: A perceval processor with gate (or operation) on which state tomography
         needs to be performed.
     """
-    def __init__(self, operator_processor, **kwargs):
-        super().__init__(operator_processor, **kwargs)
+    def __init__(self, computer: AbstractComputer, experiment: Experiment, **kwargs):
+        super().__init__(computer, experiment, **kwargs)
         self._guess_density_matrix = np.eye(2 ** self._nqubit) / (2 ** self._nqubit)
         self._povm_data()  # to set self._data_function -> all the measured data
 
@@ -317,9 +322,9 @@ class ProcessTomographyMLE(TomographyMLE, AProcessTomography):
     :param operator_processor: A perceval processor with gate (or operation) on which state tomography
         needs to be performed.
     """
-    def __init__(self, operator_processor, **kwargs):
-        TomographyMLE.__init__(self, operator_processor=operator_processor, **kwargs)
-        AProcessTomography.__init__(self, processor=operator_processor, **kwargs)
+    def __init__(self, computer: AbstractComputer, experiment: Experiment, **kwargs):
+        TomographyMLE.__init__(self, computer, experiment, **kwargs)
+        AProcessTomography.__init__(self, computer, experiment, **kwargs)
 
         self._povm_data()
         self._guess_choi_seed = np.eye((2 ** self._nqubit), dtype=np.cdouble)

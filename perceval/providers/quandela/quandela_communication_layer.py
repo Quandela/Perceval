@@ -41,6 +41,10 @@ class QuandelaCommunicationLayer(RPCBasedCommunicationLayer):
         super().__init__(RPCHandler(name, url, token, proxies))
         get_logger().info(f"Connected to Cloud platform {name}", channel.general)
 
+    @staticmethod
+    def from_rpc(rpc_handler: RPCHandler):
+        return QuandelaCommunicationLayer(rpc_handler.name, rpc_handler.token, rpc_handler.url, rpc_handler.proxies)
+
     def get_availability(self) -> int:
         try:
             availability = self._rpc_handler.get_job_availability()

@@ -29,13 +29,26 @@
 
 from abc import abstractmethod
 import numpy as np
+
 from perceval.algorithm.abstract_algorithm import AAlgorithm
-from perceval.runtime import AProcessor
+from perceval.components import Experiment
+from perceval.runtime import AProcessor, AbstractComputer
+
 from .tomography_utils import _vector_to_sq_matrix, _krauss_repr_ops, _get_canonical_basis_ops
+from ..processor_compatibility import AProcessorCompatibilityMeta
 
 
-class AProcessTomography(AAlgorithm):
-    def __init__(self, processor: AProcessor, **kwargs):
+class AProcessTomography(AAlgorithm, metaclass=AProcessorCompatibilityMeta):
+    def __init__(self, computer: AbstractComputer, experiment: Experiment, **kwargs):
+        super().__init__(computer, **kwargs)
+        self._experiment = experiment
+        self._nqubit = experiment.m // 2
+        if self._nqubit > 3:
+            raise ValueError(
+                f"Input gate too large. Tomography supports up to 3-qubit gates ({self._nqubit}-qubit gate passed).")
+        self._size_hilbert = 2 ** self._nqubit
+
+    def _init_old(self, processor: AProcessor, **kwargs):
         super().__init__(processor=processor, **kwargs)
         self._nqubit = processor.m // 2
         if self._nqubit > 3:
@@ -56,7 +69,7 @@ class AProcessTomography(AAlgorithm):
         :param k: one of the indices for the beta tensor, value between 0 and d**2-1
         :param m: one of the indices for the beta tensor, value between 0 and d**2-1
         :param n: one of the indices for the beta tensor, value between 0 and d**2-1
-        :param nqubit: numbero f qubits
+        :param nqubit: number of qubits
         :return:
         """
 

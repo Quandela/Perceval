@@ -75,6 +75,8 @@ class SimulatedComputer(LocalComputer):
 
     @noise.setter
     def noise(self, noise: NoiseModel):
+        if noise is None:
+            noise = NoiseModel()
         self._noise = noise
 
     def validate_single(self, computation: Computation) -> None:

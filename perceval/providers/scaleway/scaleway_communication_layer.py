@@ -78,6 +78,16 @@ class ScalewayCommunicationLayer(RPCBasedCommunicationLayer):
             "Stop (if not already) and revoke Scaleway Session", channel.general
         )
 
+    @staticmethod
+    def from_rpc(rpc_handler: RPCHandler):
+        # We can't choose the session parameters here, so we use the default ones
+        return ScalewayCommunicationLayer(platform_name=rpc_handler.name,
+                                          project_id = rpc_handler._project_id,
+                                          token = rpc_handler.headers["X-Auth-Token"],
+                                          url = rpc_handler.url,
+                                          proxies = rpc_handler.proxies,
+                                          provider_name = rpc_handler._provider_name)
+
 
 def _load_scaleway_communication_layer(
     communication_layer: ScalewayCommunicationLayer,

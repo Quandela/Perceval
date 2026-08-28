@@ -53,6 +53,14 @@ class KipuCommunicationLayer(RPCBasedCommunicationLayer):
 
         get_logger().info(f"Connected to Kipu Cloud platform {platform_name}", channel.general)
 
+    @staticmethod
+    def from_rpc(rpc_handler: KipuRPCHandler):
+        return KipuCommunicationLayer(rpc_handler.name,
+                                      rpc_handler._token,
+                                      rpc_handler._organization_id,
+                                      rpc_handler.url,
+                                      rpc_handler.proxies)
+
 
 def _load_kipu_communication_layer(
     communication_layer: KipuCommunicationLayer,

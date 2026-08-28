@@ -28,36 +28,42 @@
 # SOFTWARE.
 import numpy as np
 
+from perceval.runtime import Execution, Computation
+from perceval.components import Experiment
+from perceval.utils import BasicState, allstate_iterator, Matrix, ProgressCallback, FockState
+from perceval.runtime import AbstractComputer
+
 from .abstract_algorithm import AAlgorithm
-from .sampler import Sampler
-from perceval.utils import BasicState, allstate_iterator, Matrix
-from perceval.runtime import AProcessor
+from .processor_compatibility import ProcessorCompatibilityMeta
 
 
-class Analyzer(AAlgorithm):
+class Analyzer(AAlgorithm, metaclass=ProcessorCompatibilityMeta):
     """
-    Analyses a set of input states vs output states probabilities.
+    Analyzes a set of input states vs output states probabilities.
 
-    :param processor: the processor to analyse
-    :param input_states: list of BasicStates or a mapping {BasicState: name}
+    :param computer: the Computer on which to launch the tests
+    :param experiment: the Experiment to analyze
+    :param input_states: list of FockStates or a mapping {FockState: name}
     :param output_states: list of output states. Valid values are:
                           * None (then, the input states are taken as output states)
-                          * a list of BasicState
-                          * a mapping {BasicState: name}
+                          * a list of FockState
+                          * a mapping {FockState: name}
                           * the string "*" meaning oll possible target states are generated
-    :param mapping: optional mapping {BasicState: name} used for display
+    :param mapping: optional mapping {FockState: name} used for display
     :param kwargs: as the Analyzer internally uses a Sampler instance, it needs a "max_shots_per_call" value
     """
 
-    def __init__(self, processor: AProcessor,
+    def __init__(self,
+                 computer: AbstractComputer,
+                 experiment: Experiment,
                  input_states: list[BasicState] | dict[BasicState, str],
                  output_states=None,
                  mapping=None,
                  **kwargs):
         if mapping is None:
             mapping = {}
-        super().__init__(processor, **kwargs)
-        self._sampler = Sampler(processor, **kwargs)
+        super().__init__(computer, **kwargs)
+        self._experiment = experiment.copy()
         self._mapping = mapping
         self.performance = None
         self.error_rate = None
@@ -79,7 +85,7 @@ class Analyzer(AAlgorithm):
         # Test input_states_list
         for input_state in self.input_states_list:
             assert isinstance(input_state, BasicState), "input_states should contain BasicStates"
-            assert input_state.m == self._processor.m, "Incorrect BasicState size"
+            assert input_state.m == self._experiment.m, "Incorrect BasicState size"
 
         if output_states is None:
             self.output_states_list = self.input_states_list
@@ -100,10 +106,37 @@ class Analyzer(AAlgorithm):
         if output_states == '*':
             min_output_photon_count = 1  # To retrieve all non-empty states on a QPU, set filter to 1
         else:
-            min_output_photon_count = processor.m
+            min_output_photon_count = self._experiment.m
             for ostate in self.output_states_list:
                 min_output_photon_count = min(ostate.n, min_output_photon_count)
-        processor.min_detected_photons_filter(min_output_photon_count)
+        self._experiment.min_detected_photons_filter(min_output_photon_count)
+
+    def _compute(self, progress_callback: ProgressCallback | None) -> tuple[dict[FockState, float], list[float], bool]:
+        # Compute probabilities for all input states
+        probs_res = {}
+        logical_perf = []
+        has_an_empty_PD = False
+        for idx, i_state in enumerate(self.input_states_list):
+            self._experiment.with_input(i_state)
+            computation = Computation(self._computer.get_command("probs"), self._experiment)
+            if self._max_shots is not None:
+                computation.add_params(max_shots=self._max_shots)
+
+            exec = Execution(computation, self._computer)
+            exec.name = f'{self.default_job_name} {idx + 1}/{len(self.input_states_list)}'
+            probs_output = exec.execute_sync()
+            probs = probs_output['results']
+            if len(probs) == 0:
+                has_an_empty_PD = True
+            probs_res[i_state] = probs
+            if 'logical_perf' in probs_output:
+                logical_perf.append(probs_output['logical_perf'])
+            else:
+                logical_perf.append(probs_output['global_perf'])
+            if progress_callback is not None:
+                progress_callback((idx + 1) / len(self.input_states_list), "Computing individual input states")
+
+        return probs_res, logical_perf, has_an_empty_PD
 
     def compute(self, normalize: bool = False, expected: dict = None, progress_callback=None):
         """
@@ -114,29 +147,11 @@ class Analyzer(AAlgorithm):
         :param expected: optional mapping between states in ideal case
         :param progress_callback: optional callback to inform the user of the task progress
         """
-        probs_res = {}
-        logical_perf = []
-        has_an_empty_PD = False
         if expected is not None:
             normalize = True
             self.error_rate = 0
 
-        # Compute probabilities for all input states
-        for idx, i_state in enumerate(self.input_states_list):
-            self._processor.with_input(i_state)
-            job = self._sampler.probs
-            job.name = f'{self.default_job_name} {idx+1}/{len(self.input_states_list)}'
-            probs_output = job.execute_sync()
-            probs = probs_output['results']
-            if len(probs) == 0:
-                has_an_empty_PD = True
-            probs_res[i_state] = probs
-            if 'logical_perf' in probs_output:
-                logical_perf.append(probs_output['logical_perf'])
-            else:
-                logical_perf.append(probs_output['global_perf'])
-            if progress_callback is not None:
-                progress_callback((idx+1)/len(self.input_states_list))
+        probs_res, logical_perf, has_an_empty_PD = self._compute(progress_callback)
 
         # Create a distribution matrix and compute performance / error rate if needed
         self._distribution = Matrix(np.zeros((len(self.input_states_list), len(self.output_states_list))))
