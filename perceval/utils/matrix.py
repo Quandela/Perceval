@@ -33,7 +33,7 @@ import io
 import re
 
 from abc import ABC, abstractmethod
-from scipy.linalg import sqrtm, block_diag, svd
+from scipy.linalg import block_diag, svd
 from collections.abc import Iterator
 import numpy as np
 import sympy as sp
@@ -199,15 +199,17 @@ class Matrix(ABC):
 
         # Singular value decomposition and normalisation
         v1, s, v2h = svd(M)
-        d = np.diag(s / np.max(s))
+        svs = s / np.max(s)
+        d = np.diag(svs)
+        dd = np.diag([np.sqrt(1. - f ** 2) for f in svs])
 
         # # Unitary extension
         V1 = block_diag(v1, v2h.T.conj())
         V2h = block_diag(v2h, v1.T.conj())
-        D = np.block([[d, np.zeros((row, col - row)), sqrtm(np.eye(row) - d**2)],
+        D = np.block([[d, np.zeros((row, col - row)), dd],
                     [np.zeros((col - row, row)), np.eye(col - row),
                     np.zeros((col - row, row))],
-                    [sqrtm(np.eye(row) - d**2), np.zeros((row, col - row)), -d]])
+                    [dd, np.zeros((row, col - row)), -d]])
 
         U = V1 @ D @ V2h
 

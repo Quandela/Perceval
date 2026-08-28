@@ -53,7 +53,7 @@ class RemoteConfig:
     _token = None
     _url = None
 
-    def __init__(self, persistent_data: PersistentData = PersistentData()):
+    def __init__(self, persistent_data: PersistentData = PersistentData()): # !! default value is evaluated during file load, so test_remote_config_env_var_vs_cache cannot mock it !!
         self._persistent_data = persistent_data
 
     def _get_remote_config(self, key) -> str | dict[str, str] | None:
@@ -149,16 +149,6 @@ class RemoteConfig:
     def get_token_env_var() -> str:
         """Get the name of the environment variable storing a token."""
         return RemoteConfig._token_env_var
-
-    @staticmethod
-    @deprecated(version="v1.1", reason="RemoteConfig maximal job count is no longer used as it is now directly retrieved from the cloud")
-    def set_cloud_maximal_job_count(count: int) -> None:
-        pass
-
-    @staticmethod
-    @deprecated(version="v1.1", reason="RemoteConfig maximal job count is no longer used as it is now directly retrieved from the cloud")
-    def get_cloud_maximal_job_count() -> int:
-        return 0
 
     @staticmethod
     def clear_cache():

@@ -32,7 +32,7 @@ you can set values for:
 * the `detected photons filter`.
 
 >>> c = BS() // PS(phi=pcvl.P("my_phase")) // BS()  # Define a circuit containing "my_phase" variable
->>> processor = pcvl.RemoteProcessor("qpu:altair", token_qcloud)
+>>> processor = pcvl.RemoteProcessor("qpu:belenos", token_qcloud)
 >>> processor.set_circuit(c)
 >>> sampler = Sampler(processor)
 >>> sampler.add_iteration(circuit_params={"my_phase": 0.1},

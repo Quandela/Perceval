@@ -308,13 +308,6 @@ class AbstractComputer(ABC):
     def is_remote(self) -> bool:
         pass
 
-    def acquire(self) -> ContextManager:
-        """
-        This method can be used to set up the AbstractComputer before the use of the :code:`execute` method.
-        For example, it can be overloaded to warm up internal tools, or empty some cache at the end of a computation.
-        """
-        return ContextManager()
-
     def _reserve_resource(self) -> ContextManager:
         """
         This method is used internally when computing basic computations (after error mitigation extension).
@@ -323,6 +316,10 @@ class AbstractComputer(ABC):
         by waiting for the release of its resources.
         """
         return ContextManager()
+
+    @property
+    def available_jobs(self) -> int:
+        return 1
 
     @property
     def specs(self) -> PlatformSpecs:
@@ -347,6 +344,24 @@ class AbstractComputer(ABC):
     @abstractmethod
     def performance(self):
         pass
+
+    def start(self) -> None:
+        """Starts the computer. May do nothing for stateless computers"""
+        pass
+
+    def stop(self) -> None:
+        """Stops the computer. May do nothing for stateless computers"""
+        pass
+
+    def delete(self) -> None:
+        """Deletes the computer session. May do nothing for stateless computers"""
+        pass
+
+    def acquire(self) -> ContextManager:
+        """
+        :return: A context manager that starts the computer at enter and stops it at exit
+        """
+        return ContextManager(self.start, self.stop)
 
     @property
     @abstractmethod

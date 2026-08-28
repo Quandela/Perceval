@@ -96,16 +96,24 @@ def test_probs_to_sample_count(count):
     assert sum(list(output.values())) == count
 
 
-def test_sample_count_to_samples():
+@pytest.mark.parametrize("count", [1000, 1000000, 170, 1, 0])
+def test_sample_count_to_samples(count):
     sample_count = BSCount({
         b0: 280,
         b1: 120,
         b2: 400,
         b3: 200
     })
-    samples = sample_count_to_samples(sample_count)
-    for state, count in sample_count.items():
-        assert count * 0.7 < samples.count(state) < count * 1.3
+    samples = sample_count_to_samples(sample_count, max_samples=int(count))
+    if count == 1000:
+        assert samples.count(b0) == 280
+        assert samples.count(b1) == 120
+        assert samples.count(b2) == 400
+        assert samples.count(b3) == 200
+    if count > 1000:
+        for _state, _count in samples_to_sample_count(samples).items():
+            assert _count * 0.7 < samples.count(_state) < _count * 1.3
+    assert len(samples) == count
 
 
 def test_probs_to_samples():

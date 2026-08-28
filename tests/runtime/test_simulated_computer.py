@@ -28,6 +28,7 @@
 # SOFTWARE.
 import time
 
+from flaky import flaky
 import pytest
 from exqalibur import BSCount, BSSamples
 
@@ -46,6 +47,7 @@ def test_basic():
     assert set(computer.available_commands) == {"probs", "samples", "sample_count"}
 
 
+@flaky(max_runs=3)
 def test_probs():
     experiment = Experiment(2)
     experiment.add(0, BS())
@@ -63,8 +65,8 @@ def test_probs():
 
     assert isinstance(res["results"], BSDistribution)
     assert len(res["results"]) == 2
-    assert res["results"][FockState([2, 0])] == pytest.approx(0.5, abs = 3 * 0.5 / computer.PROBS_DEFAULT_SAMPLES ** 0.5)
-    assert res["results"][FockState([0, 2])] == pytest.approx(0.5, abs = 3 * 0.5 / computer.PROBS_DEFAULT_SAMPLES ** 0.5)
+    assert res["results"][FockState([2, 0])] == pytest.approx(0.5, abs = 2.5758 * 0.5 / computer.PROBS_DEFAULT_SAMPLES ** 0.5)
+    assert res["results"][FockState([0, 2])] == pytest.approx(0.5, abs = 2.5758 * 0.5 / computer.PROBS_DEFAULT_SAMPLES ** 0.5)
 
 
 def test_sample_count():

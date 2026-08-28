@@ -71,7 +71,8 @@ The class :code:`BSDistribution` represents a probability distribution of measur
 It maps states with their associated probability.
 It is the type of object returned by a ``probs`` command.
 
-It is an alias of exqalibur :ref:`BSDistribution` class and only stores perfect :code:`FockState`.
+Internally, it is a proxy to the exqalibur :ref:`FSFunction` or :ref:`FSDistribution` class depending on whether it's normalized or not,
+and only stores perfect :code:`FockState`.
 
 State Vector Distribution
 -------------------------

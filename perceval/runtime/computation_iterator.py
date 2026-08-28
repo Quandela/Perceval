@@ -36,7 +36,7 @@ from .computation import Computation
 from perceval.utils import BasicState, PostSelect
 from perceval.utils.constants import KEY_SHOTS_USED, KEY_RESULTS_LIST, KEY_ITERATION
 from perceval.components import Experiment
-from perceval.serialization import register_to_serialization
+from perceval.serialization import Serialization
 
 
 class ComputationIterator:
@@ -212,4 +212,4 @@ class ComputationIterator:
     def _set_compilation_seed(compilation_seed: int, computation: Computation):
         computation.add_params(compilation_seed = compilation_seed)
 
-register_to_serialization(ComputationIterator, default_compress=True)
+Serialization.register_class(ComputationIterator, ["base_computation", "_iterations"])

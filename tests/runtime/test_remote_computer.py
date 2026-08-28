@@ -76,6 +76,9 @@ class ComputerProxy(CommunicationLayer):
     def cancel(self, remote_id: RemoteId) -> None:
         remote_id.cancel()
 
+    def get_availability(self) -> int:
+        return self.computer.available_jobs
+
 
 def test_remote_computer_basic():
     # Checks that the communication layer is properly used

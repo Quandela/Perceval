@@ -168,10 +168,15 @@ def test_basicstate_serialization():
 def test_svdistribution_serialization():
     svd = SVDistribution()
     svd[StateVector("|0,1>")] = 0.2
-    svd[BasicState("|1,0>")] = 0.3
-    svd[BasicState("|1,1>")] = 0.5
-    svd2 = deserialize(serialize(svd))
+    svd[BasicState("|1,1>")] = 0.8
+
+    serial_svd = serialize(svd)
+    svd2 = deserialize(serial_svd)
     assert svd == svd2
+
+    # Test no break from legacy
+    assert serial_svd == ":PCVL:SVDistribution:{(1,0)*|0,1>=0.2;(1,0)*|1,1>=0.8}" or \
+           serial_svd == ":PCVL:SVDistribution:{(1,0)*|1,1>=0.8;(1,0)*|0,1>=0.2}"
 
     svd_empty = SVDistribution()
     deserialized_svd_empty = deserialize(serialize(svd_empty))
@@ -311,7 +316,7 @@ def test_experiment_serialization():
     e.min_detected_photons_filter(2)
 
     # Includes components, heralds, postselection, ports
-    e.add(0, catalog["postprocessed cnot"].build_processor())
+    e.add(0, catalog["postprocessed cnot"].build_experiment())
     e.add(0, LC(.1))  # With non-unitary component
     e.with_input(BasicState([1, 0, 1, 0]))
 

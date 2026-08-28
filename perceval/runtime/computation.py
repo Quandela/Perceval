@@ -30,7 +30,7 @@
 from typing import Any
 
 from perceval.components import Experiment
-from perceval.serialization import register_to_serialization
+from perceval.serialization import Serialization
 from .command import Command
 
 
@@ -77,4 +77,4 @@ class Computation:
         s += ")"
         return s
 
-register_to_serialization(Computation)
+Serialization.register_class(Computation, ["command", "experiment", "parameters", "job_name", "job_group_name"])

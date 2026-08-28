@@ -27,12 +27,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.runtime import ISession
-from perceval.runtime.remote_processor import RemoteProcessor
+from perceval.runtime.legacy import ISession, RemoteProcessor
 from perceval.runtime.remote_config import QUANDELA_CLOUD_URL
-from perceval.runtime.rpc_handler import RPCHandler
 from perceval.utils.logging import get_logger, channel
 
+from .rpc_handler import RPCHandler
 
 class Session(ISession):
     """

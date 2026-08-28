@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .job_status import JobStatus, RunningStatus
+from .execution_status import JobStatus, RunningStatus, ExecutionStatus
 from .remote_config import RemoteConfig
 from .check_cancel import cancel_requested
 from .payload_generator import PayloadGenerator
@@ -40,15 +40,7 @@ from .abstract_computer import AbstractComputer
 from .local_computer import LocalComputer
 from .simulated_computer import SimulatedComputer
 from .remote_computer import RemoteComputer, CommunicationLayer
-from .quandela_computer import QuandelaComputer, QuandelaCommunicationLayer
 from .execution import Execution
+from .execution_group import ExecutionGroup
 
-# Legacy
-from .session import ISession
-from .job import Job
-from .local_job import LocalJob
-from .remote_job import RemoteJob
-from .job_group import JobGroup
-from .abstract_processor import AProcessor
-from .processor import Processor
-from .remote_processor import RemoteProcessor, perf_dict_to_noise
+from .legacy import *

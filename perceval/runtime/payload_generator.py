@@ -94,7 +94,7 @@ class PayloadGenerator:
         return PayloadGenerator.generate_global_data(payload, global_kwargs)
 
     @staticmethod
-    def generate_global_data(payload: dict, kwargs: dict = None) -> dict:
+    def generate_global_data(payload: Any, kwargs: dict = None) -> dict:
         r"""
         Generate a simple payload containing the experiment, with the following template:
         {

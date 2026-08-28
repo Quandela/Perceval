@@ -56,7 +56,7 @@ class FFSimulator(ISimulator):
             get_logger().warn("Only the global performance can be computed for a feed-forward simulator.")
 
     def set_circuit(self, circuit: Experiment | list[tuple[tuple, AComponent]], m=None):
-        from perceval.runtime import Processor
+        from perceval.runtime import Processor  # TODO: remove (deprecated since 1.3)
         if isinstance(circuit, (Processor, Experiment)):
             self._components = circuit.components
             min_detected_photons = circuit._min_detected_photons_filter
@@ -68,10 +68,6 @@ class FFSimulator(ISimulator):
 
     def set_noise(self, nm: NoiseModel):
         self._noise_model = nm
-
-    @deprecated("Version 1.1 - Source is no longer used")
-    def set_source(self, source: Source):
-        pass
 
     def _probs_svd(self,
                    input_state: SVDistribution | tuple[Source, BasicState],
@@ -239,11 +235,10 @@ class FFSimulator(ISimulator):
 
         # Now the Experiment has only the heralds that were possibly added by adding Experiments as input, all at the end
         if isinstance(input_state, SVDistribution):
-            if len(exp.in_heralds) > 0:
-                source = Source.from_noise_model(self._noise_model)
+            if exp.in_heralds:
                 heralds_perfect_state = FockState([v for k, v in sorted(exp.in_heralds.items())])
-                heralded_dist = source.generate_distribution(heralds_perfect_state)
-                input_state = input_state * heralded_dist  # Must not change the original object
+                source = Source.from_noise_model(self._noise_model)
+                input_state = input_state * source.generate_distribution(heralds_perfect_state)  # Must not change the original object
         else:
             exp.with_input(input_state[1])
             input_state = (input_state[0], exp.input_state)
@@ -275,7 +270,7 @@ class FFSimulator(ISimulator):
 
         from .simulator_factory import SimulatorFactory  # Avoids a circular import
 
-        sim = SimulatorFactory.build(exp, self._backend)
+        sim = SimulatorFactory.build(exp, self._backend, self._noise_model)
         if self._precision is not None:
             sim.set_precision(self._precision)
         sim.set_silent(True)

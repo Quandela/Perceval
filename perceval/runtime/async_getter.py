@@ -29,7 +29,7 @@
 
 from abc import ABC, abstractmethod
 
-from .job_status import JobStatus
+from .execution_status import ExecutionStatus
 
 from perceval.utils.logging import channel, get_logger
 
@@ -48,10 +48,10 @@ class AsyncGetter(ABC):
 
     def __init__(self):
         self._results = None
-        self._status = JobStatus()
+        self._status = ExecutionStatus()
 
     @property
-    def status(self) -> JobStatus:
+    def status(self) -> ExecutionStatus:
         """
         The job status metadata structure
         """

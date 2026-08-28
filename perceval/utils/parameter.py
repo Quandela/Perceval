@@ -212,12 +212,6 @@ class Parameter:
         """
         self._max = m
 
-    @deprecated(version = "v1.1", reason = "Use id(self) or self.is_identical_to(other) instead")
-    @property
-    def pid(self):
-        r"""Unique identifier for the parameter"""
-        return id(self)
-
     def __mul__(self, other):
         if isinstance(other, Parameter):
             return Expression(f"({self.name}*{other.name})", self._merge_param_sets(other))
