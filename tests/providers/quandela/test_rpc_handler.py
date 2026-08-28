@@ -43,7 +43,7 @@ from perceval.providers.quandela.rpc_handler import (
     _ENDPOINT_JOB_STATUS,
     _ENDPOINT_JOB_RERUN
 )
-from perceval.runtime.job_status import RunningStatus
+from perceval.runtime.execution_status import RunningStatus
 
 TOKEN = "test_token"
 PLATFORM_NAME = "sim:test"

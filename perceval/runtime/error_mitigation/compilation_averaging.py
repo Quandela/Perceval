@@ -37,6 +37,7 @@ from ..computation import Computation
 from perceval.utils import BSCount
 from perceval.utils.constants import KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_GLOBAL_PERF, KEY_PHYSICAL_PERF, \
     KEY_LOGICAL_PERF, KEY_RESULTS
+from perceval.serialization import Serialization
 
 class CompilationAveraging(AbstractMitigation):
 
@@ -134,3 +135,6 @@ class CompilationAveraging(AbstractMitigation):
             res[KEY_LOGICAL_PERF] = n_samples / n_physical
 
         return res
+
+
+Serialization.register_class(CompilationAveraging, ["repetitions", "starting_seed"])

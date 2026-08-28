@@ -34,13 +34,13 @@ from typing import TypeVar, Type
 
 from requests import HTTPError
 
-from perceval.serialization import deserialize, serialize
+from perceval.serialization import InputArchive, Serialization, deserialize, serialize, OutputArchive
 from perceval.utils.constants import KEY_JOB_NAME, KEY_JOB_CONTEXT, KEY_RESULT_MAPPING, \
     KEY_MAPPING_PARAMETERS, KEY_RESULTS_LIST, KEY_ITERATION, KEY_RESULTS, KEY_PLATFORM_NAME, KEY_JOB_GROUP_NAME, \
     KEY_COMMAND, KEY_MAX_SHOTS, KEY_MAX_SAMPLES
 from perceval.utils.logging import channel, get_logger
 
-from .job_status import JobStatus, RunningStatus
+from .execution_status import JobStatus, RunningStatus
 from .command import Command
 from .platform_specs import PlatformSpecs
 from .payload_updater import PayloadUpdater
@@ -168,6 +168,12 @@ class RPCBasedCommunicationLayer(CommunicationLayer):
     def get_specs(self) -> PlatformSpecs:
         return self._specs
 
+    @staticmethod
+    def _serialize(obj):
+        archive = OutputArchive()
+        Serialization.serialize(obj, archive)
+        return archive.to_text()  # Use other format ? Compress ?
+
     def send(self, payload: dict) -> RemoteId:
         computation = PayloadGenerator.get_computation(payload)
 
@@ -182,6 +188,13 @@ class RPCBasedCommunicationLayer(CommunicationLayer):
             # we only needs the argument to have "available_commands" when downgrading to version 1
             # This might not be true anymore if we introduce a version 3 someday
             payload = PayloadUpdater.update_payload(payload, self._specs, target_payload_version=1)
+
+        else:
+            # We serialize the payload here, using the new serialization system - Needed to serialize Computation
+            cloud_needed_fields = [KEY_COMMAND, KEY_MAX_SHOTS, KEY_MAX_SAMPLES]
+            for key, value in payload.items():
+                if key not in cloud_needed_fields:
+                    payload[key] = self._serialize(value)
 
         global_data = PayloadGenerator.generate_global_data(payload,
                                                             {KEY_PLATFORM_NAME: self._rpc_handler.name,
@@ -289,3 +302,22 @@ class RPCBasedCommunicationLayer(CommunicationLayer):
 
     def get_availability(self) -> int:
         return 1
+
+
+def _load_rpc_communication_layer(
+    communication_layer: RPCBasedCommunicationLayer,
+    archive: InputArchive,
+    members,
+    version: int,
+):
+    archive.load_attr(communication_layer, members)
+    communication_layer.fetch_data()  # Will not fetch if we are below MINIMUM_FETCH_INTERVAL
+
+
+Serialization.register_class(
+    RPCBasedCommunicationLayer,
+    class_serial_members_write=lambda communication_layer, archive: archive.save_attr(
+        communication_layer, ["_rpc_handler", "_specs", "_perfs", "_status", "_last_fetch_time"]
+    ),
+    class_serial_members_read=_load_rpc_communication_layer,
+)

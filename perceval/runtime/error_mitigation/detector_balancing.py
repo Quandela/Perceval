@@ -37,7 +37,7 @@ from .imperfections import Imperfections
 from ..computation import Computation
 
 from perceval.utils.constants import KEY_RESULTS, KEY_GLOBAL_PERF, KEY_PHYSICAL_PERF
-
+from perceval.serialization import Serialization
 
 class DetectorBalancing(AbstractMitigation):
     """
@@ -114,3 +114,6 @@ class DetectorBalancing(AbstractMitigation):
             res[KEY_PHYSICAL_PERF] *= perf_factor
 
         return res
+
+
+Serialization.register_class(DetectorBalancing, [])

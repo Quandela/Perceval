@@ -32,6 +32,8 @@ import pytest
 
 from perceval import LocalComputer, Execution, Computation, Experiment, NoiseModel, RunningStatus, SimulatedComputer
 import perceval as pcvl
+from perceval.serialization import Serialization
+
 
 # This test file is heavily inspired and copied from the tests on the old Job class
 
@@ -67,6 +69,11 @@ class ComputerForTest(LocalComputer):
             l.append(i ** 2)
         assert not must_fail, "Expected failure"  # Dummy failure condition
         return {"results": l}
+
+Serialization.register_class(
+    ComputerForTest,
+    ["_error_mitigations", "_parameters"]
+)  # Needed to test ExecutionGroup - This serialization is flawed, fix it if needed
 
 
 @pytest.fixture

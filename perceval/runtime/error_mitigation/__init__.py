@@ -33,3 +33,4 @@ from .photon_recycling import photon_recycling, PhotonRecycling
 from .compilation_averaging import CompilationAveraging
 from .distinguishable_photon_mitigation import DistinguishablePhotonMitigation
 from .detector_balancing import DetectorBalancing
+from .mitigation_factory import MitigationLevel, MitigationFactory

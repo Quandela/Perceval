@@ -35,9 +35,9 @@ from perceval.utils.logging import get_logger, channel
 from perceval.components.experiment import Experiment
 from perceval.components.linear_circuit import ACircuit, Circuit
 from perceval.components.source import Source
-from perceval.backends import ExqaliburBackendWrapper, ASamplingBackend
 
 from .abstract_processor import AProcessor
+from ..simulated_computer import SimulatedComputer
 
 
 class Processor(AProcessor):
@@ -65,32 +65,30 @@ class Processor(AProcessor):
             m_circuit = Experiment(m_circuit, noise=noise, name=name)
         elif noise:
             m_circuit = m_circuit.copy()  # Create a copy so that we don't change the input experiment
-            m_circuit.noise = noise
         super().__init__(m_circuit)
 
-        self._init_backend(backend)
-        self._inputs_map = None
-        self._noise_changed_observer()
-        self._input_changed_observer()
-        self._simulator = None
-        self._compute_physical_logical_perf = False
+        self._init_backend(backend)  # the only reason to keep this is that backend is public
+        self._computer = SimulatedComputer(self.backend)
 
-    @property
-    def _has_custom_input(self):
-        return (isinstance(self.input_state, SVDistribution)
-                or (isinstance(self.input_state, AnnotatedFockState) and self.input_state.has_polarization))
+        if noise is not None:
+            self._computer.noise = noise
+        self._noise_changed_observer()
 
     def _noise_changed_observer(self):
-        self._source = Source.from_noise_model(self.noise)
-        if not self._has_custom_input:
-            self._inputs_map = None
+        self._source = None
 
-    @AProcessor.noise.getter
+    @property
     def noise(self):
         noise = super(Processor, type(self)).noise.fget(self)
         if noise is None:
-            return NoiseModel()
+            return self._computer.noise
         return noise
+
+    @noise.setter
+    def noise(self, noise: NoiseModel):
+        if self._experiment.noise is not None:
+            self._experiment.noise = noise
+        self._computer.noise = noise
 
     @property
     def source_distribution(self) -> SVDistribution | None:
@@ -98,18 +96,17 @@ class Processor(AProcessor):
         Retrieve the computed input distribution. Compute it if it is not cached and an input state has been provided.
         :return: the input SVDistribution if `with_input` was called previously, otherwise None.
         """
-        if self._inputs_map is None and self.input_state is not None:
-            self._generate_noisy_input()
-        return self._inputs_map
-
-    def _circuit_change_observer(self, new_component = None):
-        self._simulator = None
+        if isinstance(self.input_state, FockState):
+            return self.source.generate_distribution(self.input_state)
+        return self._experiment.input_state
 
     @property
     def source(self):
         """
         :return: The photonic source
         """
+        if self._source is None:
+            self._source = Source.from_noise_model(self.noise)
         return self._source
 
     def _init_backend(self, backend):
@@ -129,27 +126,11 @@ class Processor(AProcessor):
     def is_remote(self) -> bool:
         return False
 
-    def _generate_noisy_input(self):
-        self._inputs_map = self._source.generate_distribution(self.input_state)
-
     def generate_noisy_heralds(self) -> SVDistribution:
-        if self.heralds:
+        if self.in_heralds:
             heralds_perfect_state = FockState([v for k, v in sorted(self.experiment.in_heralds.items())])
-            return self._source.generate_distribution(heralds_perfect_state)
+            return self.source.generate_distribution(heralds_perfect_state)
         return SVDistribution()
-
-    def _input_changed_observer(self):
-        if isinstance(self.input_state, BasicState):
-            if isinstance(self.input_state, AnnotatedFockState):
-                self._inputs_map = SVDistribution(StateVector(self.input_state))
-            else:
-                self._inputs_map = None
-        elif isinstance(self.input_state, SVDistribution):
-            self._inputs_map = self.input_state
-
-    def clear_input_and_circuit(self, new_m=None):
-        super().clear_input_and_circuit(new_m)
-        self._inputs_map = None
 
     def linear_circuit(self, flatten: bool = False) -> Circuit:
         """
@@ -164,97 +145,19 @@ class Processor(AProcessor):
         return experiment.unitary_circuit(flatten=flatten)
 
     def samples(self, max_samples: int, max_shots: int = None, progress_callback=None) -> dict:
-        self.check_min_detected_photons_filter()
-
-        # Avoids circular import
-        from perceval.simulators import ExqaliburNoisySamplingSimulator, NoisySamplingSimulator
-
-        assert isinstance(self.backend, ASamplingBackend), "A sampling backend is required to call samples method"
-        if isinstance(self.backend, ExqaliburBackendWrapper):
-            sampling_simulator = ExqaliburNoisySamplingSimulator(self.backend)
-        else:
-            sampling_simulator = NoisySamplingSimulator(self.backend)
-        sampling_simulator.sleep_between_batches = 0  # Remove sleep time between batches of samples in local simulation
-        sampling_simulator.set_circuit(self.linear_circuit())
-        sampling_simulator.set_selection(
-            min_detected_photons_filter=self._min_detected_photons_filter,
-            postselect=self.post_select_fn,
-            heralds=self.heralds)
-        sampling_simulator.keep_heralds(False)
-        sampling_simulator.compute_physical_logical_perf(self._compute_physical_logical_perf)
-        sampling_simulator.set_detectors(self.detectors)
-        self.log_resources(sys._getframe().f_code.co_name, {'max_samples': max_samples, 'max_shots': max_shots})
-        get_logger().info(
-            f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} sampling", channel.general)
-        sample_provider = self.source_distribution if self._has_custom_input else (self._source, self.input_state)
-        res = sampling_simulator.samples(sample_provider, max_samples, max_shots, progress_callback)
-        get_logger().info("Local sampling complete!", channel.general)
-        return res
+        # Experiment's noise takes precedence
+        with self._computer.apply_configuration(noise = self.experiment.noise):
+            return self._computer.samples(self.experiment, max_samples=max_samples, max_shots=max_shots, progress_callback=progress_callback)
 
     def probs(self, precision: float = None, progress_callback: ProgressCallback = None) -> dict:
-        self.check_min_detected_photons_filter()
-
-        experiment = self.experiment.use_phase_noise(self.noise)
-
-        # assert self._inputs_map is not None, "Input is missing, please call with_inputs()"
-        if self._simulator is None:
-            from perceval.simulators import SimulatorFactory  # Avoids a circular import
-            self._simulator = SimulatorFactory.build(experiment, self.backend)
-        else:
-            self._simulator.set_circuit(experiment.unitary_circuit() if experiment.is_unitary else experiment.components,
-                                        experiment.circuit_size)
-            self._simulator.set_min_detected_photons_filter(self._min_detected_photons_filter)
-
-        if precision is not None:
-            self._simulator.set_precision(precision)
-        get_logger().info(f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} strong simulation",
-                          channel.general)
-        self._simulator.keep_heralds(False)
-        self._simulator.compute_physical_logical_perf(self._compute_physical_logical_perf)
-        svd = self.source_distribution if self._has_custom_input else (self._source, self.input_state)
-        res = self._simulator.probs_svd(svd, self.detectors, progress_callback)
-        get_logger().info("Local strong simulation complete!", channel.general)
-
-        self.log_resources(sys._getframe().f_code.co_name, {'precision': precision})
-        return res
+        # Experiment's noise takes precedence
+        with self._computer.apply_configuration(noise=self.experiment.noise):
+            return self._computer.probs(self.experiment, precision=precision, progress_callback=progress_callback)
 
     @property
     def available_commands(self) -> list[str]:
         from perceval.backends import ASamplingBackend
         return ["samples" if isinstance(self.backend, ASamplingBackend) else "probs"]
-
-    def log_resources(self, method: str, extra_parameters: dict):
-        """Log resources of the processor
-
-        :param method: name of the method used
-        :param extra_parameters: extra parameters to log.
-
-            Extra parameter can be:
-
-                - max_samples
-                - max_shots
-                - precision
-        """
-        extra_parameters = {key: value for key, value in extra_parameters.items() if value is not None}
-        my_dict = {
-            'layer': 'Processor',
-            'backend': self.backend.name,
-            'm': self.circuit_size,
-            'method': method
-        }
-        if isinstance(self.input_state, BasicState):
-            my_dict['n'] = self.input_state.n
-        elif isinstance(self.input_state, StateVector):
-            my_dict['n'] = max(self.input_state.n)
-        elif isinstance(self.input_state, SVDistribution):
-            my_dict['n'] = self.input_state.n_max
-        else:
-            get_logger().error(f"Cannot get n for type {type(self.input_state).__name__}", channel.general)
-        if extra_parameters:
-            my_dict.update(extra_parameters)
-        if self.noise != NoiseModel():
-            my_dict['noise'] = self.noise.__dict__()
-        get_logger().log_resources(my_dict)
 
     def compute_physical_logical_perf(self, value: bool):
         """
@@ -262,4 +165,4 @@ class Processor(AProcessor):
 
         :param value: True to compute the physical and logical performances, False otherwise.
         """
-        self._compute_physical_logical_perf = value
+        self._computer.compute_physical_logical_perf(value)

@@ -51,7 +51,7 @@ from perceval.providers.quandela.rpc_handler import (
     _ENDPOINT_JOB_AVAILABILITY,
     quote_plus
 )
-from perceval.runtime.job_status import RunningStatus, JobStatus
+from perceval.runtime.execution_status import RunningStatus, JobStatus
 
 _TIMESTAMP = datetime.datetime.now().timestamp()
 

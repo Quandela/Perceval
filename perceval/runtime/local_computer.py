@@ -34,14 +34,14 @@ from typing import Callable, Any
 from perceval.utils import ProgressCallback, parse_signature
 from perceval.components import Experiment
 
-from .job_status import RunningStatus
+from .execution_status import RunningStatus
 from .abstract_computer import AbstractComputer
 from .computation import Computation
 from .async_getter import AsyncGetter
 from .command import Command
 
 
-class _ThreadedExecution(AsyncGetter):
+class _ThreadedGetter(AsyncGetter):
     """Async execution for local computer - Private class"""
 
     def __init__(self, method: Callable, args: tuple=(), kwargs: dict = None):
@@ -150,8 +150,8 @@ class LocalComputer(AbstractComputer, ABC):
             else:
                 raise e
 
-    def _execute_command_async(self, computation: Computation) -> _ThreadedExecution:
-        return _ThreadedExecution(self._execute_single, args=(computation,))
+    def _execute_command_async(self, computation: Computation) -> _ThreadedGetter:
+        return _ThreadedGetter(self._execute_single, args=(computation,))
 
     @property
     def is_remote(self) -> bool:

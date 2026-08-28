@@ -75,7 +75,6 @@ class SimulatorFactory:
         m = None
 
         from perceval.runtime import Processor  # TODO: remove (deprecated since 1.3)
-
         if isinstance(circuit, Processor):
             if backend is None:
                 # If no backend was chosen, the backend type set in the Processor is used

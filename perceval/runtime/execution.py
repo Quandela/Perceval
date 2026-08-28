@@ -36,9 +36,11 @@ from .async_getter import AsyncGetter
 from .abstract_computer import AbstractComputer
 from .computation import Computation
 from .computation_iterator import ComputationIterator
-from .job_status import JobStatus, RunningStatus
+from .execution_status import ExecutionStatus, RunningStatus
 from .error_mitigation import AbstractMitigation, Imperfections
 from perceval.utils import ProgressCallback
+from perceval.serialization import InputArchive, Serialization
+from perceval.serialization.library.class_registry import ClassRegistry
 
 
 class Execution:
@@ -49,7 +51,7 @@ class Execution:
         self._name = computation.job_name
         self._job_group_name = computation.job_group_name
         self._results = {}
-        self._status: JobStatus = JobStatus()
+        self._status: ExecutionStatus = ExecutionStatus()
 
         # Storage for async run
         self._mitigations: list[AbstractMitigation] = []
@@ -84,6 +86,14 @@ class Execution:
         return None
 
     @property
+    def computation(self) -> Computation | ComputationIterator:
+        return self._computation
+
+    @property
+    def computer(self) -> AbstractComputer:
+        return self._computer
+
+    @property
     def name(self) -> str:
         """
         The job name
@@ -97,16 +107,16 @@ class Execution:
         self._name = new_name
 
     @property
-    def job_group_name(self) -> str:
+    def job_group_name(self) -> str | None:
         """
-        The job name
+        The job group name
         """
-        return self._name
+        return self._job_group_name
 
     @job_group_name.setter
     def job_group_name(self, new_name: str):
-        if not isinstance(new_name, str):
-            raise TypeError("A job name must be a string")
+        if not isinstance(new_name, str) or len(new_name) == 0:
+            raise TypeError("A job group name must be a non-empty string")
         self._job_group_name = new_name
 
     def set_job_group_name(self, new_name: str):  # TODO: legacy; remove ?
@@ -127,13 +137,13 @@ class Execution:
         return self.execute_sync(*args, **kwargs)
 
     @property
-    def status(self) -> JobStatus:
+    def status(self) -> ExecutionStatus:
         """
         The job status metadata structure
         """
         if len(self._getters) > 0 and not self._status.completed:
             all_status = [getter.status for getters in self._getters for getter in getters]
-            self._status.copy_from(JobStatus.merge_status(all_status))
+            self._status.copy_from(ExecutionStatus.merge_status(all_status))
 
         return self._status
 
@@ -267,3 +277,52 @@ class Execution:
             return f"Execution '{self.name}', status:not sent"
         else:
             return f"Execution '{self.name}', status:{self._status}"
+
+
+_EXECUTION_MEMBERS = [
+    "_computation",
+    "_computer",
+    "_name",
+    "_job_group_name",
+    "_results",
+    "_status",
+    "_mitigations",  # Async memory must be the last ones due to the way _save_execution() is written
+    "_imperfections",
+    "_getters",
+]
+
+
+def _getter_is_serializable(getter: AsyncGetter) -> bool:
+    try:
+        ClassRegistry.get_by_class(type(getter))
+        return True
+    except RuntimeError:
+        return False
+
+
+def _save_execution(execution: Execution, archive):
+    if all(_getter_is_serializable(getter) for getters in execution._getters for getter in getters):
+        return archive.save_attr(execution, _EXECUTION_MEMBERS)
+    else:
+        return archive.save_attr(execution, _EXECUTION_MEMBERS[:-3])
+
+
+def _load_execution(
+    execution: Execution,
+    archive: InputArchive,
+    members,
+    version: int,
+):
+    archive.load_attr(execution, members)
+    execution._user_cb = None
+    if not hasattr(execution, "_getters"):  # Other possibility: store them with initial value
+        execution._getters = []
+        execution._noise = None
+        execution._mitigations = []
+
+
+Serialization.register_class(
+    Execution,
+    class_serial_members_write=_save_execution,
+    class_serial_members_read=_load_execution,
+)

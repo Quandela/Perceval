@@ -27,6 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from perceval.runtime.communication_layer import RPCBasedCommunicationLayer
+from perceval.serialization import InputArchive, Serialization
 
 from perceval.utils.logging import get_logger, channel
 
@@ -51,3 +52,29 @@ class KipuCommunicationLayer(RPCBasedCommunicationLayer):
         ))
 
         get_logger().info(f"Connected to Kipu Cloud platform {platform_name}", channel.general)
+
+    @staticmethod
+    def from_rpc(rpc_handler: KipuRPCHandler):
+        return KipuCommunicationLayer(rpc_handler.name,
+                                      rpc_handler._token,
+                                      rpc_handler._organization_id,
+                                      rpc_handler.url,
+                                      rpc_handler.proxies)
+
+
+def _load_kipu_communication_layer(
+    communication_layer: KipuCommunicationLayer,
+    archive: InputArchive,
+    members,
+    version: int,
+):
+    RPCBasedCommunicationLayer.__init__(communication_layer, archive.create(members[0][1]))
+
+
+Serialization.register_class(
+    KipuCommunicationLayer,
+    class_serial_members_write=lambda communication_layer, archive: archive.save_attr(
+        communication_layer, ["_rpc_handler"]
+    ),
+    class_serial_members_read=_load_kipu_communication_layer,
+)

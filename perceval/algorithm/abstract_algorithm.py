@@ -26,17 +26,24 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from perceval.runtime import AbstractComputer
+from perceval.runtime.legacy import AProcessor
 
-from perceval.runtime import AProcessor
+from .processor_compatibility import computer_from_processor
 
 
 class AAlgorithm:
     _MAX_SHOTS_NAMED_PARAM = "max_shots_per_call"
 
-    def __init__(self, processor: AProcessor, **kwargs):
-        self._processor = processor
+    def __init__(self, computer: AbstractComputer, **kwargs):
+        # TODO: remove (deprecated since 1.3)
+        if isinstance(computer, AProcessor):
+            setattr(self, "_processor", computer)  # Do not use "self._processor = " to get IDE warnings
+            computer = computer_from_processor(computer)
+
+        self._computer = computer
         if not self._check_compatibility():
-            raise RuntimeError("Processor and algorithm are not compatible")
+            raise RuntimeError("Computer and algorithm are not compatible")
 
         self.default_job_name = None
 
@@ -47,7 +54,7 @@ class AAlgorithm:
                 raise RuntimeError(f'`{self._MAX_SHOTS_NAMED_PARAM}` must be a positive value')
         # max_shots_per_call must be found in **kwargs when the processor is remote.
         # This condition is forced because the user will consume credits on the cloud and needs to set an upper bound
-        if processor.is_remote and not self._max_shots:
+        if computer.is_remote and not self._max_shots:
             raise RuntimeError(f'Please input a `{self._MAX_SHOTS_NAMED_PARAM}` value when using a RemoteProcessor')
 
     def _check_compatibility(self) -> bool:

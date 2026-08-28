@@ -34,6 +34,7 @@ import json
 from datetime import datetime, timedelta
 from requests import HTTPError
 
+from perceval.serialization import Serialization
 from perceval.utils.logging import get_logger, channel
 from perceval.utils.constants import KEY_JOB_NAME, KEY_PAYLOAD
 
@@ -329,3 +330,10 @@ class RPCHandler:
         return (
             timedelta(seconds=time.time() - start_time).seconds if start_time else None
         )
+
+
+Serialization.register_class(
+    RPCHandler,
+    ["_project_id", "_url", "_proxies", "_session_id", "_platform_name", "_headers", "_provider_name", "_platform_id"],
+    tag="ScalewayRPCHandler",
+)

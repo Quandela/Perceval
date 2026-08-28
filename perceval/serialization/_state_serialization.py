@@ -26,8 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-from perceval.utils.states import BasicState, StateVector, BSSamples
+from perceval.utils.states import BasicState, StateVector, BSSamples, SVDistribution, BSCount, BSDistribution
 from perceval.utils import simple_float
 from ast import literal_eval
 import re
@@ -77,6 +76,25 @@ def serialize_bssamples(bss: BSSamples) -> str:
         else:
             order[idx] = mapping[bs]
     return ';'.join([serialize_state(bs) for bs in mapping.keys()]) + '/' + ';'.join([str(i) for i in order])
+
+
+def serialize_svdistribution(dist: SVDistribution) -> str:
+    return "{" \
+        + ";".join(f"{serialize_statevector(state)}={simple_float(prob, nsimplify=False)[1]}"
+                   for state, prob in dist.items()) \
+        + "}"
+
+def serialize_bsdistribution(dist: BSDistribution) -> str:
+    return "{" \
+        + ";".join(f"{serialize_state(state)}={simple_float(probability, nsimplify=False)[1]}"
+                   for state, probability in dist.items()) \
+        + "}"
+
+
+def serialize_bscount(count: BSCount) -> str:
+    return "{" \
+        + ";".join(f"{serialize_state(state)}={value}" for state, value in count.items()) \
+        + "}"
 
 
 def deserialize_bssamples(serialized_bss: str) -> BSSamples:

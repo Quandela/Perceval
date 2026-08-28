@@ -1,5 +1,3 @@
-
-
 # MIT License
 #
 # Copyright (c) 2022 Quandela
@@ -29,18 +27,36 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-KNOWN_TYPES: dict[str, type] = {}
+import pytest
 
-for t in [int, float, complex, str, bool, list, dict, tuple]:
-    KNOWN_TYPES[t.__name__] = t
-
-
-def add_type_deserializer(t: type):
-    global KNOWN_TYPES
-    KNOWN_TYPES[t.__name__] = t
+from perceval import MitigationFactory, MitigationLevel, DistinguishablePhotonMitigation, CompilationAveraging
 
 
-def deserialize_type(serialized_type: str) -> type:
-    if serialized_type in KNOWN_TYPES:
-        return KNOWN_TYPES[serialized_type]
-    raise TypeError(f"Unknown type {serialized_type}")
+def test_factory():
+    assert MitigationFactory(level=MitigationLevel.none).build() == []
+    assert MitigationFactory(level=0).build() == []  # Check that we can also call it with an int
+
+    for level in range(1, 4):
+        assert len(MitigationFactory(level=MitigationLevel(level)).build()) > 0
+
+    with pytest.raises(ValueError):
+        MitigationFactory(level=4).build()
+
+def test_factory_advanced_use():
+    factory = MitigationFactory(level=MitigationLevel.none)
+
+    my_mitigation = CompilationAveraging(10)
+    factory.set_custom_mitigation(my_mitigation)
+
+    assert factory.build() == [my_mitigation]
+
+    order = 5
+    factory.set_distinguishable_photon_mitigation(order)
+    mitigations = factory.build()
+    assert len(mitigations) == 2
+
+    for mitigation in mitigations:
+        if isinstance(mitigation, DistinguishablePhotonMitigation):
+            assert mitigation._order == order
+        else:
+            assert mitigation == my_mitigation

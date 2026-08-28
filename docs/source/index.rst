@@ -85,7 +85,7 @@ Perceval is used in several higher-level projects (non-exhaustive list):
    reference/providers
    reference/rendering/index
    reference/runtime/index
-   reference/serialization
+   reference/serialization/index
    reference/simulators/index
    reference/utils/index
    reference/exqalibur/index

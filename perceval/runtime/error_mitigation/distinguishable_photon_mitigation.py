@@ -33,6 +33,7 @@ from copy import copy, deepcopy
 from perceval.components import DetectionType, get_detection_type
 from perceval.utils import BSDistribution, FockState, NoiseModel, get_logger
 from perceval.utils.constants import KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_RESULTS
+from perceval.serialization import Serialization
 
 from ..computation import Computation
 from .imperfections import Imperfections, update_imperfections_from_results
@@ -449,3 +450,6 @@ class DistinguishablePhotonMitigation(AbstractMitigation):
             values[i] += 1
 
         return values
+
+
+Serialization.register_class(DistinguishablePhotonMitigation, ["_order"])

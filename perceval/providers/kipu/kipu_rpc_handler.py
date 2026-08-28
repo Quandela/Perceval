@@ -31,6 +31,7 @@
 
 from datetime import datetime
 
+from perceval.serialization import InputArchive, Serialization
 from perceval.utils.constants import KEY_VERSION, KEY_PROCESS_ID, KEY_JOB_NAME, KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_PAYLOAD
 
 _MISSING_QHUB_MSG = (
@@ -316,3 +317,28 @@ class KipuRPCHandler:
         hub_type = "SIMULATOR" if ".sim." in self._backend_id else "QPU"
         details.setdefault("type", _BACKEND_TYPE_MAP.get(hub_type, "simulator"))
         return details
+
+
+def _load_kipu_rpc_handler(
+    handler: KipuRPCHandler,
+    archive: InputArchive,
+    members,
+    version: int,
+):
+    values = {name: archive.create(index) for name, index in members}
+    handler.__init__(
+        platform_name=values["_platform_name"],
+        url=values["_url"],
+        token=values["_token"],
+        organization_id=values["_organization_id"],
+        proxies=values["_proxies"],
+    )
+
+
+Serialization.register_class(
+    KipuRPCHandler,
+    class_serial_members_write=lambda handler, archive: archive.save_attr(
+        handler, ["_platform_name", "_url", "_token", "_organization_id", "_proxies"]
+    ),
+    class_serial_members_read=_load_kipu_rpc_handler,
+)

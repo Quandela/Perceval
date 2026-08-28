@@ -37,7 +37,7 @@ from .abstract_computer import AbstractComputer
 from .computation_iterator import ComputationIterator
 from .platform_specs import PlatformSpecs
 from .error_mitigation import AbstractMitigation, Imperfections
-from .job_status import RunningStatus
+from .execution_status import RunningStatus
 from .simulated_computer import SimulatedComputer
 from .async_getter import AsyncGetter
 from .payload_generator import PayloadGenerator
@@ -45,6 +45,7 @@ from .payload_generator import PayloadGenerator
 from perceval.utils import perf_dict_to_noise, ProgressCallback, NoiseModel, PostSelect, ContextManager
 from perceval.utils.logging import channel, get_logger
 from perceval.components import PortLocation, Experiment
+from perceval.serialization import Serialization, InputArchive
 
 
 class _RemoteGetter(AsyncGetter):
@@ -53,11 +54,10 @@ class _RemoteGetter(AsyncGetter):
 
     def __init__(self, communication_layer: CommunicationLayer, remote_id: RemoteId):
         super().__init__()
-        # TODO: Communication layer must NOT be serialized. It should be reinserted back when deserializing a Job
-        self._communication_layer = communication_layer  # Not serialized
+        self._communication_layer = communication_layer
         self._remote_id = remote_id
-        self._last_status_refresh = 0.  # Not serialized
-        self._job_status_errors = 0  # Not serialized
+        self._last_status_refresh = 0.
+        self._job_status_errors = 0
 
     def cancel(self):
         if self.status.status in (RunningStatus.RUNNING, RunningStatus.WAITING, RunningStatus.SUSPENDED):
@@ -176,6 +176,17 @@ class RemoteComputer(AbstractComputer):
                 raise RuntimeError(f"Circuit too big ({m} modes > {constraints['max_mode_count']})")
             if 'min_mode_count' in constraints and m < constraints['min_mode_count']:
                 raise RuntimeError(f"Circuit too small ({m} < {constraints['min_mode_count']})")
+
+        # TODO: Check that the component matches what the platform can do
+        # if new_component is not None:
+        #     if isinstance(new_component, Experiment):
+        #         if not new_component.is_unitary:
+        #             raise RuntimeError('Cannot compose a RemoteProcessor with a processor containing non linear components')
+        #         if new_component.has_feedforward:
+        #             raise RuntimeError('Cannot compose a RemoteProcessor with a processor containing feed-forward')
+        #
+        #     elif not isinstance(new_component, IDetector) and not isinstance(new_component, ACircuit):
+        #         raise NotImplementedError("Non linear components not implemented for RemoteProcessors")
 
     def _handle_iterator(self, comp: Computation | ComputationIterator, out: dict | None)\
             -> tuple[dict, Callable[[dict], None]]:
@@ -370,3 +381,32 @@ class RemoteComputer(AbstractComputer):
         """
         p_interest = self._estimate_sample_probability(computation, param_values=param_values)
         return round(nshots * p_interest)
+
+
+Serialization.register_class(
+    _RemoteGetter,
+    ["_remote_id", "_results", "_status", "_last_status_refresh", "_communication_layer", "_job_status_errors"],
+    tag="RemoteGetter"
+)
+
+
+def _load_remote_computer(
+    computer: RemoteComputer,
+    archive: InputArchive,
+    members,
+    version: int,
+):
+    values = {name: archive.create(index) for name, index in members}
+    computer.__init__(values.pop("_communication_layer"))  # This sets the specs and perfs as usual
+    for name, value in values.items():
+        setattr(computer, name, value)
+
+
+Serialization.register_class(
+    RemoteComputer,
+    # Do not save specs and perfs - asked again to the communication layer
+    class_serial_members_write=lambda computer, archive: archive.save_attr(
+        computer, ["_communication_layer", "_error_mitigations", "_parameters", "_custom_noise", "use_mitigations_remotely"]
+    ),
+    class_serial_members_read=_load_remote_computer,
+)

@@ -30,7 +30,7 @@
 from typing import Any
 
 from perceval.utils.constants import KEY_MAX_SAMPLES, KEY_MAX_SHOTS
-from perceval.serialization import register_to_serialization
+from perceval.serialization import Serialization
 
 
 class Command:
@@ -117,4 +117,4 @@ class CommandFactoryClass:
 CommandFactory = CommandFactoryClass()
 
 
-register_to_serialization(Command)
+Serialization.register_class(Command, ["name", "signature", "apply_emt"])

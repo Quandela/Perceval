@@ -55,11 +55,11 @@ from ._constants import (
     POSTSELECT_TAG,
     BS_LAYERED_DETECTOR_TAG,
     DETECTOR_TAG, COMPONENT_TAG, HERALD_TAG, PORT_TAG, VALUE_NOT_SET, EXPERIMENT_TAG, COMPILED_CIRCUIT_TAG,
-    COMPILED_CIRCUIT_VERSION_TAG, TYPE_TAG,
+    COMPILED_CIRCUIT_VERSION_TAG,
 )
 from ._state_serialization import deserialize_statevector, deserialize_bssamples
 from . import _component_deserialization as _cd
-from ._type_deserialization import deserialize_type
+from .library import InputArchive, Serialization
 from exqalibur.serialization import circuit_pb2 as pb
 
 
@@ -243,7 +243,6 @@ DESERIALIZER = {
     EXPERIMENT_TAG: deserialize_experiment,
     COMPILED_CIRCUIT_TAG: deserialize_compiled_circuit,
     COMPILED_CIRCUIT_VERSION_TAG: deserialize_compiled_circuit_version,
-    TYPE_TAG: deserialize_type,
 }
 
 
@@ -280,6 +279,9 @@ def deserialize(obj, strict=True):
 
         deserialize_func = DESERIALIZER.get(class_obj, serializer_not_implemented)
         r = deserialize_func(serial_obj)
+    elif isinstance(obj, str) and obj.startswith(InputArchive.header):
+        archive = InputArchive.from_text(obj)
+        r = Serialization.deserialize(archive)
     else:
         r = obj
     return r

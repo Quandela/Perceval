@@ -1,5 +1,9 @@
-serialization
-^^^^^^^^^^^^^
+serialization legacy
+^^^^^^^^^^^^^^^^^^^^
+
+.. warning::
+   This page is about the legacy serialization system of perceval. Use the :ref:`Serialization` system if possible.
+
 
 Perceval provides a generic way to serialize most objects into strings that can be deserialized later on
 to get back the original object.

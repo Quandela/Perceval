@@ -32,7 +32,7 @@ from abc import ABC, abstractmethod
 
 from perceval.utils.logging import get_logger, channel
 
-from ..job_status import JobStatus
+from ..execution_status import JobStatus
 
 
 class Job(ABC):

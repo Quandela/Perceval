@@ -30,18 +30,19 @@
 import numpy as np
 from collections import defaultdict
 
-from perceval.components import PauliType
+from perceval.components import PauliType, Experiment
 from perceval.utils import BasicState
-from perceval.runtime import AProcessor
+from perceval.runtime import AbstractComputer
 
 from .abstract_process_tomography import AProcessTomography
 from .tomography_utils import (_matrix_basis, _matrix_to_vector, _vector_to_sq_matrix, _coef_linear_decomp,
                                _get_fixed_basis_ops, _get_canonical_basis_ops, _generate_pauli_index,
                                _generate_pauli_prep_index, _list_subset_k_from_n, _compute_probs)
 from ..abstract_algorithm import AAlgorithm
+from ..processor_compatibility import ProcessorCompatibilityMeta
 
 
-class StateTomography(AAlgorithm):
+class StateTomography(AAlgorithm, metaclass=ProcessorCompatibilityMeta):
     """
     Experiment to reconstruct the state of the system by tomography experiment.
 
@@ -55,12 +56,14 @@ class StateTomography(AAlgorithm):
         needs to be performed.
 
     """
-    def __init__(self, operator_processor: AProcessor, **kwargs):
-        super().__init__(processor=operator_processor, **kwargs)
-        self._nqubit, odd_modes = divmod(operator_processor.m, 2)
+
+    def __init__(self, computer: AbstractComputer, experiment: Experiment, **kwargs):
+        super().__init__(computer=computer, **kwargs)
+        self._experiment = experiment.copy()
+        self._nqubit, odd_modes = divmod(experiment.m, 2)
         if odd_modes:
             raise ValueError(
-                f"Input processor has an odd mode count ({operator_processor.m}) and thus, is not a logical gate")
+                f"Input computer has an odd mode count ({experiment.m}) and thus, is not a logical gate")
 
         self._size_hilbert = 2 ** self._nqubit
         self._gate_logical_perf = None
@@ -133,13 +136,15 @@ class ProcessTomography(AProcessTomography):
 
     - Provides analysis methods to investigate the results of process tomography such as the fidelity of the operation and error process maps.
 
-    :param operator_processor: A perceval Processor with gate (or operation) on which process tomography
+    :param computer: The computer to use to perform the tomography
+    :param experiment: A perceval Experiment with gate (or operation) on which process tomography
         needs to be performed
 
     """
-    def __init__(self, operator_processor: AProcessor, **kwargs):
-        super().__init__(processor=operator_processor, **kwargs)
-        self._qst = StateTomography(operator_processor=self._processor, **kwargs)
+
+    def __init__(self, computer: AbstractComputer, experiment: Experiment, **kwargs):
+        super().__init__(computer, experiment, **kwargs)
+        self._qst = StateTomography(self._computer, self._experiment, **kwargs)
 
         self.chi_normalized = None
         self.chi_unnormalized = None
