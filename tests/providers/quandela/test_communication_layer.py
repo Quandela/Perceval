@@ -29,7 +29,6 @@
 
 import pytest
 
-from _test_utils import assert_experiment_equals
 from perceval import ProcessorType, Computation, CommandFactory, Experiment, PayloadGenerator, RunningStatus, JobStatus
 from perceval.providers.quandela.rpc_handler import RPCHandler
 from perceval.runtime.communication_layer import RPCBasedCommunicationLayer
@@ -37,6 +36,7 @@ from perceval.runtime.platform_specs import PlatformSpecs
 from perceval.serialization import deserialize
 
 from ._mock_rpc_handler import RPCHandlerResponsesBuilder, ARCHITECTURE_PLATFORM_INFO
+from ..._test_utils import assert_experiment_equals
 
 TOKEN = "test_token"
 PLATFORM_NAME = "sim:test"
