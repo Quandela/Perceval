@@ -313,8 +313,6 @@ def _load_execution(
     members,
     version: int,
 ):
-    if version != 0:
-        raise RuntimeError(f"Unsupported Execution serialization version {version}")
     archive.load_attr(execution, members)
     execution._user_cb = None
     if not hasattr(execution, "_getters"):  # Other possibility: store them with initial value

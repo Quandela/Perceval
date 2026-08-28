@@ -43,17 +43,17 @@ ClassReader: TypeAlias = Callable[[InputArchive, ADescriptor, PreRecorder], None
 
 
 class ASerializer(ABC, Generic[T, DescriptorType]):
-    """TODO"""
+    """A class describing how to serialize an object from another class T, by using a descriptor"""
     type: T
     class_tag: str
     descriptor_type: DescriptorType
 
     @abstractmethod
     def write(self, obj: T, ar: OutputArchive) -> PartialRecord:
-        """TODO"""
+        """Makes a Descriptor of the object, and the list of all children that need to be serialized"""
         pass
 
     @abstractmethod
     def read(self, ar: InputArchive, desc: DescriptorType, pre_recorder: PreRecorder) -> T:
-        """TODO"""
+        """Takes a descriptor of the object, and returns a filled instance of the object"""
         pass

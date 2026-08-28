@@ -26,3 +26,20 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
+from zlib import compress as zlib_compress, decompress as zlib_decompress
+from base64 import b64encode, b64decode
+
+
+def b64encoding(obj: bytes) -> str:
+    return b64encode(obj).decode('utf-8')
+
+
+def compress_str(obj: str) -> str:
+    serialized_string_compressed = zlib_compress(obj.encode('utf-8'))  # Compress byte to byte
+    return b64encoding(serialized_string_compressed)  # base64 to string
+
+
+def decompress_str(obj: str) -> str:
+    obj = b64decode(obj)
+    return zlib_decompress(obj).decode('utf-8')

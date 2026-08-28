@@ -42,7 +42,6 @@ from .command import Command
 
 
 class _ThreadedGetter(AsyncGetter):
-    # Note: could be beneficial to use sub-processes, especially in terms of resource lock
     """Async execution for local computer - Private class"""
 
     def __init__(self, method: Callable, args: tuple=(), kwargs: dict = None):

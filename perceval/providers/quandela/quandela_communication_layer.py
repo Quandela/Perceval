@@ -41,6 +41,10 @@ class QuandelaCommunicationLayer(RPCBasedCommunicationLayer):
         super().__init__(RPCHandler(name, url, token, proxies))
         get_logger().info(f"Connected to Cloud platform {name}", channel.general)
 
+    @staticmethod
+    def from_rpc(rpc_handler: RPCHandler):
+        return QuandelaCommunicationLayer(rpc_handler.name, rpc_handler.token, rpc_handler.url, rpc_handler.proxies)
+
     def get_availability(self) -> int:
         try:
             availability = self._rpc_handler.get_job_availability()
@@ -56,10 +60,6 @@ def _load_quandela_communication_layer(
     members,
     version: int,
 ):
-    if version != 0:
-        raise RuntimeError(
-            f"Unsupported QuandelaCommunicationLayer serialization version {version}"
-        )
     RPCBasedCommunicationLayer.__init__(communication_layer, archive.create(members[0][1]))
 
 

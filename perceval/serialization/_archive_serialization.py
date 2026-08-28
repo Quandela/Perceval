@@ -129,10 +129,15 @@ def register_perceval_serializers() -> None:
     _register_string(BSSamples, BSS_TAG, serialize_bssamples, deserialize_bssamples)
     _register_string(PostSelect, POSTSELECT_TAG, str, deserialize_postselect)
 
-    # TODO: use the register as a data class ?
-    _register_string(
-        NoiseModel,
-        NOISE_TAG,
-        lambda obj: json.dumps(obj.__dict__()),
-        deserialize_noise_model,
+    Serialization.register_class(NoiseModel,
+        [
+            "brightness",
+            "indistinguishability",
+            "g2",
+            "g2_distinguishable",
+            "transmittance",
+            "phase_imprecision",
+            "phase_error",
+        ],
+        tag=NOISE_TAG,
     )

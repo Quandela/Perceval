@@ -377,8 +377,6 @@ def _load_remote_computer(
     members,
     version: int,
 ):
-    if version != 0:
-        raise RuntimeError(f"Unsupported RemoteComputer serialization version {version}")
     values = {name: archive.create(index) for name, index in members}
     computer.__init__(values.pop("_communication_layer"))  # This sets the specs and perfs as usual
     for name, value in values.items():

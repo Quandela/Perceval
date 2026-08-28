@@ -107,6 +107,7 @@ class NoiseModel:
                     return False
         return True
 
+# Note: NoiseModel serialization is in serialization._archive_serialization
 
 def perf_dict_to_noise(perfs: dict[str, float]) -> NoiseModel:
     nm = NoiseModel()

@@ -32,7 +32,7 @@ from enum import Enum
 from time import time
 from typing import TypeAlias
 
-from perceval.serialization import DescriptorInteger, Serialization
+from perceval.serialization import DescriptorString, Serialization
 from perceval.utils.logging import get_logger, channel
 
 
@@ -355,10 +355,12 @@ JobStatus: TypeAlias = ExecutionStatus  # Legacy name  TODO: add a deprecated wa
 
 Serialization.register_class(
     RunningStatus,
-    class_write_custom=lambda status, ar: (DescriptorInteger(status.value), []),
-    class_read_custom=lambda ar, desc, pre_recorder: RunningStatus(desc.value),
-    descriptor_type=DescriptorInteger,
+    class_write_custom=lambda status, ar: (DescriptorString(status.name), []),
+    class_read_custom=lambda ar, desc, pre_recorder: RunningStatus[desc.value] if desc.value in RunningStatus.__members__
+                                                                                       else RunningStatus.UNKNOWN,
+    descriptor_type=DescriptorString,
 )
+
 Serialization.register_class(
     ExecutionStatus, ["_status",
                       "_init_time_start",
