@@ -61,14 +61,16 @@ DEFAULT_PLATFORM_INFO = {
     'perfs': {},
     'specs': {
         'available_commands': ['probs'],
-        'connected_input_modes': [0, 2, 4, 6, 8, 10],
+        'connected_input_modes': [0],
         'constraints': {
             'max_mode_count': 20,
             'max_photon_count': 6,
             'min_mode_count': 1,
             'min_photon_count': 1,
         },
-        'specific_circuit': 'serialized circuit'
+        # BS()
+        'specific_circuit': ':PCVL:zip:eJyzCnAO87FydM4sSi7NLLFydfTM9K9wdI7MSg52DsyO9AkNCtWu9DANqMj3cg50hAPP9GwvBM+xEKgW'\
+                            'wXPxRFELAAdTHXM='
     },
     'status': 'available',
     'type': 'simulator',
@@ -87,7 +89,9 @@ ARCHITECTURE_PLATFORM_INFO = {
             'min_mode_count': 1,
             'min_photon_count': 1,
         },
-        'architecture': 'serialized experiment'
+        'architecture': ':PCVL:zip:eJxVykEPQzAYxvEPtAObWESyw6vtoialKOo4kZoZtklm334ORPbc/nl+dohS3ybTUL1uj6obbVTLoyAsS/CA'\
+                        'ZM4GuWe6zKM26D6Tj2FH1HCuXKctH+1YZKZOa7J6fjWYLg7pu8iYHjS9QEBi4tAAKcaTltawzMLW8QwKSA0xVj0WxIwpX84'\
+                        'QNA7eJZgAyaaMEb9LX0Ri93XNcOo9tLp5VN29reA5260w/bMi1DTNsE4/BC1I6Q=='
     },
     'status': 'available',
     'type': 'simulator',

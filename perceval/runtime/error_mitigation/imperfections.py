@@ -33,6 +33,7 @@ from copy import copy
 from perceval.utils import NoiseModel
 from perceval.utils.constants import KEY_NOISE
 from perceval.components import IDetector
+from perceval.serialization import Serialization
 
 
 @dataclasses.dataclass
@@ -42,6 +43,9 @@ class Imperfections:
     """
     noise: NoiseModel
     detectors: list[IDetector | None]
+
+
+Serialization.register_class(Imperfections, ["noise", "detectors"], tag="Imperfections")
 
 
 def update_imperfections_from_results(imperfections: Imperfections, results: dict) -> Imperfections:
