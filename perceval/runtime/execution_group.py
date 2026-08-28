@@ -236,7 +236,6 @@ class ExecutionGroup:
         """
         return [execution for execution in self._executions if not execution.was_sent]
 
-
     def _launch_wait_executions(self, delay: float, rerun: bool,
                                 replace_failed_executions: bool = False, sequential: bool = False) -> None:
         """
