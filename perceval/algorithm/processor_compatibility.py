@@ -32,7 +32,7 @@ from typing import Any
 
 from perceval.runtime import AbstractComputer, SimulatedComputer, RemoteComputer
 from perceval.runtime.legacy import AProcessor, Processor, RemoteProcessor
-from perceval.runtime.communication_layer import RPCBasedCommunicationLayer
+from perceval.providers.rpc_based_communication_layer import RPCBasedCommunicationLayer
 from perceval.providers.kipu import KipuRPCHandler, KipuCommunicationLayer
 from perceval.providers.quandela import QuandelaCommunicationLayer
 from perceval.providers.quandela.rpc_handler import RPCHandler as QuandelaRPCHandler

@@ -30,6 +30,7 @@ from __future__ import annotations  # Python 3.11 : Replace using Self typing
 
 import json
 import time
+from typing import TypeVar, Type
 
 from requests.exceptions import HTTPError, ConnectionError
 
@@ -39,7 +40,21 @@ from perceval.utils.logging import get_logger, channel
 
 from .job import Job
 from ..execution_status import JobStatus, RunningStatus
-from ..communication_layer import _retrieve_from_response
+
+
+T = TypeVar('T')
+
+def _retrieve_from_response(response: dict, field: str, default_value: T = '', value_type: Type[T] = str) -> T:
+    if field not in response:
+        get_logger().error(f"Missing field '{field}' from server response. Using default value {default_value}.", channel.general)
+        return default_value
+    try:
+        result = value_type(response[field])
+    except (ValueError, TypeError):
+        get_logger().error(f"The field '{field}' from server response contains the wrong value '{response[field]}'. Using default value {default_value}.", channel.general)
+        result = default_value
+    return result
+
 
 class RemoteJob(Job):
     r"""

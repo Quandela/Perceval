@@ -41,11 +41,11 @@ from .remote_job import RemoteJob
 from .abstract_processor import AProcessor
 from .processor import Processor
 
-from ..communication_layer import PERFS_KEY
 from ..payload_generator import PayloadGenerator
 from ..platform_specs import PlatformSpecs
 
 DEFAULT_TRANSMITTANCE = 0.06
+PERFS_KEY = "perfs"
 
 
 class RemoteProcessor(AProcessor):

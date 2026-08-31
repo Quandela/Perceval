@@ -27,11 +27,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.runtime.communication_layer import RPCBasedCommunicationLayer
 from perceval.serialization import InputArchive, Serialization
 from perceval.utils.logging import get_logger, channel
 
 from .scaleway_rpc_handler import RPCHandler
+from ..rpc_based_communication_layer import RPCBasedCommunicationLayer
 
 
 class ScalewayCommunicationLayer(RPCBasedCommunicationLayer):

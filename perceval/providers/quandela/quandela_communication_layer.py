@@ -28,11 +28,11 @@
 # SOFTWARE.
 from requests import HTTPError
 
-from perceval.runtime.communication_layer import RPCBasedCommunicationLayer
 from perceval.serialization import InputArchive, Serialization
 from perceval.utils.logging import get_logger, channel
 
 from .rpc_handler import RPCHandler
+from ..rpc_based_communication_layer import RPCBasedCommunicationLayer
 
 
 class QuandelaCommunicationLayer(RPCBasedCommunicationLayer):
