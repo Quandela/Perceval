@@ -36,7 +36,7 @@ from perceval.runtime.platform_specs import PlatformSpecs
 from perceval.serialization import deserialize
 
 from .quandela._mock_rpc_handler import RPCHandlerResponsesBuilder, ARCHITECTURE_PLATFORM_INFO
-from _test_utils import assert_experiment_equals
+from .._test_utils import assert_experiment_equals
 
 TOKEN = "test_token"
 PLATFORM_NAME = "sim:test"
