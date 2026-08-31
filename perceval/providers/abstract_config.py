@@ -178,17 +178,3 @@ class AbstractRemoteConfig:
             config[self._REMOTE_KEY][field] = getattr(cls, attribute)
 
         self._persistent_data.save_config(config)
-
-
-QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
-TOKEN_ENV_VAR = "PCVL_CLOUD_TOKEN"
-
-# TODO: move this class to providers/quandela ?
-class RemoteConfig(AbstractRemoteConfig):
-    """Handle the remote configuration for Quandela provider.
-
-    :param persistent_data: The persistent data access to use. In a standard environment, always use the default.
-    """
-    _token_env_var = TOKEN_ENV_VAR
-
-    _DEFAULT_URL = QUANDELA_CLOUD_URL

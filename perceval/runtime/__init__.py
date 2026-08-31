@@ -28,7 +28,6 @@
 # SOFTWARE.
 
 from .execution_status import JobStatus, RunningStatus, ExecutionStatus
-from .remote_config import RemoteConfig
 from .check_cancel import cancel_requested
 from .payload_generator import PayloadGenerator
 from .payload_updater import PayloadUpdater

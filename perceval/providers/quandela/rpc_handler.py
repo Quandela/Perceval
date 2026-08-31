@@ -34,9 +34,10 @@ from urllib.parse import quote_plus
 
 import requests
 
-from perceval.runtime import RemoteConfig
 from perceval.serialization import Serialization, InputArchive
 from perceval.utils.logging import get_logger, channel
+
+from .remote_config import RemoteConfig
 
 _ENDPOINT_PLATFORM_DETAILS = '/api/platform/'
 _ENDPOINT_PLATFORM_DETAILS_NEW = '/api/platforms/'

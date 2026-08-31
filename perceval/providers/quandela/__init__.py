@@ -29,3 +29,4 @@
 
 from .quandela_session import Session
 from .quandela_communication_layer import QuandelaCommunicationLayer
+from .remote_config import RemoteConfig

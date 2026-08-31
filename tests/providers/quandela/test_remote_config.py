@@ -33,7 +33,7 @@ import platform
 
 from perceval.utils.persistent_data import _CONFIG_FILE_NAME
 
-from perceval.runtime.remote_config import RemoteConfig, QUANDELA_CLOUD_URL
+from perceval.providers.quandela.remote_config import RemoteConfig, QUANDELA_CLOUD_URL
 
 
 MISSING_KEY = "MISSING_ENV_VAR"

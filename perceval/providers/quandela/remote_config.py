@@ -29,50 +29,16 @@
 
 from ..abstract_config import AbstractRemoteConfig
 
-TOKEN_ENV_VAR = "SCALEWAY_CLOUD_TOKEN"
 
-PROVIDER_KEY = "provider_name"
+QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
+TOKEN_ENV_VAR = "PCVL_CLOUD_TOKEN"
 
 
-class ScalewayConfig(AbstractRemoteConfig):
-    """Handle the remote configuration for the Scaleway API.
-
-    Note: the ``secret_key`` argument from the Scaleway classes is stored under the name ``token`` for coherence with
-    the other provider configs.
+class RemoteConfig(AbstractRemoteConfig):
+    """Handle the remote configuration for Quandela provider.
 
     :param persistent_data: The persistent data access to use. In a standard environment, always use the default.
     """
-
     _token_env_var = TOKEN_ENV_VAR
 
-    _REMOTE_KEY = "scaleway"
-    _DEFAULT_URL = "https://api.scaleway.com"
-    _DEFAULT_PLATFORM_PROVIDER = "quandela"
-
-    _provider_name: str = None
-
-    _FIELDS = AbstractRemoteConfig._FIELDS | {
-        PROVIDER_KEY: "_provider_name",
-    }
-
-    @classmethod
-    def set_provider(cls, provider_name: str) -> None:
-        """Set a provider name in the configuration cache. It is not saved on disk before the `save` method
-        is called.
-
-        :param provider_name: The provider to use by default
-        """
-        cls._provider_name = provider_name
-
-    def get_provider(self) -> str:
-        """Search a valid provider from the environment, put it in cache and return it.
-
-        The priority for the provider search is as follows:
-        * A provider already in cache (e.g. set by the user or already found in a previous call)
-        * The value in Perceval persistent configuration
-
-        :return: The stored provider
-        """
-        if not self._provider_name:
-            self.set_provider(self._get_remote_config(PROVIDER_KEY))
-        return self._provider_name or self._DEFAULT_PLATFORM_PROVIDER
+    _DEFAULT_URL = QUANDELA_CLOUD_URL

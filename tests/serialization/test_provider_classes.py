@@ -26,8 +26,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from unittest.mock import patch
-
 import pytest
 
 from perceval import ContextManager, ScalewayConfig, KipuConfig
@@ -37,7 +35,7 @@ from perceval.providers.quandela.quandela_communication_layer import QuandelaCom
 from perceval.providers.quandela.rpc_handler import RPCHandler as QuandelaRPCHandler
 from perceval.providers.scaleway.scaleway_communication_layer import ScalewayCommunicationLayer
 from perceval.providers.scaleway.scaleway_rpc_handler import RPCHandler as ScalewayRPCHandler
-from perceval.runtime.remote_config import AbstractRemoteConfig, RemoteConfig
+from perceval.providers import AbstractRemoteConfig, RemoteConfig
 from perceval.serialization import InputArchive, OutputArchive, Serialization
 
 
@@ -54,15 +52,13 @@ def config_manager(config: AbstractRemoteConfig, token: str, proxies = None):
     initial_token = config.get_token()
     initial_proxies = config.get_proxies()
 
-    def at_enter():
-        config.set_token(token)
-        config.set_proxies(proxies)
+    def set_values(t, p):
+        config.set_token(t)
+        config.set_proxies(p)
+        config.save()
 
-    def at_exit():
-        config.set_token(initial_token)
-        config.set_proxies(initial_proxies)
-
-    return ContextManager(at_enter, at_exit)
+    return ContextManager(lambda: set_values(token, proxies),
+                          lambda: set_values(initial_token, initial_proxies))
 
 
 def _round_trip(obj):
@@ -77,8 +73,9 @@ def test_quandela_rpc_handler_serialization():
     )
     handler.request_timeout = 42
 
-    with pytest.raises(ConnectionError):  # Nothing set in the remote config
-        restored = _round_trip(handler)
+    with config_manager(RemoteConfig(), ""):
+        with pytest.raises(ConnectionError):  # Nothing set in the remote config
+            restored = _round_trip(handler)
 
     with config_manager(RemoteConfig(), "token", {"https": "proxy"}):
         restored = _round_trip(handler)

@@ -28,9 +28,9 @@
 # SOFTWARE.
 
 from perceval.runtime.legacy import ISession, RemoteProcessor
-from perceval.runtime.remote_config import QUANDELA_CLOUD_URL
 from perceval.utils.logging import get_logger, channel
 
+from .remote_config import QUANDELA_CLOUD_URL
 from .rpc_handler import RPCHandler
 
 class Session(ISession):

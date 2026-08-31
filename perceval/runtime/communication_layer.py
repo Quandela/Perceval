@@ -252,14 +252,14 @@ class RPCBasedCommunicationLayer(CommunicationLayer):
             else:  # If the status code is any other error, it is considered unrecoverable
                 raise error
 
-    def get_job_status(self, remote_id: RemoteId, refresh_errors: int = 0) -> JobStatus | None:
+    def get_job_status(self, remote_id: RemoteId, refresh_errors: int = 0) -> ExecutionStatus | None:
         try:
             response = self._rpc_handler.get_job_status(remote_id)
         except (HTTPError, ConnectionError) as error:
             self._handle_status_error(error, remote_id, refresh_errors)
             return None
 
-        job_status = JobStatus()
+        job_status = ExecutionStatus()
         job_status.status = RunningStatus.from_server_response(_retrieve_from_response(response, 'status'))
         if job_status.running or job_status.completed:
             job_status.update_progress(_retrieve_from_response(response, 'progress', 0., float),
@@ -271,7 +271,7 @@ class RPCBasedCommunicationLayer(CommunicationLayer):
         return job_status
 
     @staticmethod
-    def _extract_job_times(status: JobStatus, response: dict) -> None:
+    def _extract_job_times(status: ExecutionStatus, response: dict) -> None:
         creation_datetime = _retrieve_from_response(response, 'creation_datetime', 0., float)
 
         start_datetime = 0.
