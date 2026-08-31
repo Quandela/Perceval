@@ -32,7 +32,7 @@ from copy import deepcopy
 from typing import Any, Callable
 
 from .async_getter import AsyncGetter
-from .error_mitigation import AbstractMitigation
+from .error_mitigation import AbstractMitigation, Imperfections
 from .computation import Computation
 from .computation_iterator import ComputationIterator
 from .platform_specs import PlatformSpecs
@@ -150,22 +150,25 @@ class AbstractComputer(ABC):
 
         res = []
         for computation in computations:
-            res += self._prepare_sub_computations(emts[0].extend_computation(computation, self.noise), emts[1:])
+            res += self._prepare_sub_computations(emts[0].extend_computation(computation, self._get_imperfections(computation)), emts[1:])
 
         return res
+
+    def _get_imperfections(self, computation: Computation | ComputationIterator) -> Imperfections:
+        return Imperfections(self.noise, computation.experiment.detectors)
 
     def post_process(self,
                      original_computation: Computation,
                      results: list[dict | AsyncGetter],
-                     noise: NoiseModel,
+                     imperfections: Imperfections,
                      emts: list[AbstractMitigation] = None,
                      progress_callback: ProgressCallback = None) -> dict:
         if not original_computation.command.apply_emt:
             emts = None
-        return self._post_process(original_computation, emts or [], results, noise, progress_callback)[0]
+        return self._post_process(original_computation, emts or [], results, imperfections, progress_callback)[0]
 
     def _post_process(self, computation: Computation, emts: list[AbstractMitigation], results: list,
-                      noise: NoiseModel,
+                      imperfections: Imperfections,
                       progress_callback: ProgressCallback = None, current_index: int = 0) -> tuple[dict, int]:
         # current_index supposes that results are in the order requested by self.extend_computation()
         if len(emts) == 0:
@@ -178,13 +181,13 @@ class AbstractComputer(ABC):
             else:
                 return results[current_index], current_index + 1
 
-        computations = emts[0].extend_computation(computation, noise)
+        computations = emts[0].extend_computation(computation, imperfections)
         res: list[dict] = []
         for comp in computations:
-            sub_res, current_index = self._post_process(comp, emts[1:], results, noise, progress_callback, current_index)
+            sub_res, current_index = self._post_process(comp, emts[1:], results, imperfections, progress_callback, current_index)
             res.append(sub_res)
 
-        return emts[0].parse_results(computation, res, noise), current_index
+        return emts[0].parse_results(computation, res, imperfections), current_index
 
     def execute(self, computation: Computation | ComputationIterator, out: dict = None, progress_callback: ProgressCallback = None) -> dict:
         """Synchronous execution of computation
@@ -230,7 +233,8 @@ class AbstractComputer(ABC):
                     return
 
             # Step 2: we post-process for the current computation and insert it in the results
-            inserter(self.post_process(original_computation, res, self.noise, self._error_mitigations,
+            imperfections = self._get_imperfections(original_computation)
+            inserter(self.post_process(original_computation, res, imperfections, self._error_mitigations,
                                        partial_progress_callable(batch_callback, self.EMT_POST_PROGRESS_START)))
 
             if len(computations) > 1:
@@ -248,7 +252,7 @@ class AbstractComputer(ABC):
     def _execute_command(self, computation: Computation, progress_callback: ProgressCallback = None) -> dict:
         pass
 
-    def execute_async(self, computation: Computation | ComputationIterator) -> tuple[list[AbstractMitigation] | None, NoiseModel, list[list[AsyncGetter]]]:
+    def execute_async(self, computation: Computation | ComputationIterator) -> tuple[list[AbstractMitigation] | None, Imperfections, list[list[AsyncGetter]]]:
         """
         Asynchronous execution of computation
 
@@ -257,18 +261,19 @@ class AbstractComputer(ABC):
         """
         computation.validate()
         computations = self.extend_computation(computation)
-        return deepcopy(self._get_local_mitigations()), deepcopy(self.noise), self._execute_all_async(computations)
+        imperfections = deepcopy(self._get_imperfections(computation))
+        return deepcopy(self._get_local_mitigations()), imperfections, self._execute_all_async(computations)
 
     def get_results(self, computation: Computation | ComputationIterator,
                     mitigations: list[AbstractMitigation],
-                    noise: NoiseModel,
+                    imperfections: Imperfections,
                     async_getters: list[list[AsyncGetter]],
                     out: dict = None) -> dict[str, Any]:
         """
         Get the results for an asynchronous computation
         :param computation: The original computation that was executed
         :param mitigations: The list of mitigations that were applied when the computation has been launched (as returned by execute_async)
-        :param noise: The noise model with which the computations were executed
+        :param imperfections: The imperfections with which the computations were executed
         :param async_getters: The list of async_getters that point to the executions of the computation (as returned by execute_async)
         :param out: A dictionary where to place the results.
         """
@@ -276,7 +281,7 @@ class AbstractComputer(ABC):
 
         try:
             for getters, comp in zip(async_getters, computation):
-                inserter(self.post_process(comp, getters, noise, mitigations))
+                inserter(self.post_process(comp, getters, imperfections, mitigations))
         except Exception as e:
             inserter({KEY_RESULTS: str(e)})
             raise

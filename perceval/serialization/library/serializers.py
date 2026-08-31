@@ -34,6 +34,7 @@ from .abstract_serializer import ASerializer, T, DescriptorType, PreRecorder, Cl
 from .archive import InputArchive, OutputArchive
 from .descriptors import PartialRecord, DescriptorClass, DescriptorNone, DescriptorBool, DescriptorInteger, \
     DescriptorFloat, DescriptorComplex, DescriptorString, DescriptorList, DescriptorBinary
+from .class_registry import ClassRegistry
 
 
 #########################
@@ -49,7 +50,7 @@ class SerializerBasicType(ASerializer[T, DescriptorType]):
         return desc.value
 
 
-class SerializerNone(SerializerBasicType[NoneType, DescriptorType]):
+class SerializerNone(SerializerBasicType[NoneType, DescriptorNone]):
     type = NoneType
     class_tag = 'None'
     descriptor_type = DescriptorNone
@@ -79,7 +80,7 @@ class SerializerComplex(SerializerBasicType[complex, DescriptorComplex]):
     descriptor_type = DescriptorComplex
 
 
-class SerializerStr(SerializerBasicType[complex, DescriptorComplex]):
+class SerializerStr(SerializerBasicType[str, DescriptorString]):
     type = str
     class_tag = 'str'
     descriptor_type = DescriptorString
@@ -164,11 +165,9 @@ class SerializerType(ASerializer):
     descriptor_type = DescriptorString
 
     def write(self, obj: type, ar: OutputArchive) -> PartialRecord:
-        from .class_registry import ClassRegistry
         return DescriptorString(ClassRegistry.get_by_class(obj).class_tag), []
 
     def read(self, ar: InputArchive, desc: DescriptorString, pre_recorder: PreRecorder) -> type:
-        from .class_registry import ClassRegistry
         return ClassRegistry.get_by_tag(desc.value).type
 
 
@@ -185,7 +184,7 @@ class SerializerSet(ASerializer):
 
     def read(self, ar: InputArchive, desc: DescriptorList, pre_recorder: PreRecorder) -> set:
         obj = set()
-        # first record empty list so children can point to it
+        # first record empty set so children can point to it
         pre_recorder(obj)
 
         for child in desc.value:

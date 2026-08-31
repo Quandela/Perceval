@@ -30,6 +30,7 @@
 import perceval as pcvl
 import perceval.components.unitary_components as comp
 import perceval.algorithm as algo
+from perceval import SimulatedComputer, Experiment
 from perceval.rendering.pdisplay import pdisplay_analyzer
 import sympy as sp
 import pytest
@@ -39,7 +40,7 @@ from .._test_utils import strip_line_12
 
 @pytest.mark.long_test
 def test_analyzer_on_qrng():
-    chip_QRNG = pcvl.Circuit(4, name='QRNG')
+    chip_QRNG = pcvl.Experiment(4, name='QRNG')
     # Parameters
     phis = [pcvl.Parameter("phi1"), pcvl.Parameter("phi2"),
             pcvl.Parameter("phi3"), pcvl.Parameter("phi4")]
@@ -63,7 +64,7 @@ def test_analyzer_on_qrng():
     phis[2].set_value(0)
     phis[3].set_value(0.4)
 
-    p = pcvl.Processor("Naive", chip_QRNG)
+    computer = SimulatedComputer("SLOS")
 
     output_states = [  # Fix the output order for the unit test
         pcvl.FockState('|1,0,1,0>'),
@@ -77,7 +78,7 @@ def test_analyzer_on_qrng():
         pcvl.FockState('|0,0,1,1>'),
         pcvl.FockState('|0,0,0,2>')
     ]
-    ca = algo.Analyzer(p, [pcvl.FockState([1,0,1,0]), pcvl.FockState([0,1,1,0])], output_states)
+    ca = algo.Analyzer(computer, chip_QRNG, [pcvl.FockState([1,0,1,0]), pcvl.FockState([0,1,1,0])], output_states)
     ca.compute()
     assert strip_line_12(pdisplay_analyzer(ca)) == strip_line_12("""
             +-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+
@@ -90,8 +91,7 @@ def test_analyzer_on_qrng():
 
 
 def test_analyzer_bs_1():
-    p = pcvl.Processor("Naive", comp.BS())
-    ca = algo.Analyzer(p, [pcvl.FockState([2,0])],
+    ca = algo.Analyzer(SimulatedComputer("SLOS"), Experiment(comp.BS()), [pcvl.FockState([2,0])],
                        [pcvl.FockState([1,1]), pcvl.FockState([2,0]), pcvl.FockState([0,2])])
     ca.compute()
     assert ca.distribution[0, 0] == pytest.approx(1/2)  # |1,1>
@@ -100,10 +100,10 @@ def test_analyzer_bs_1():
 
 
 def test_analyzer_bs_2():
-    bs = comp.BS()
+    e = Experiment(comp.BS())
     for backend_name in ["SLOS", "Naive"]:
-        p = pcvl.Processor(backend_name, bs)
-        ca = algo.Analyzer(p, [pcvl.FockState([0, 1]), pcvl.FockState([1, 0])])
+        computer = SimulatedComputer(backend_name)
+        ca = algo.Analyzer(computer, e, [pcvl.FockState([0, 1]), pcvl.FockState([1, 0])])
         ca.compute()
         assert pdisplay_analyzer(ca, nsimplify=True) == strip_line_12("""
             +-------+-------+-------+

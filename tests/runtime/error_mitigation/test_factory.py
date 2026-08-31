@@ -27,4 +27,36 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from ._mock_rpc_handler import get_rpc_handler_for_tests, RPCHandlerResponsesBuilder
+import pytest
+
+from perceval import MitigationFactory, MitigationLevel, DistinguishablePhotonMitigation, CompilationAveraging
+
+
+def test_factory():
+    assert MitigationFactory(level=MitigationLevel.none).build() == []
+    assert MitigationFactory(level=0).build() == []  # Check that we can also call it with an int
+
+    for level in range(1, 4):
+        assert len(MitigationFactory(level=MitigationLevel(level)).build()) > 0
+
+    with pytest.raises(ValueError):
+        MitigationFactory(level=4).build()
+
+def test_factory_advanced_use():
+    factory = MitigationFactory(level=MitigationLevel.none)
+
+    my_mitigation = CompilationAveraging(10)
+    factory.set_custom_mitigation(my_mitigation)
+
+    assert factory.build() == [my_mitigation]
+
+    order = 5
+    factory.set_distinguishable_photon_mitigation(order)
+    mitigations = factory.build()
+    assert len(mitigations) == 2
+
+    for mitigation in mitigations:
+        if isinstance(mitigation, DistinguishablePhotonMitigation):
+            assert mitigation._order == order
+        else:
+            assert mitigation == my_mitigation

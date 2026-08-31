@@ -30,14 +30,15 @@
 import numpy as np
 import math
 from itertools import product, combinations
+
 from perceval.components import (PauliType, PauliEigenStateType, get_pauli_gate, get_pauli_eigen_state_prep_circ,
                                  experiment_circuit_configurator)
-from ..sampler import Sampler
-from perceval.utils import BasicState
-from perceval.runtime import Processor
+from perceval.utils import BasicState, BSDistribution
+from perceval.runtime import Computation, Execution
 
 
-def _compute_probs(tomography_experiment, prep_state_indices: list, meas_pauli_basis_indices: list, denormalize = True) -> tuple:
+def _compute_probs(tomography_experiment, prep_state_indices: list, meas_pauli_basis_indices: list, denormalize = True)\
+        -> tuple[BSDistribution, float]:
     """
     computes the output probability distribution for the tomography experiment
     :param tomography_experiment: Tomography experiment object with a Processor on which Tomography is to be done
@@ -46,20 +47,24 @@ def _compute_probs(tomography_experiment, prep_state_indices: list, meas_pauli_b
      circuit
     :return: Output state probability distribution
     """
-    e = experiment_circuit_configurator(tomography_experiment._processor.experiment, prep_state_indices,
+    e = experiment_circuit_configurator(tomography_experiment._experiment, prep_state_indices,
                                         meas_pauli_basis_indices)
 
-    p = Processor(tomography_experiment._processor.backend, e)  # TODO: allow RemoteProcessor
     input_state = BasicState([1, 0] * tomography_experiment._nqubit)
-    p.with_input(input_state)
+    e.with_input(input_state)
 
-    p.compute_physical_logical_perf(True)
+    parameters = tomography_experiment._computer.parameters | {"compute_physical_logical_perf": True}
+    with tomography_experiment._computer.apply_configuration(parameters=parameters):
 
-    sampler = Sampler(p, max_shots_per_call=tomography_experiment._max_shots)
-    sampler.default_job_name = 'Tomography_'\
-                               +str().join([x.name for x in prep_state_indices])+'_'\
-                               +str().join([x.name for x in meas_pauli_basis_indices])
-    probs = sampler.probs()
+        computation = Computation(tomography_experiment._computer.get_command("probs"), e)
+        if tomography_experiment._max_shots is not None:
+            computation.add_params(max_shots=tomography_experiment._max_shots)
+
+        exec = Execution(computation, tomography_experiment._computer)
+        exec.name = 'Tomography_' \
+                    + str().join([x.name for x in prep_state_indices]) + '_' \
+                    + str().join([x.name for x in meas_pauli_basis_indices])
+        probs = exec.execute_sync()
 
     output_distribution = probs["results"]
     if sum(list(output_distribution.values())) == 0:
@@ -69,8 +74,7 @@ def _compute_probs(tomography_experiment, prep_state_indices: list, meas_pauli_b
     gate_logical_perf = probs["logical_perf"]
 
     if denormalize:
-        for key in output_distribution:  # Denormalize output state distribution
-            output_distribution[key] *= gate_logical_perf
+        output_distribution *= gate_logical_perf
 
     return output_distribution, gate_logical_perf
 

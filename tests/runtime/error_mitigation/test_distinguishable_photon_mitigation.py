@@ -26,8 +26,11 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from unittest.mock import patch
+
 import pytest
 
+import perceval as pcvl
 from perceval import Experiment, BS, SimulatedComputer, DistinguishablePhotonMitigation, FockState, NoiseModel, Computation, \
     tvd_dist
 from tests._test_utils import assert_bsd_close, assert_unordered_lists_equal
@@ -159,7 +162,8 @@ def test_g2_mitigation():
     assert_bsd_close(corrected_res["results"], perfect_res["results"])
 
 
-def test_full_noise():
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")  # Suppress the warning in tvd_dist()
+def test_full_noise(mock_warn):
     e = Experiment(BS())
     e.with_input(FockState([1, 1]))
     e.min_detected_photons_filter(1)

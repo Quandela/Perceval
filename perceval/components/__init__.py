@@ -48,7 +48,8 @@ from .feed_forward_configurator import AFFConfigurator, FFCircuitProvider, FFCon
 catalog = Catalog('perceval.components.core_catalog')
 
 # TODO: remove in perceval 1.4
-from perceval.runtime import AProcessor, Processor as Proc
+from perceval.runtime.legacy.abstract_processor import AProcessor
+from perceval.runtime.legacy.processor import Processor as Proc
 from perceval.utils import deprecated, ProcessorType
 
 class Processor(Proc):

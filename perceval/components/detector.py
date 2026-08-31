@@ -295,7 +295,7 @@ class Detector(IDetector):
             + self._cond_probability(det, nph - 1) * (self._wire_efficiency * det / self._wires + 1 - self._wire_efficiency)
 
 
-def get_detection_type(detectors: list[IDetector]) -> DetectionType:
+def get_detection_type(detectors: list[IDetector | None]) -> DetectionType:
     """Computes a global detection type from a given list of detectors.
 
     :param detectors: List of detectors (None is treated as PNR).

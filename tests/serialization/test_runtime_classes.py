@@ -29,7 +29,7 @@
 
 import pytest
 
-from perceval import ContextManager
+from perceval import ContextManager, Detector, Imperfections, DetectionType
 from perceval.components import Experiment
 from perceval.runtime.communication_layer import RPCBasedCommunicationLayer
 from perceval.runtime.computation import Computation
@@ -204,3 +204,16 @@ def test_execution_serialization():
 
     restored = _round_trip(execution)
     assert len(restored._getters) == 0
+
+
+def test_imperfections_serialization():
+    noise = NoiseModel(transmittance=.6)
+    d = Detector.threshold()
+
+    imperfections = Imperfections(noise, [d])
+
+    restored = _round_trip(imperfections)
+
+    assert restored.noise == noise
+    assert len(restored.detectors) == 1
+    assert restored.detectors[0].type == DetectionType.Threshold

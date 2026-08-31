@@ -46,7 +46,7 @@ def heralds_compatible_threshold(s: FockState, heralds: dict[int, int]) -> bool:
     return True
 
 
-def compute_distributions(s: FockState, detectors: list[IDetector], heralds: dict[int, int]) -> list[BSDistribution]:
+def compute_distributions(s: FockState, detectors: list[IDetector | None], heralds: dict[int, int]) -> list[BSDistribution]:
     """
     :param s: The state to compute distributions for given the detectors.
     :param detectors: The detectors to apply to get the distributions

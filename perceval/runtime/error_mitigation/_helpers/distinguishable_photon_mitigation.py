@@ -31,6 +31,7 @@ from collections import Counter
 from itertools import combinations_with_replacement
 from math import comb
 
+from perceval.components import DetectionType
 from perceval.utils import FockState, BSDistribution
 
 
@@ -45,18 +46,21 @@ def filter_extra_photons(dist: BSDistribution, n: int) -> BSDistribution:
     return extracted
 
 
-def apply_detection_filter(distribution: BSDistribution, pnr_per_mode: list[int]) -> BSDistribution:
+def apply_detection_filter(distribution: BSDistribution, pnr_per_mode: list[int | None], detection_type: DetectionType) -> BSDistribution:
     """Apply a detection pattern to a set of results matching the PNR.
     """
-    if not pnr_per_mode:
+    if detection_type == DetectionType.PNR:
         return distribution
+
+    elif detection_type == DetectionType.Threshold:
+        return distribution.photon_threshold_simplification(1)
 
     assert len(pnr_per_mode) == distribution.m
     detected = BSDistribution()
     for state, prob in distribution.items():
         detected.add(
             FockState([
-                min(count, pnr_per_mode[mode])
+                min(count, pnr_per_mode[mode] if pnr_per_mode[mode] is not None else count)
                 for mode, count in enumerate(state)
             ]),
             prob,

@@ -51,7 +51,6 @@ _ENDPOINT_JOB_AVAILABILITY = '/api/jobs/availability/'
 _JOB_ID_KEY = 'job_id'
 
 
-# TODO: move this class to providers/quandela
 class RPCHandler:
     """Remote Call Procedure Handler
 
@@ -215,14 +214,12 @@ def _load_rpc_handler(
     members,
     version: int,
 ):
-    if version != 0:
-        raise RuntimeError(f"Unsupported QuandelaRPCHandler serialization version {version}")
     values = {name: archive.create(index) for name, index in members}
     handler.__init__(
         name=values["name"],
         url=values["url"],
-        # token = to be filled by RemoteConfig
-        # proxies = to be filled by RemoteConfig,
+        token = None, # to be filled by RemoteConfig
+        proxies = None, # to be filled by RemoteConfig,
     )
     handler.request_timeout = values["request_timeout"]
 

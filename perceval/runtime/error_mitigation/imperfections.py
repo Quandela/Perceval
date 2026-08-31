@@ -27,4 +27,33 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from ._mock_rpc_handler import get_rpc_handler_for_tests, RPCHandlerResponsesBuilder
+import dataclasses
+from copy import copy
+
+from perceval.utils import NoiseModel
+from perceval.utils.constants import KEY_NOISE
+from perceval.components import IDetector
+from perceval.serialization import Serialization
+
+
+@dataclasses.dataclass
+class Imperfections:
+    """
+    Dataclass representing every imperfection source that can be mitigated.
+    """
+    noise: NoiseModel
+    detectors: list[IDetector | None]
+
+
+Serialization.register_class(Imperfections, ["noise", "detectors"], tag="Imperfections")
+
+
+def update_imperfections_from_results(imperfections: Imperfections, results: dict) -> Imperfections:
+    # Tool given to any mitigation if needed.
+    # It MUST NOT be used to extend the computation during parsing since we want the original extension
+    new_imperfections = copy(imperfections)
+    if KEY_NOISE in results:
+        new_imperfections.noise = results[KEY_NOISE]
+    if "detectors" in results:
+        new_imperfections.detectors = results["detectors"]
+    return new_imperfections

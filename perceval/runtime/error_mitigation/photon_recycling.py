@@ -33,13 +33,13 @@ from math import comb
 
 from scipy.optimize import curve_fit
 
-from perceval.components import PortLocation
-from perceval.utils import BSCount, BSDistribution, BasicState, SVDistribution, NoiseModel, PostSelect
+from perceval.utils import BSCount, BSDistribution, BasicState, SVDistribution, PostSelect
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import Serialization
 
 from ..computation import Computation
 from .abstract_mitigation import AbstractMitigation
+from .imperfections import Imperfections
 from ._helpers.photon_recycling import gen_lossy_dists, get_avg_exp_from_uni_dist, generate_one_photon_per_mode_mapping
 
 
@@ -140,7 +140,7 @@ class PhotonRecycling(AbstractMitigation):
 
         return 0
 
-    def extend_computation(self, computation: Computation, noise: NoiseModel) -> list[Computation]:
+    def extend_computation(self, computation: Computation, imperfections: Imperfections) -> list[Computation]:
         expected_photons = self._ideal_photon_number(computation)
 
         if expected_photons < 3:
@@ -152,8 +152,7 @@ class PhotonRecycling(AbstractMitigation):
         if comp.experiment.post_select_fn.has_condition or len(comp.experiment.heralds):
             get_logger().warn("Photon recycling is used along logical post-selection. Not optimal.", channel.user)
             comp.experiment.set_postselection(PostSelect())
-            for m in comp.experiment.heralds:
-                comp.experiment.remove_port(m, location=PortLocation.OUTPUT)
+            comp.experiment.remove_all_ports()
 
         if comp.experiment.min_photons_filter is None or comp.experiment.min_photons_filter > expected_photons - 2:
             comp.experiment.min_detected_photons_filter(expected_photons - 2)
@@ -162,7 +161,7 @@ class PhotonRecycling(AbstractMitigation):
 
         return [comp]
 
-    def _parse_results(self, computation: Computation, results: list[dict], misc: object) -> dict:
+    def _parse_results(self, computation: Computation, results: list[dict], imperfections: Imperfections) -> dict:
         ideal_photon_count = self._ideal_photon_number(computation)
         res = results[0]
 

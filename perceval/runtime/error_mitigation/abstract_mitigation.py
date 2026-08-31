@@ -26,14 +26,14 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
 from abc import abstractmethod, ABC
 
 from exqalibur import BSCount, BSSamples
 
+from .imperfections import Imperfections
 from ..computation import Computation
 
-from perceval.utils import NoiseModel, ConversionHelper, apply_min_photons, apply_post_select, BSDistribution
+from perceval.utils import ConversionHelper, apply_min_photons, apply_post_select, BSDistribution
 from perceval.utils.constants import KEY_RESULTS, KEY_GLOBAL_PERF, KEY_PHYSICAL_PERF, KEY_LOGICAL_PERF, KEY_SHOTS_USED
 from perceval.components import Experiment
 
@@ -44,33 +44,33 @@ class AbstractMitigation(ABC):
     APPLY_LOGICAL_SELECTION = True
 
     @abstractmethod
-    def extend_computation(self, computation: Computation, noise: NoiseModel) -> list[Computation]:
+    def extend_computation(self, computation: Computation, imperfections: Imperfections) -> list[Computation]:
         """
         :param computation: The computation asked by the upper layer
-        :param noise: The Computer noise
+        :param imperfections: The Computer imperfections
         :return: a list of all computations to execute to apply the mitigation
         """
         pass
 
     @abstractmethod
-    def _parse_results(self, computation: Computation, results: list[dict], misc: object) -> dict:
+    def _parse_results(self, computation: Computation, results: list[dict], imperfections: Imperfections) -> dict:
         """
         Parses the results obtained from an iterator obtained through extend_computation().
         :param results: The results for the list of computations obtained through extend_computation()
-        :param misc: Collection of data that will be usefull for the mitigations (Noise model, detector descriptions, ...)
+        :param imperfections: Collection of data that will be useful for the mitigations (Noise model, detector descriptions, ...)
         :return: A dict with the fields "results", "global_perf", "nb_shots_used"
         """
         pass
 
-    def parse_results(self, computation: Computation, results: list[dict], misc: object) -> dict:
+    def parse_results(self, computation: Computation, results: list[dict], imperfections: Imperfections) -> dict:
         """
         Parses the results obtained from an iterator obtained through extend_computation().
         :param computation: The computation asked by the upper layer
         :param results: The results for the list of computations obtained through extend_computation()
-        :param misc: Collection of data that will be usefull for the mitigations (Noise model, detector descriptions, ...)
+        :param imperfections: Collection of data that will be useful for the mitigations (Noise model, detector descriptions, ...)
         :return: The mitigated result, matching the expectations of computation
         """
-        result = self._parse_results(computation, results, misc)
+        result = self._parse_results(computation, results, imperfections)
 
         res, physical_perf, logical_perf = self._apply_filtering(computation.experiment, result[KEY_RESULTS])
 

@@ -31,10 +31,11 @@ import random
 from copy import deepcopy, copy
 
 from .abstract_mitigation import AbstractMitigation
+from .imperfections import Imperfections
 from ..computation import Computation
 
-from perceval.utils import NoiseModel, BSCount
-from perceval.utils.constants import KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_SHOTS_USED, KEY_GLOBAL_PERF, KEY_PHYSICAL_PERF, \
+from perceval.utils import BSCount
+from perceval.utils.constants import KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_GLOBAL_PERF, KEY_PHYSICAL_PERF, \
     KEY_LOGICAL_PERF, KEY_RESULTS
 from perceval.serialization import Serialization
 
@@ -58,7 +59,7 @@ class CompilationAveraging(AbstractMitigation):
             f"Number of repetitions must be a positive integer (got {repetitions})"
         self.starting_seed = starting_seed
 
-    def extend_computation(self, computation: Computation, noise: NoiseModel) -> list[Computation]:
+    def extend_computation(self, computation: Computation, imperfections: Imperfections) -> list[Computation]:
         if not any(signature[0] == "compilation_seed" for signature in computation.command.signature):
             return [computation]  # Can't do anything
 
@@ -99,7 +100,7 @@ class CompilationAveraging(AbstractMitigation):
 
         return res
 
-    def _parse_results(self, computation: Computation, results: list[dict], misc: object) -> dict:
+    def _parse_results(self, computation: Computation, results: list[dict], imperfections: Imperfections) -> dict:
         # First, do nothing if nothing was done - for example no compilation seed could be set
         if len(results) == 1:
             return results[0]

@@ -50,22 +50,11 @@ class AProcessor(ABC):
     @experiment.setter
     def experiment(self, experiment: Experiment):
         self._experiment = experiment
-        experiment.add_observers(self._circuit_change_observer,
-                                 self._noise_changed_observer,
-                                 self._input_changed_observer)
+        experiment.add_observers(self._noise_changed_observer)
         self._noise_changed_observer()
-        self._circuit_change_observer()
-        self._input_changed_observer()
-
-    @abstractmethod
-    def _circuit_change_observer(self, new_component = None):
-        pass
 
     @abstractmethod
     def _noise_changed_observer(self):
-        pass
-
-    def _input_changed_observer(self):
         pass
 
     @property

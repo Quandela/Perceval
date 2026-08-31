@@ -40,7 +40,7 @@ from perceval.utils.constants import KEY_JOB_NAME, KEY_JOB_CONTEXT, KEY_RESULT_M
     KEY_COMMAND, KEY_MAX_SHOTS, KEY_MAX_SAMPLES
 from perceval.utils.logging import channel, get_logger
 
-from .execution_status import JobStatus, RunningStatus
+from .execution_status import ExecutionStatus, RunningStatus
 from .command import Command
 from .platform_specs import PlatformSpecs
 from .payload_updater import PayloadUpdater
@@ -87,7 +87,7 @@ class CommunicationLayer(ABC):
         pass
 
     @abstractmethod
-    def get_job_status(self, remote_id: RemoteId, refresh_errors: int = 0) -> JobStatus | None:
+    def get_job_status(self, remote_id: RemoteId, refresh_errors: int = 0) -> ExecutionStatus | None:
         """
         :param remote_id:
         :param refresh_errors: The number of times in a row where this method returned None
@@ -310,10 +310,6 @@ def _load_rpc_communication_layer(
     members,
     version: int,
 ):
-    if version != 0:
-        raise RuntimeError(
-            f"Unsupported RPCBasedCommunicationLayer serialization version {version}"
-        )
     archive.load_attr(communication_layer, members)
     communication_layer.fetch_data()  # Will not fetch if we are below MINIMUM_FETCH_INTERVAL
 

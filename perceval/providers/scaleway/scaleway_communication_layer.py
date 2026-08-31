@@ -78,6 +78,16 @@ class ScalewayCommunicationLayer(RPCBasedCommunicationLayer):
             "Stop (if not already) and revoke Scaleway Session", channel.general
         )
 
+    @staticmethod
+    def from_rpc(rpc_handler: RPCHandler):
+        # We can't choose the session parameters here, so we use the default ones
+        return ScalewayCommunicationLayer(platform_name=rpc_handler.name,
+                                          project_id = rpc_handler._project_id,
+                                          token = rpc_handler.headers["X-Auth-Token"],
+                                          url = rpc_handler.url,
+                                          proxies = rpc_handler.proxies,
+                                          provider_name = rpc_handler._provider_name)
+
 
 def _load_scaleway_communication_layer(
     communication_layer: ScalewayCommunicationLayer,
@@ -85,10 +95,6 @@ def _load_scaleway_communication_layer(
     members,
     version: int,
 ):
-    if version != 0:
-        raise RuntimeError(
-            f"Unsupported ScalewayCommunicationLayer serialization version {version}"
-        )
     values = {name: index for name, index in members}
     RPCBasedCommunicationLayer.__init__(communication_layer, archive.create(values.pop("_rpc_handler")))
     archive.load_attr(communication_layer, list(values.items()))

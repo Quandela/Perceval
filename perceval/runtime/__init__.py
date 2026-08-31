@@ -41,5 +41,6 @@ from .local_computer import LocalComputer
 from .simulated_computer import SimulatedComputer
 from .remote_computer import RemoteComputer, CommunicationLayer
 from .execution import Execution
+from .execution_group import ExecutionGroup
 
 from .legacy import *

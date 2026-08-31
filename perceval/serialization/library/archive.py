@@ -33,7 +33,7 @@ from typing import Iterable, Any
 from .descriptors import DescriptorClass, PartialRecord
 from .class_registry import ClassRegistry
 from .string_buffer import StringBuffer
-from .utils import b64encoding, compress_str, decompress_str
+from .utils import compress_str, decompress_str
 
 
 class Archive:
@@ -123,7 +123,7 @@ class OutputArchive(Archive):
 
     # To storable object
     def to_json(self):
-        pass
+        raise NotImplementedError("JSON storage not implemented")
 
     def to_text(self, compress: bool = False) -> str:
         """
@@ -198,8 +198,7 @@ class InputArchive(Archive):
     # Storable object parsing
     @classmethod
     def from_json(cls):
-        # TODO
-        pass
+        raise NotImplementedError("JSON storage not implemented")
 
     @classmethod
     def from_text(cls, txt: str) -> "InputArchive":  # TODO: python 3.11: use Self
@@ -229,7 +228,7 @@ class InputArchive(Archive):
         n_roots = buffer.get_int()
         self.roots = [ buffer.get_int() for _ in range(n_roots) ]
 
-        while not buffer.is_empty():
+        while buffer:
             tag = buffer.get_next()
             t = ClassRegistry.get_by_tag(tag)
             desc = t.descriptor_type.from_txt(buffer)

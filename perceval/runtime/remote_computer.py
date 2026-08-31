@@ -36,7 +36,7 @@ from .computation import Computation
 from .abstract_computer import AbstractComputer
 from .computation_iterator import ComputationIterator
 from .platform_specs import PlatformSpecs
-from .error_mitigation import AbstractMitigation
+from .error_mitigation import AbstractMitigation, Imperfections
 from .execution_status import RunningStatus
 from .simulated_computer import SimulatedComputer
 from .async_getter import AsyncGetter
@@ -177,6 +177,17 @@ class RemoteComputer(AbstractComputer):
             if 'min_mode_count' in constraints and m < constraints['min_mode_count']:
                 raise RuntimeError(f"Circuit too small ({m} < {constraints['min_mode_count']})")
 
+        # TODO: Check that the component matches what the platform can do
+        # if new_component is not None:
+        #     if isinstance(new_component, Experiment):
+        #         if not new_component.is_unitary:
+        #             raise RuntimeError('Cannot compose a RemoteProcessor with a processor containing non linear components')
+        #         if new_component.has_feedforward:
+        #             raise RuntimeError('Cannot compose a RemoteProcessor with a processor containing feed-forward')
+        #
+        #     elif not isinstance(new_component, IDetector) and not isinstance(new_component, ACircuit):
+        #         raise NotImplementedError("Non linear components not implemented for RemoteProcessors")
+
     def _handle_iterator(self, comp: Computation | ComputationIterator, out: dict | None)\
             -> tuple[dict, Callable[[dict], None]]:
         if out is None:
@@ -210,6 +221,14 @@ class RemoteComputer(AbstractComputer):
         while not async_getter.is_complete:
             time.sleep(1)
         return async_getter.get_results()
+
+    def _get_imperfections(self, computation: Computation | ComputationIterator) -> Imperfections:
+        architecture = self.specs.architecture
+        if architecture is not None:
+            detectors = architecture.detectors  # TODO: use the perfs to correct the efficiency automatically ?
+        else:
+            detectors = computation.experiment.detectors  # Supposes the remote can simulate them
+        return Imperfections(self.noise, detectors)  # We drop experiment.noise in this case (deprecated anyway)
 
     def _execute_command_async(self, computation: Computation) -> _RemoteGetter:
         payload = self.prepare_payload(computation)
@@ -377,8 +396,6 @@ def _load_remote_computer(
     members,
     version: int,
 ):
-    if version != 0:
-        raise RuntimeError(f"Unsupported RemoteComputer serialization version {version}")
     values = {name: archive.create(index) for name, index in members}
     computer.__init__(values.pop("_communication_layer"))  # This sets the specs and perfs as usual
     for name, value in values.items():

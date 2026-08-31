@@ -32,8 +32,8 @@ class StringBuffer:
         self.s = value
         self.current = 0
 
-    def is_empty(self) -> bool:
-        return self.current >= len(self.s)
+    def __bool__(self):
+        return self.current < len(self.s)
 
     def get_next(self) -> str:
         start = self.current

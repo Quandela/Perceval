@@ -219,7 +219,7 @@ class FFSimulator(ISimulator):
         Heralds that are already in this simulator are still considered.
 
         :param input_state: The input state used for the simulation
-        :param components: A list of components that will be added in the simulation. Can themselves be processors.
+        :param components: A list of components that will be added in the simulation. Can themselves be experiments.
         :param filter_states: Whether the states should be filtered in the sub-simulation.
         :param new_heralds: The list of heralds that should be added, containing the position and the value
 
@@ -233,7 +233,7 @@ class FFSimulator(ISimulator):
         for r, c in components:
             exp.add(r, c)
 
-        # Now the Experiment has only the heralds that were possibly added by adding Experiment as input, all at the end
+        # Now the Experiment has only the heralds that were possibly added by adding Experiments as input, all at the end
         if isinstance(input_state, SVDistribution):
             if exp.in_heralds:
                 heralds_perfect_state = FockState([v for k, v in sorted(exp.in_heralds.items())])

@@ -33,8 +33,10 @@ from perceval import ProcessorType, Computation, CommandFactory, Experiment, Pay
 from perceval.providers.quandela.rpc_handler import RPCHandler
 from perceval.runtime.communication_layer import RPCBasedCommunicationLayer
 from perceval.runtime.platform_specs import PlatformSpecs
+from perceval.serialization import deserialize
 
 from ._mock_rpc_handler import RPCHandlerResponsesBuilder, ARCHITECTURE_PLATFORM_INFO
+from ..._test_utils import assert_experiment_equals
 
 TOKEN = "test_token"
 PLATFORM_NAME = "sim:test"
@@ -54,7 +56,11 @@ def test_communication_layer_platform_status():
     assert isinstance(specs, PlatformSpecs)
     expected = PlatformSpecs(ARCHITECTURE_PLATFORM_INFO["specs"])
     expected.type = ProcessorType[ARCHITECTURE_PLATFORM_INFO["type"].upper()]
+    expected_architecture = deserialize(expected.pop("architecture"))
+    gotten_architecture = specs.pop("architecture")
     assert specs == expected
+
+    assert_experiment_equals(expected_architecture, gotten_architecture)
 
     perfs = comm.get_performances()
     assert perfs == ARCHITECTURE_PLATFORM_INFO["perfs"]

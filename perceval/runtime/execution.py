@@ -37,8 +37,8 @@ from .abstract_computer import AbstractComputer
 from .computation import Computation
 from .computation_iterator import ComputationIterator
 from .execution_status import ExecutionStatus, RunningStatus
-from .error_mitigation import AbstractMitigation
-from perceval.utils import NoiseModel, ProgressCallback
+from .error_mitigation import AbstractMitigation, Imperfections
+from perceval.utils import ProgressCallback
 from perceval.serialization import InputArchive, Serialization
 from perceval.serialization.library.class_registry import ClassRegistry
 
@@ -55,7 +55,7 @@ class Execution:
 
         # Storage for async run
         self._mitigations: list[AbstractMitigation] = []
-        self._noise: NoiseModel | None = None
+        self._imperfections: Imperfections | None = None
         self._getters: list[list[AsyncGetter]] = []
 
         # Not serialized
@@ -86,6 +86,14 @@ class Execution:
         return None
 
     @property
+    def computation(self) -> Computation | ComputationIterator:
+        return self._computation
+
+    @property
+    def computer(self) -> AbstractComputer:
+        return self._computer
+
+    @property
     def name(self) -> str:
         """
         The job name
@@ -99,16 +107,16 @@ class Execution:
         self._name = new_name
 
     @property
-    def job_group_name(self) -> str:
+    def job_group_name(self) -> str | None:
         """
-        The job name
+        The job group name
         """
-        return self._name
+        return self._job_group_name
 
     @job_group_name.setter
     def job_group_name(self, new_name: str):
-        if not isinstance(new_name, str):
-            raise TypeError("A job name must be a string")
+        if not isinstance(new_name, str) or len(new_name) == 0:
+            raise TypeError("A job group name must be a non-empty string")
         self._job_group_name = new_name
 
     def set_job_group_name(self, new_name: str):  # TODO: legacy; remove ?
@@ -234,7 +242,7 @@ class Execution:
 
         self._status.start_run()
         self._transmit_args(*args, **kwargs)
-        self._mitigations, self._noise, self._getters = self._computer.execute_async(self._computation)
+        self._mitigations, self._imperfections, self._getters = self._computer.execute_async(self._computation)
         return self
 
     def get_results(self, allow_partial_results: bool = False) -> dict:
@@ -257,7 +265,7 @@ class Execution:
             raise RuntimeError(f"Execution failed: {self._status.stop_message}")
 
         try:
-            self._computer.get_results(self._computation, self._mitigations, self._noise, self._getters, self._results)
+            self._computer.get_results(self._computation, self._mitigations, self._imperfections, self._getters, self._results)
         except Exception as e:
             if not allow_partial_results:
                 self._results = {}  # Return None as in legacy ?
@@ -279,7 +287,7 @@ _EXECUTION_MEMBERS = [
     "_results",
     "_status",
     "_mitigations",  # Async memory must be the last ones due to the way _save_execution() is written
-    "_noise",
+    "_imperfections",
     "_getters",
 ]
 
@@ -305,8 +313,6 @@ def _load_execution(
     members,
     version: int,
 ):
-    if version != 0:
-        raise RuntimeError(f"Unsupported Execution serialization version {version}")
     archive.load_attr(execution, members)
     execution._user_cb = None
     if not hasattr(execution, "_getters"):  # Other possibility: store them with initial value

@@ -34,7 +34,7 @@ from exqalibur import FockState
 from exqalibur.exqalibur import PostSelect
 
 from perceval import CompilationAveraging, Computation, CommandFactory, Experiment, NoiseModel, Command, BSCount, \
-    apply_min_photons, apply_post_select
+    apply_min_photons, apply_post_select, Imperfections
 from perceval.utils.constants import KEY_SHOTS_USED
 
 
@@ -46,8 +46,9 @@ def test_computation_extension():
 
     # Test without "compilation_seed" in signature
     computation = Computation(CommandFactory.probs, Experiment())
+    imperfections = Imperfections(NoiseModel(), [])
 
-    comp_list = averaging.extend_computation(computation, NoiseModel())
+    comp_list = averaging.extend_computation(computation, imperfections)
     assert len(comp_list) == 1
 
     # Test with "compilation_seed" in signature
@@ -56,7 +57,7 @@ def test_computation_extension():
     computation = Computation(command, Experiment())
     computation.add_params(max_shots = 50000, max_samples = 10000)
 
-    comp_list = averaging.extend_computation(computation, NoiseModel())
+    comp_list = averaging.extend_computation(computation, imperfections)
     assert len(comp_list) == 3
     assert all(comp.command.name == "sample_count" for comp in comp_list)
     assert sum(comp.parameters["max_shots"] for comp in comp_list) == 50000
@@ -66,7 +67,7 @@ def test_computation_extension():
     assert len(seeds) == 3
 
     computation.add_params(max_shots = 60000, max_samples = 15000)  # So the numbers are divisible by the number of repetitions
-    comp_list = averaging.extend_computation(computation, NoiseModel())
+    comp_list = averaging.extend_computation(computation, imperfections)
     assert len(comp_list) == 3
     assert all(comp.parameters["max_shots"] == 20000 for comp in comp_list)
     assert all(comp.parameters["max_samples"] == 5000 for comp in comp_list)
@@ -121,6 +122,6 @@ def test_recombination():
     computation = Computation(CommandFactory.sample_count, Experiment())
     computation.add_params(max_samples = expected["results"].total())
 
-    res = averaging.parse_results(computation, sub_results, NoiseModel())
+    res = averaging.parse_results(computation, sub_results, Imperfections(NoiseModel(), []))
 
     assert res == pytest.approx(expected)
