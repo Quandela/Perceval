@@ -110,10 +110,10 @@ class RPCHandler:
             get_logger().debug(error_info, channel.general)
             raise requests.HTTPError(f"Could not read json response from url: {endpoint}. \n{e}")
 
-    def post_request(self, endpoint: str, payload: dict | None) -> None | dict:
+    def post_request(self, endpoint: str, cloud_data: dict | None) -> None | dict:
         # requests may throw an IO Exception, let the user deal with it
         try:
-            response = requests.post(endpoint, headers=self.headers, json=payload, timeout=self.request_timeout, proxies=self.proxies)
+            response = requests.post(endpoint, headers=self.headers, json=cloud_data, timeout=self.request_timeout, proxies=self.proxies)
         except Exception as e:
             error_info = ''.join(traceback.format_stack()[:-1])
             get_logger().debug(error_info, channel.general)
@@ -152,7 +152,7 @@ class RPCHandler:
             response =  self.get_request(endpoint)
         return response
 
-    def create_job(self, payload) -> str:
+    def create_job(self, payload: dict) -> str:
         """create a job
 
         :param payload: the payload to send

@@ -54,6 +54,16 @@ class PayloadGenerator:
                          platform_name: str = None,
                          **kwargs
                          ) -> dict[str, Any]:
+        """Compatibility wrapper for legacy remote processors."""
+        return PayloadGenerator.generate_cloud_data(command, experiment, params, platform_name, **kwargs)
+
+    @staticmethod
+    def generate_cloud_data(command: str,
+                            experiment: Experiment = None,
+                            params: dict[str, Any] = None,
+                            platform_name: str = None,
+                            **kwargs
+                            ) -> dict[str, Any]:
         r"""
         Generate a simple payload containing the experiment, with the following template:
         {
@@ -90,11 +100,11 @@ class PayloadGenerator:
             payload[KEY_PARAMETERS] = params
         payload[KEY_EXPERIMENT] = serialize(experiment)
 
-        global_kwargs = {KEY_PLATFORM_NAME: platform_name} if platform_name else None
-        return PayloadGenerator.generate_global_data(payload, global_kwargs)
+        cloud_data_kwargs = {KEY_PLATFORM_NAME: platform_name} if platform_name else None
+        return PayloadGenerator.generate_cloud_data_from_payload(payload, cloud_data_kwargs)
 
     @staticmethod
-    def generate_global_data(payload: Any, kwargs: dict = None) -> dict:
+    def generate_cloud_data_from_payload(payload: Any, kwargs: dict = None) -> dict:
         r"""
         Generate a simple payload containing the experiment, with the following template:
         {
@@ -109,7 +119,7 @@ class PayloadGenerator:
 
         Other parameters can be added to the payload via **kwargs.
         """
-        global_data = {
+        cloud_data = {
             KEY_VERSION: PMetadata.short_version(),
             KEY_PROCESS_ID: str(__process_id__),
             KEY_PAYLOAD: payload,
@@ -117,8 +127,8 @@ class PayloadGenerator:
 
         if kwargs is not None:
             for key, value in kwargs.items():
-                global_data[key] = value
-        return global_data
+                cloud_data[key] = value
+        return cloud_data
 
     @staticmethod
     def from_computation(computation: Computation | ComputationIterator,
