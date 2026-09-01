@@ -127,13 +127,12 @@ class RPCBasedCommunicationLayer(CommunicationLayer):
                 if key not in cloud_needed_fields:
                     payload[key] = self._serialize(value)
 
-        cloud_data = PayloadGenerator.generate_cloud_data_from_payload(
-            payload,
-            {KEY_PLATFORM_NAME: self._rpc_handler.name,
-             KEY_JOB_NAME: computation.job_name,
-             KEY_JOB_GROUP_NAME: computation.job_group_name})
+        global_data = PayloadGenerator.generate_global_data(payload,
+                                                            {KEY_PLATFORM_NAME: self._rpc_handler.name,
+                                                             KEY_JOB_NAME: computation.job_name,
+                                                             KEY_JOB_GROUP_NAME: computation.job_group_name})
 
-        return self._rpc_handler.create_job(serialize(cloud_data))
+        return self._rpc_handler.create_job(serialize(global_data))
 
     def get_results(self, remote_id: RemoteId) -> dict:
         try:

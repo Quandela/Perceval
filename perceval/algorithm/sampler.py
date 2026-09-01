@@ -119,16 +119,16 @@ class Sampler(AAlgorithm):
             job_context = None
             if converter:
                 job_context = {"result_mapping": ['perceval.utils', converter.__name__]}
-            cloud_data = self._processor.prepare_job_payload(primitive)
+            payload = self._processor.prepare_job_payload(primitive)
             if self._iterator:
-                cloud_data['payload']['iterator'] = self._iterator.iterations
-            cloud_data['payload']['max_shots'] = self._max_shots
+                payload['payload']['iterator'] = self._iterator.iterations
+            payload['payload']['max_shots'] = self._max_shots
             job_name = self.default_job_name if self.default_job_name is not None else method
-            job = RemoteJob(cloud_data, self._processor.get_rpc_handler(), job_name,
+            job = RemoteJob(payload, self._processor.get_rpc_handler(), job_name,
                             command_param_names=command_param_names,
                             delta_parameters=delta_parameters, job_context=job_context)
             get_logger().info(
-                f"Prepare remote job (command: {primitive} on {cloud_data['platform_name']})", channel.general)
+                f"Prepare remote job (command: {primitive} on {payload['platform_name']})", channel.general)
             return job
         else:
             func_name = f"_{primitive}_iterate_locally" if self._iterator else f"_{primitive}_wrapper"

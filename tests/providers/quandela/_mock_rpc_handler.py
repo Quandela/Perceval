@@ -151,7 +151,6 @@ class RPCHandlerResponsesBuilder():
         self._custom_status_response = None
         self._job_availability_response = {"max_jobs_in_queue": 1, "num_jobs_in_queue": 0}
         self.last_payload = {}
-        responses.start()
         responses.reset()
         self._set_default_responses(use_new_platform_details_url)
 
