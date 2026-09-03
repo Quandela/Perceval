@@ -27,15 +27,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.simulators import SimulatorFactory, Simulator, DelaySimulator, LossSimulator, PolarizationSimulator
+from perceval.simulators import (SimulatorFactory, Simulator, ExqaliburSimulator,
+                                 DelaySimulator, LossSimulator, PolarizationSimulator)
 from perceval.components import BS, PBS, Unitary, PS, TD, LC
 from perceval.runtime import Processor
 from perceval.backends._slos import SLOSBackend
 from perceval.backends._slos_exqalibur import SLOSExqaliburBackend
+from perceval.backends._slos_mpi import SLOSMPIBackend
 from perceval.backends._naive import NaiveBackend
 from perceval.utils import BasicState
 
 import numpy as np
+import exqalibur as xq
+import pytest
 
 
 def test_create_simulator_from_circuit():
@@ -108,3 +112,75 @@ def test_create_simulator_from_complex_processor():
     assert isinstance(simu._simulator, DelaySimulator)
     assert isinstance(simu._simulator._simulator, PolarizationSimulator)
     assert isinstance(simu._simulator._simulator._simulator, Simulator)
+
+@pytest.mark.skipif(not hasattr(xq, "SLOS_MPI"), reason="Exqalibur was built without MPI support")
+def test_create_simulator_with_slos_mpi():
+    pytest.importorskip("mpi4py")
+    simu = SimulatorFactory.build(BS(), "SLOS_MPI")
+    assert isinstance(simu, Simulator)
+    assert not isinstance(simu, ExqaliburSimulator)
+    assert isinstance(simu._backend, SLOSMPIBackend)
+
+    results = simu.probs(BasicState("|1,0>"))
+    assert np.isclose(sum(results.values()), 1)
+
+
+@pytest.mark.skipif(not hasattr(xq, "SLOS_MPI"), reason="Exqalibur was built without MPI support")
+def test_create_simulator_from_polarized_circuit_with_slos_mpi():
+    pytest.importorskip("mpi4py")
+    simu = SimulatorFactory.build(PBS(), "SLOS_MPI")
+    assert isinstance(simu, PolarizationSimulator)
+    assert isinstance(simu._simulator, Simulator)
+    assert isinstance(simu._simulator._backend, SLOSMPIBackend)
+
+
+@pytest.mark.skipif(not hasattr(xq, "SLOS_MPI"), reason="Exqalibur was built without MPI support")
+def test_create_simulator_from_components_with_slos_mpi():
+    pytest.importorskip("mpi4py")
+
+    unitary_components = [
+        ((0, 1), BS()),
+        ((1,), PS(phi=2)),
+        ((0, 1), BS()),
+    ]
+    simu = SimulatorFactory.build(unitary_components, "SLOS_MPI")
+    assert isinstance(simu, Simulator)
+    assert isinstance(simu._backend, SLOSMPIBackend)
+
+    delayed_components = [
+        ((0, 1), BS()),
+        ((1,), TD(dt=2)),
+        ((0, 1), BS()),
+    ]
+    simu = SimulatorFactory.build(delayed_components, "SLOS_MPI")
+    assert isinstance(simu, DelaySimulator)
+    assert isinstance(simu._simulator, Simulator)
+    assert isinstance(simu._simulator._backend, SLOSMPIBackend)
+
+    lossy_components = [
+        ((0, 1), BS()),
+        ((1,), LC(loss=0.2)),
+        ((0, 1), BS()),
+    ]
+    simu = SimulatorFactory.build(lossy_components, "SLOS_MPI")
+    assert isinstance(simu, LossSimulator)
+    assert isinstance(simu._simulator, Simulator)
+    assert isinstance(simu._simulator._backend, SLOSMPIBackend)
+
+
+@pytest.mark.skipif(not hasattr(xq, "SLOS_MPI"), reason="Exqalibur was built without MPI support")
+def test_create_simulator_from_complex_processor_with_slos_mpi():
+    pytest.importorskip("mpi4py")
+    processor = Processor("SLOS_MPI", 2)
+    processor.add(0, BS())
+    processor.add(0, TD(dt=1))
+    processor.add(0, PS(phi=0.5))
+    processor.add(1, LC(loss=0.1))
+    processor.add(0, PBS())
+
+    simu = SimulatorFactory.build(processor)
+    assert isinstance(simu, LossSimulator)
+    assert isinstance(simu._simulator, DelaySimulator)
+    assert isinstance(simu._simulator._simulator, PolarizationSimulator)
+    assert isinstance(simu._simulator._simulator._simulator, Simulator)
+    assert isinstance(simu._simulator._simulator._simulator._backend, SLOSMPIBackend)

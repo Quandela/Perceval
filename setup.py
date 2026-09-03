@@ -78,7 +78,10 @@ setuptools.setup(
                       'multipledispatch<2', 'drawsvg>=2.0', 'requests<3',
                       'networkx>=3.1,<4', 'latexcodec<4', 'platformdirs<5', 'tqdm',
                       ],
-    extras_require={"kipu": ["qhub-api>=2.0.0,<3"]},
+    extras_require={
+        "kipu": ["qhub-api>=2.0.0,<3"],
+        "mpi": ["mpi4py>=4,<5"],
+    },
     setup_requires=["scmver"],
     python_requires=">=3.10,<3.15",
     scmver=True
