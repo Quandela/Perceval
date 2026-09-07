@@ -148,6 +148,10 @@ class RemoteComputer(AComputer):
         return self._perfs
 
     @property
+    def status(self) -> str:
+        return self._communication_layer.get_remote_status()
+
+    @property
     def available_parameters(self) -> dict[str, str]:
         return self._specs.parameters
 

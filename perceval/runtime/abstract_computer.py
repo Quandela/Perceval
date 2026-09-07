@@ -379,6 +379,11 @@ class AComputer(ABC):
         possibly evaluating things that a noise model doesn't know"""
         pass
 
+    @property
+    def status(self) -> str:
+        """Returns the status of the computer as a string"""
+        return "Available"
+
     def start(self) -> None:
         """Starts the computer. May do nothing for stateless computers"""
         pass
