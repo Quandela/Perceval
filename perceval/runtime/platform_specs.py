@@ -309,7 +309,7 @@ class PlatformSpecs(dict):
             self_type = self._getitem("type")
             if isinstance(self_type, ProcessorType):
                 return self_type
-            return ProcessorType.SIMULATOR if self_type == "simulator" else ProcessorType.PHYSICAL
+            return ProcessorType.SIMULATOR if self_type.lower() == "simulator" else ProcessorType.PHYSICAL
         return ProcessorType.SIMULATOR
 
     @type.setter
