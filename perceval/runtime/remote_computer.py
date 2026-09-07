@@ -90,6 +90,9 @@ class _RemoteGetter(AsyncGetter):
         self._results = self._communication_layer.get_results(self._remote_id)
         return self._results
 
+    def get_details(self) -> str:
+        return f"Remote: {{id: {self._remote_id}, status: {self._status.status.name}, platform: {self._communication_layer.name}}}"
+
 
 class RemoteComputer(AComputer):
     """

@@ -102,6 +102,9 @@ class _ThreadedGetter(AsyncGetter):
     def is_complete(self) -> bool:
         return not self._thread.is_alive()
 
+    def get_details(self) -> str:
+        return f"Local: {{status: {self._status.status.name}}}"
+
 
 class LocalComputer(AComputer, ABC):
     """An abstract computer for local computer. Must implement at least "probs", "sample_count", and "samples" methods."""

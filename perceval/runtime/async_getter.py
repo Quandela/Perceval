@@ -114,3 +114,7 @@ class AsyncGetter(ABC):
     @abstractmethod
     def _update_status(self) -> None:
         pass
+
+    @abstractmethod
+    def get_details(self) -> str:
+        pass

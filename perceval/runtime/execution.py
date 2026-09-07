@@ -311,11 +311,23 @@ class Execution:
                 raise e
         return self._results
 
+    def get_details(self) -> str:
+        """
+        :return: A str representing the details of the execution.
+        """
+        res = f"Execution: {{Computer: {self._computer.name}, name: {self.name}, status: {self._status.status.name if self.was_sent else 'NOT SENT'}"
+        if len(self._getters):
+            res += f", getters: ["
+            res += ", ".join(getter.get_details() for getters in self._getters for getter in getters)
+            res += "]"
+        res += "}"
+        return res
+
     def __str__(self):
         if not self.was_sent:
-            return f"Execution '{self.name}', status:not sent"
+            return f"Execution ('{self.name}', status: not sent)"
         else:
-            return f"Execution '{self.name}', status:{self._status}"
+            return f"Execution ('{self.name}', status: {self._status})"
 
 
 _EXECUTION_MEMBERS = [
