@@ -104,7 +104,7 @@ class SimulatedComputer(LocalComputer):
 
     @property
     def available_parameters(self) -> dict[str, str]:
-        return {"compute_physical_logical_perf": "bool. If True, physical and logical performances will be returned."
+        return {"compute_physical_logical_perf": "bool. If True, physical and logical performances will be returned. "
                                                  "Else, only a global performance will be returned."}
 
     def _create_source(self, experiment: Experiment) -> Source:
