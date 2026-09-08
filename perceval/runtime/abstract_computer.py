@@ -383,7 +383,7 @@ class AComputer(ABC):
     @property
     def status(self) -> str:
         """Returns the status of the computer as a string"""
-        return "Available"
+        return "available"
 
     def start(self) -> None:
         """Starts the computer. May do nothing for stateless computers"""
