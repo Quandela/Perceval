@@ -115,17 +115,15 @@ class CompilationAveraging(AMitigation, tag="CompilationAveraging"):
             bsd += res[KEY_RESULTS]
             global_perf += res[KEY_GLOBAL_PERF]
 
-            if res[KEY_PHYSICAL_PERF] is not None:
-                if physical_perf is not None:
-                    physical_perf += res[KEY_PHYSICAL_PERF]
-                else:
-                    physical_perf = None
+            if physical_perf is not None and KEY_PHYSICAL_PERF in res:
+                physical_perf += res[KEY_PHYSICAL_PERF]
+            else:
+                physical_perf = None
 
-            if res[KEY_LOGICAL_PERF] is not None:
-                if logical_perf is not None:
-                    logical_perf += res[KEY_LOGICAL_PERF]
-                else:
-                    logical_perf = None
+            if logical_perf is not None and KEY_LOGICAL_PERF in res:
+                logical_perf += res[KEY_LOGICAL_PERF]
+            else:
+                logical_perf = None
 
         res = copy(results[0])  # We are going to modify this to keep custom fields as much as we can
 
