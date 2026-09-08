@@ -358,7 +358,8 @@ class AComputer(ABC):
             specs.parameters = self.available_parameters
         specs.type = self.type
         specs.pcvl_version = PMetadata.version()
-        specs.default_mitigations = self.mitigations
+        if self._error_mitigations is not None:
+            specs.default_mitigations = self._error_mitigations
         specs.known_mitigations = AMitigation.KNOWN_MITIGATIONS
         return specs
 

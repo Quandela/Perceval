@@ -28,7 +28,6 @@
 # SOFTWARE.
 import random
 import time
-from copy import copy
 from typing import TypeAlias
 
 from perceval import AComputer, SimulatedComputer, Experiment, FockState, Computation, BSDistribution, ExecutionStatus, \
