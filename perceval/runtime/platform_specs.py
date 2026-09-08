@@ -31,7 +31,7 @@ from typing import Any
 
 from .command import Command, CommandFactory
 from .error_mitigation import AMitigation
-from perceval.serialization import Serialization
+from perceval.serialization import Serialization, serialize, OutputArchive
 from perceval.serialization.library.serializers import SerializerDict
 from perceval.utils import FockState, deprecated, ProcessorType
 from perceval.utils.logging import channel, get_logger
@@ -341,6 +341,24 @@ class PlatformSpecs(dict):
         assert isinstance(value, list)
         assert all(isinstance(val, str) for val in value)
         self["known_mitigations"] = value
+
+
+def _encode(value: Any) -> str:
+    archive = OutputArchive()
+    Serialization.serialize(value, archive)
+    return archive.to_text(compress=True)
+
+
+def serialize_specs_backward_compatibility(specs: PlatformSpecs) -> dict:
+    """Serializes the specs such that old perceval will continue to be able to receive specs serialized here"""
+    # For use in workers (e.g. see QuandelaQPUHandler in perceval-interop)
+    specs_dict: dict = serialize(specs)
+
+    if "commands" in specs:
+        specs_dict["commands"] = _encode(specs.commands)
+    if "default_mitigations" in specs:
+        specs_dict["default_mitigations"] = _encode(specs.default_mitigations)
+    return specs_dict
 
 
 class SerializerSpecs(SerializerDict):
