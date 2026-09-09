@@ -91,6 +91,11 @@ class IDetector(AComponent, ABC):
     def efficiency(self):
         pass
 
+    @efficiency.setter
+    @abstractmethod
+    def efficiency(self, efficiency: float):
+        pass
+
 
 class BSLayeredPPNR(IDetector):
     r"""
@@ -124,6 +129,10 @@ class BSLayeredPPNR(IDetector):
     @property
     def efficiency(self) -> float:
         return 1
+
+    @efficiency.setter
+    def efficiency(self, efficiency: float):
+        get_logger().warn("Can't set the efficiency in a BSLayeredPPNR detector", channel.user)
 
     def clear_cache(self):
         """
@@ -202,13 +211,11 @@ class Detector(IDetector):
         assert n_wires is None or n_wires > 0, f"A detector requires at least 1 wire (got {n_wires})"
         assert max_detections is None or n_wires is None or max_detections <= n_wires, \
             f"Max detections has to be lower or equal than the number of wires (got {max_detections} > {n_wires} wires)"
-        assert wire_efficiency > 0 and wire_efficiency <= 1, f"Wire efficiency efficiency has to be between 0 and 1"
         self._wires = n_wires
-        self._wire_efficiency = wire_efficiency
+        self.efficiency = wire_efficiency
         self._max = max_detections
         if self._wires is not None:
             self._max = self._wires if max_detections is None else min(max_detections, self._wires)
-        self._cache = {}
 
     @property
     def max_detections(self) -> int:
@@ -219,6 +226,12 @@ class Detector(IDetector):
     def efficiency(self):
         """Wire efficiency"""
         return self._wire_efficiency
+
+    @efficiency.setter
+    def efficiency(self, wire_efficiency: float):
+        assert wire_efficiency > 0 and wire_efficiency <= 1, f"Wire efficiency efficiency has to be between 0 and 1"
+        self._wire_efficiency = wire_efficiency
+        self._cache = {}
 
     @staticmethod
     def threshold() -> Detector:
@@ -275,7 +288,6 @@ class Detector(IDetector):
         self._cache[theoretical_photons] = result
         return result
 
-    @cache
     def _cond_probability(self, det: int, nph: int):
         """
         The conditional probability of having `det` detections with `nph` photons on the total number of wires.
@@ -345,10 +357,8 @@ def update_detectors(detectors: list[IDetector], output_transmissions: list[floa
     """
     output_transmissions = [eff / max(output_transmissions) for eff in output_transmissions]
 
-    for i, (eff, d) in enumerate(zip(output_transmissions, detectors)):
-        if isinstance(d, Detector):
-            # Better to make a new one to wipe off the cache
-            detectors[i] = Detector(d._wires, d.max_detections, eff)
+    for eff, d in zip(output_transmissions, detectors):
+        d.efficiency = eff
 
 
 def update_detectors_from_perfs(detectors: list[IDetector], perfs: dict) -> None:

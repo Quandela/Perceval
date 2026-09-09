@@ -187,18 +187,17 @@ def test_get_res_run_async():
     assert res_1st_call["global_perf"] == res_2nd_call["global_perf"]
 
 
-# TODO: restore this test
-# def test_run_async_parameter_change_safe():
-#     e = Experiment(6)
-#     e.with_input(FockState([1, 0, 1, 0, 1, 0]))
-#     computer = SimulatedComputer("SLOS")
-#     computation = Computation(computer.get_command("sample_count"), e)
-#     execution = Execution(computation, computer)
-#     execution.execute_async(10000)
-#     computer.compute_physical_logical_perf(True)
-#     while not execution.is_complete:
-#         time.sleep(0.01)
-#
-#     res = execution.get_results()
-#
-#     assert KEY_PHYSICAL_PERF not in res
+def test_run_async_parameter_change_safe():
+    e = Experiment(6)
+    e.with_input(FockState([1, 0, 1, 0, 1, 0]))
+    computer = SimulatedComputer("SLOS")
+    computation = Computation(computer.get_command("sample_count"), e)
+    execution = Execution(computation, computer)
+    execution.execute_async(10000)
+    computer.compute_physical_logical_perf(True)
+    while not execution.is_complete:
+        time.sleep(0.01)
+
+    res = execution.get_results()
+
+    assert KEY_PHYSICAL_PERF not in res

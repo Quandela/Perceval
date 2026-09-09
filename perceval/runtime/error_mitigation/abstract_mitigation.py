@@ -48,6 +48,8 @@ class AMitigation(ABC):
     def __init_subclass__(cls, /, tag=None, **kwargs):
         super().__init_subclass__(**kwargs)
         tag = tag or cls.__name__
+        if tag in AMitigation.KNOWN_MITIGATIONS:
+            raise ValueError(f"Given mitigation tag {tag} already exists.")
         AMitigation.KNOWN_MITIGATIONS.append(tag)
         cls._TAG = tag
 

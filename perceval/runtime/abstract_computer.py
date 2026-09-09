@@ -427,7 +427,7 @@ class AComputer(ABC):
         .. warning::
            Using this method is generally not safe in an asynchronous context.
            In that case, make a persistent copy of the computer inside the `with` block, then use the copy.
-           Async usage with :class:`Execution` should be safe.
+           Async usage with :class:`Execution` should be safe with the Computers directly provided by Perceval.
 
         :param mitigations: The mitigations to apply within the ContextManager. If None, nothing is changed
         :param noise: The noise model to apply within the ContextManager. If None, nothing is changed
