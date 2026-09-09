@@ -29,20 +29,19 @@
 
 import json
 import time
-from typing import TypeVar, Type
+from typing import TypeVar, Type, Any
 
 from requests import HTTPError
 
 from perceval.serialization import InputArchive, Serialization, deserialize, serialize, OutputArchive
 from perceval.utils.constants import KEY_JOB_NAME, KEY_JOB_CONTEXT, KEY_RESULT_MAPPING, \
     KEY_MAPPING_PARAMETERS, KEY_RESULTS_LIST, KEY_ITERATION, KEY_RESULTS, KEY_PLATFORM_NAME, KEY_JOB_GROUP_NAME, \
-    KEY_COMMAND, KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_GLOBAL_PERF, KEY_PHYSICAL_PERF, KEY_LOGICAL_PERF
+    KEY_COMMAND, KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_GLOBAL_PERF, KEY_PHYSICAL_PERF, KEY_LOGICAL_PERF, PERFS_KEY
 from perceval.utils.logging import channel, get_logger
 
 from perceval.runtime import ExecutionStatus, RunningStatus, Command, PlatformSpecs, PayloadUpdater, PayloadGenerator, \
     CommunicationLayer, CommandFactory
 
-PERFS_KEY = "perfs"
 T = TypeVar('T')
 
 RemoteId = TypeVar("RemoteId")
@@ -71,6 +70,7 @@ class RPCBasedCommunicationLayer(CommunicationLayer):
         self._status: str = ""
         self._perfs: dict[str, str] = {}
         self._last_fetch_time = None
+        self._platform_details: dict[str, Any] = {}
 
         self.fetch_data()
 
@@ -78,7 +78,7 @@ class RPCBasedCommunicationLayer(CommunicationLayer):
         # RPCHandler specific: the same method gives the specs, perfs and platform status
         if self._last_fetch_time is None or time.time() - self._last_fetch_time > self.MINIMUM_FETCH_INTERVAL:
             try:
-                platform_details = self._rpc_handler.fetch_platform_details()
+                self._platform_details = self._rpc_handler.fetch_platform_details()
             except HTTPError as e:
                 if not len(self._specs):  # throw only the first time
                     raise HTTPError(f"Error while fetching platform details: {e}") from None
@@ -86,12 +86,12 @@ class RPCBasedCommunicationLayer(CommunicationLayer):
                     get_logger().warn(f"Error while fetching platform details: {e}")
                     return
 
-            self._status = platform_details.get("status")
-            platform_specs = deserialize(platform_details['specs'], strict=False)
+            self._status = self._platform_details.get("status", "")
+            platform_specs = deserialize(self._platform_details['specs'], strict=False)
             self._specs = PlatformSpecs(platform_specs)
-            self._specs["type"] = platform_details.get('type', "simulator")
-            if PERFS_KEY in platform_details:
-                self._perfs.update(platform_details[PERFS_KEY])
+            self._specs["type"] = self._platform_details.get('type', "simulator")
+            if PERFS_KEY in self._platform_details:
+                self._perfs.update(self._platform_details[PERFS_KEY])
 
             self._last_fetch_time = time.time()
 
@@ -101,6 +101,10 @@ class RPCBasedCommunicationLayer(CommunicationLayer):
 
     def get_specs(self) -> PlatformSpecs:
         return self._specs
+
+    def get_platform_details(self) -> dict:
+        self.fetch_data()
+        return self._platform_details
 
     @staticmethod
     def _serialize(obj):

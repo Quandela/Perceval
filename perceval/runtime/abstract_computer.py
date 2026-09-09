@@ -385,6 +385,16 @@ class AComputer(ABC):
         """Returns the status of the computer as a string"""
         return "available"
 
+    @property
+    @abstractmethod
+    def details(self) -> dict[str, Any]:
+        """
+        Return details about the computer.
+        Any kind of details can be given here, but there is no guarantee that a particular detail will appear,
+        so computer-agnostic code should never assume that a field is present here.
+        """
+        pass
+
     def start(self) -> None:
         """Starts the computer. May do nothing for stateless computers"""
         pass

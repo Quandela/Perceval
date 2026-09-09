@@ -146,6 +146,15 @@ class CommunicationLayer(ABC):
         """
         pass
 
+    @abstractmethod
+    def get_platform_details(self) -> dict:
+        """Return any kind of information that the platform could provide.
+        No particular field is guaranteed to exist here, nor do their types.
+        This should only be used for information purpose or on specific computers,
+        and always check that the read field exists before accessing it.
+        """
+        pass
+
     def start_session(self) -> None:
         """Start or acquire a provider session.
 

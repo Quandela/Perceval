@@ -29,7 +29,7 @@
 
 import time
 from copy import deepcopy, copy
-from typing import Callable
+from typing import Callable, Any
 
 from .check_cancel import call_and_check_cancel
 from .communication_layer import CommunicationLayer, RemoteId
@@ -154,6 +154,10 @@ class RemoteComputer(AComputer):
     @property
     def available_parameters(self) -> dict[str, str]:
         return self._specs.parameters
+
+    @property
+    def details(self) -> dict[str, Any]:
+        return self._communication_layer.get_platform_details()
 
     def validate_single(self, computation: Computation) -> None:
         super().validate_single(computation)

@@ -34,6 +34,7 @@ from typing import Callable, Any
 
 from perceval.utils import ProgressCallback, parse_signature
 from perceval.components import Experiment
+from utils.constants import PERFS_KEY
 
 from .execution_status import RunningStatus
 from .abstract_computer import AComputer
@@ -161,3 +162,12 @@ class LocalComputer(AComputer, ABC):
     @property
     def is_remote(self) -> bool:
         return False
+
+    @property
+    def details(self) -> dict[str, Any]:
+        return {
+            "status": self.status,
+            "specs": self.specs,
+            "type": self.type.name.lower(),
+            PERFS_KEY: self.performance,
+        }

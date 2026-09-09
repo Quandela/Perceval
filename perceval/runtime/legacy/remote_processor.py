@@ -31,11 +31,12 @@ from typing import Any
 from requests import HTTPError
 from copy import copy
 
-from perceval.components import ACircuit, AComponent, Experiment, PortLocation
+from perceval.components import ACircuit, Experiment, PortLocation
 from perceval.utils import FockState, NoiseModel, PostSelect, ProcessorType
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import deserialize
-from perceval.utils.noise_model import TRANSMITTANCE_KEY, perf_dict_to_noise
+from perceval.utils.noise_model import perf_dict_to_noise
+from perceval.utils.constants import PERFS_KEY, TRANSMITTANCE_KEY
 
 from .remote_job import RemoteJob
 from .abstract_processor import AProcessor
@@ -45,7 +46,6 @@ from ..payload_generator import PayloadGenerator
 from ..platform_specs import PlatformSpecs
 
 DEFAULT_TRANSMITTANCE = 0.06
-PERFS_KEY = "perfs"
 
 
 class RemoteProcessor(AProcessor):

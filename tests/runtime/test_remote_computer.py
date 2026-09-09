@@ -81,6 +81,9 @@ class ComputerProxy(CommunicationLayer):
     def get_availability(self) -> int:
         return self.computer.available_jobs
 
+    def get_platform_details(self) -> dict:
+        return self.computer.details
+
 
 def test_remote_computer_basic():
     # Checks that the communication layer is properly used

@@ -74,6 +74,7 @@ KEY_JOB_GROUP_NAME = "job_group_name"
 
 
 # Perf keys
+PERFS_KEY = "perfs"
 TRANSMITTANCE_KEY = "Transmittance (%)"
 INDISTINGUISHABILITY_KEY = "HOM (%)"
 G2_KEY = "g2 (%)"
