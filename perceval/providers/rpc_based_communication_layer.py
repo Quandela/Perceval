@@ -127,7 +127,7 @@ class RPCBasedCommunicationLayer(CommunicationLayer):
                 if key not in cloud_needed_fields:
                     payload[key] = self._serialize(value)
 
-        cloud_data = PayloadGenerator.generate_cloud_data_from_payload(
+        cloud_data = PayloadGenerator.generate_cloud_data(
             payload,
             {KEY_PLATFORM_NAME: self._rpc_handler.name,
              KEY_JOB_NAME: computation.job_name,

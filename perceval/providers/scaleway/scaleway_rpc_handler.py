@@ -187,7 +187,7 @@ class RPCHandler:
 
         request.raise_for_status()
 
-    def create_job(self, payload: dict) -> str:
+    def create_job(self, cloud_data: dict) -> str:
         """Create and start on new job on the attached session
 
         :param payload: the perceval circuit and run parameters to be executed on the attached session
@@ -196,8 +196,8 @@ class RPCHandler:
             raise Exception("Cannot create job because session_id is None")
 
         scw_payload = {
-            "name": payload.get(KEY_JOB_NAME),
-            "circuit": {"percevalCircuit": json.dumps(payload.get(KEY_PAYLOAD, {}))},
+            "name": cloud_data.get(KEY_JOB_NAME),
+            "circuit": {"percevalCircuit": json.dumps(cloud_data.get(KEY_PAYLOAD, {}))},
             "project_id": self._project_id,
             "session_id": self._session_id,
         }

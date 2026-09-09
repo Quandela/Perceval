@@ -102,7 +102,7 @@ def test_payload_cnot():
         ZIP_PREFIX)  # Circuits are compressed in payloads
 
 def test_payload_generator():
-    cloud_data = PayloadGenerator.generate_cloud_data(COMMAND_NAME)
+    cloud_data = PayloadGenerator.generate_payload(COMMAND_NAME)
 
     assert 'pcvl_version' in cloud_data
     assert 'process_id' in cloud_data
