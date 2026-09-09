@@ -33,8 +33,8 @@ from threading import Thread
 from typing import Callable, Any
 
 from perceval.utils import ProgressCallback, parse_signature
+from perceval.utils.constants import PERFS_KEY
 from perceval.components import Experiment
-from utils.constants import PERFS_KEY
 
 from .execution_status import RunningStatus
 from .abstract_computer import AComputer
