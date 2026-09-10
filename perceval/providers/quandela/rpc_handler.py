@@ -152,15 +152,15 @@ class RPCHandler:
             response =  self.get_request(endpoint)
         return response
 
-    def create_job(self, payload) -> str:
+    def create_job(self, cloud_data: dict) -> str:
         """create a job
 
-        :param payload: the payload to send
+        :param cloud_data: the data with payload to send
         :raises HTTPError: when the API don't accept the payload
         :return: job id
         """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_CREATE)
-        json_res = self.post_request(endpoint, payload)
+        json_res = self.post_request(endpoint, cloud_data)
         assert _JOB_ID_KEY in json_res, f'Missing {_JOB_ID_KEY} field in create_job response'
         return json_res[_JOB_ID_KEY]
 
