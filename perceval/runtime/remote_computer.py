@@ -128,15 +128,18 @@ class RemoteComputer(AComputer):
     def noise(self, noise: NoiseModel | None):
         self._custom_noise = noise
 
-    def _get_local_mitigations(self) -> list[AMitigation]:
+    def _use_mitigations_remotely(self):
         use_mitigations_remotely = self.use_mitigations_remotely
-        if self._error_mitigations is not None:
+        if self._error_mitigations is not None and use_mitigations_remotely:
             for mitigation in self._error_mitigations:
                 if not mitigation.is_known_from(self.specs.known_mitigations):
                     use_mitigations_remotely = False
                     break
 
-        return [] if use_mitigations_remotely else super()._get_local_mitigations()
+        return use_mitigations_remotely
+
+    def _get_local_mitigations(self) -> list[AMitigation]:
+        return [] if self._use_mitigations_remotely() else super()._get_local_mitigations()
 
     @property
     def specs(self) -> PlatformSpecs:
@@ -305,7 +308,7 @@ class RemoteComputer(AComputer):
 
     def prepare_payload(self, computation: Computation) -> dict:
         if self._error_mitigations is not None:
-            if self.use_mitigations_remotely:
+            if self._use_mitigations_remotely():
                 remote_mitigations = self._error_mitigations
             else:
                 remote_mitigations = []
