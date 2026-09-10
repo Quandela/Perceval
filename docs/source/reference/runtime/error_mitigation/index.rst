@@ -76,7 +76,7 @@ Assign an empty list or :code:`None` to disable all mitigations explicitly:
 >>> computer.mitigations = []
 
 Use :meth:`Computer.apply_configuration
-<perceval.runtime.abstract_computer.AbstractComputer.apply_configuration>` to change mitigations temporarily:
+<perceval.runtime.abstract_computer.AComputer.apply_configuration>` to change mitigations temporarily:
 
 >>> temporary_mitigations = [pcvl.DetectorBalancing()]
 >>> with computer.apply_configuration(mitigations=temporary_mitigations):

@@ -28,9 +28,9 @@
 # SOFTWARE.
 
 import warnings
-from typing import Iterable, Any
+from typing import Iterable, Any, Type
 
-from .descriptors import DescriptorClass, PartialRecord
+from .descriptors import ADescriptor, DescriptorClass, PartialRecord
 from .class_registry import ClassRegistry
 from .string_buffer import StringBuffer
 from .utils import compress_str, decompress_str
@@ -46,8 +46,8 @@ class Archive:
 
     def __init__(self, raise_on_unregistred_class: bool = True):
         self.raise_on_unregistred_class = raise_on_unregistred_class
-        self.roots = [] # list of ids
-        self.memo = [] # list of (tag, desc)
+        self.roots: list[int] = [] # list of ids
+        self.memo: list[tuple[str, ADescriptor] | Type[Archive.NoValue]] = [] # list of (tag, desc) or NoValue
 
 
 class OutputArchive(Archive):
@@ -122,8 +122,22 @@ class OutputArchive(Archive):
         self.memo.extend( [ self.NoValue ] * (len(self.ids) - len(self.memo)) )
 
     # To storable object
-    def to_json(self):
-        raise NotImplementedError("JSON storage not implemented")
+    def to_json(self) -> dict[str, Any]:
+        """
+        :return: A dict representation of the archive, that can be converted to str using json.dumps
+        """
+        res = {"header": self.header,
+               "archive_version": self.archive_version,
+               "roots": self.roots}
+
+        objects = []
+        for entry in self.memo:
+            tag, desc = entry
+            objects.append([tag, desc.to_json()])
+
+        res["data"] = objects
+
+        return res
 
     def to_text(self, compress: bool = False) -> str:
         """
@@ -197,8 +211,30 @@ class InputArchive(Archive):
 
     # Storable object parsing
     @classmethod
-    def from_json(cls):
-        raise NotImplementedError("JSON storage not implemented")
+    def from_json(cls, json_obj: dict) -> "InputArchive":  # TODO: python 3.11: use Self
+        """
+        :param json_obj: a dict representing an archive, typically obtained by using an OutputArchive.to_json() method.
+        :return: A new InputArchive containing the data that were stored in the archive.
+        """
+        header = json_obj.get("header", "")
+        if header != cls.header:
+            raise RuntimeError(f"invalid archive")
+
+        archive_version = json_obj.get("archive_version", 0)
+        if archive_version > InputArchive.archive_version:
+            raise RuntimeError(f"unknown archive version {archive_version}")
+
+        self = cls()
+        self.roots = json_obj["roots"]
+        self.memo = []
+
+        for tag, data in json_obj["data"]:
+            t = ClassRegistry.get_by_tag(tag)
+            desc = t.descriptor_type.from_json(data)
+            self.memo.append( (tag, desc) )
+
+        self.created = [ self.NoValue ] * len(self.memo)
+        return self
 
     @classmethod
     def from_text(cls, txt: str) -> "InputArchive":  # TODO: python 3.11: use Self
@@ -211,9 +247,6 @@ class InputArchive(Archive):
             txt = f"{InputArchive.header}{decompress_str(txt[len(compress_header):])}"
 
         self = cls()
-        self.roots = []
-        self.memo = []
-        self.created = []
 
         buffer = StringBuffer(txt)
 
@@ -228,6 +261,7 @@ class InputArchive(Archive):
         n_roots = buffer.get_int()
         self.roots = [ buffer.get_int() for _ in range(n_roots) ]
 
+        self.memo = []
         while buffer:
             tag = buffer.get_next()
             t = ClassRegistry.get_by_tag(tag)

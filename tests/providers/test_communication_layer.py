@@ -29,7 +29,7 @@
 
 import pytest
 
-from perceval import ProcessorType, Computation, CommandFactory, Experiment, PayloadGenerator, RunningStatus, JobStatus
+from perceval import ProcessorType, Computation, CommandFactory, Experiment, PayloadGenerator, RunningStatus, ExecutionStatus
 from perceval.providers.quandela.rpc_handler import RPCHandler
 from perceval.providers.rpc_based_communication_layer import RPCBasedCommunicationLayer
 from perceval.runtime.platform_specs import PlatformSpecs
@@ -94,7 +94,7 @@ def test_communication_layer_job():
 
     remote_id = comm.send(PayloadGenerator.from_computation(computation))
     status = comm.get_job_status(remote_id)
-    assert isinstance(status, JobStatus)
+    assert isinstance(status, ExecutionStatus)
     assert status.status == expected_running_status[0]
     assert status.progress == 0.5
 
@@ -102,13 +102,13 @@ def test_communication_layer_job():
 
     remote_id = comm.send(PayloadGenerator.from_computation(computation))
     status = comm.get_job_status(remote_id)
-    assert isinstance(status, JobStatus)
+    assert isinstance(status, ExecutionStatus)
     assert status.status == expected_running_status[1]
 
     # Due to the way the ResponseBuilder works, we need to create another job
     remote_id = comm.send(PayloadGenerator.from_computation(computation))
     status = comm.get_job_status(remote_id)
-    assert isinstance(status, JobStatus)
+    assert isinstance(status, ExecutionStatus)
     assert status.status == expected_running_status[2]
     assert status.progress == 1.
 

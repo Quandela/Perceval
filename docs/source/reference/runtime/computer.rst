@@ -36,12 +36,14 @@ Since they share the same interface, it is a good idea to always use the common 
 For instance, you should always start and stop them before and after doing all your computations, even for computers where this does nothing.
 This automatic start and stop process can be done using the :meth:`acquire()` context manager.
 
->>> with remote_computer.acquire():
+>>> with acquire(remote_computer):
 ...     # All computations here
 
 .. note::
    A computer should not be stopped until all computations are executed. Hence, the acquisition should be done at the
    topmost level. For instance, methods that take a computer as argument should not acquire it.
+
+.. automethod:: perceval.runtime.abstract_computer.acquire
 
 
 SimulatedComputer

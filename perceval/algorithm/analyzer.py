@@ -31,7 +31,7 @@ import numpy as np
 from perceval.runtime import Execution, Computation
 from perceval.components import Experiment
 from perceval.utils import BasicState, allstate_iterator, Matrix, ProgressCallback, FockState
-from perceval.runtime import AbstractComputer
+from perceval.runtime import AComputer
 
 from .abstract_algorithm import AAlgorithm
 from .processor_compatibility import ProcessorCompatibilityMeta
@@ -54,7 +54,7 @@ class Analyzer(AAlgorithm, metaclass=ProcessorCompatibilityMeta):
     """
 
     def __init__(self,
-                 computer: AbstractComputer,
+                 computer: AComputer,
                  experiment: Experiment,
                  input_states: list[BasicState] | dict[BasicState, str],
                  output_states=None,

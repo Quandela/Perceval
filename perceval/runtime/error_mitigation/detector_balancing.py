@@ -32,14 +32,14 @@ from copy import deepcopy, copy
 from perceval.utils import BSDistribution
 from perceval.simulators._simulate_detectors import compute_distributions
 
-from .abstract_mitigation import AbstractMitigation
+from .abstract_mitigation import AMitigation
 from .imperfections import Imperfections
 from ..computation import Computation
 
 from perceval.utils.constants import KEY_RESULTS, KEY_GLOBAL_PERF, KEY_PHYSICAL_PERF
 from perceval.serialization import Serialization
 
-class DetectorBalancing(AbstractMitigation):
+class DetectorBalancing(AMitigation, tag="DetectorBalancing"):
     """
     A mitigation process that adjusts the probabilities of each output state based on the output
     loss, detector models, and number of photons in each mode.
@@ -81,8 +81,6 @@ class DetectorBalancing(AbstractMitigation):
         for n in range(len(res_by_n) - 1, -1, -1):
             for state in res_by_n[n].keys():
                 distributions = compute_distributions(state, detectors, {})
-
-                # prob threshold ?
                 state_dist = BSDistribution.list_tensor_product(distributions)
 
                 # If we were able to detect state, it means that the detectors model should have state in its results

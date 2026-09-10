@@ -27,14 +27,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from ..abstract_config import AbstractRemoteConfig
+from ..abstract_config import ARemoteConfig
 
 TOKEN_ENV_VAR = "KIPU_CLOUD_TOKEN"
 
 ORGANIZATION_ID_KEY = "organization_id"
 
 
-class KipuConfig(AbstractRemoteConfig):
+class KipuConfig(ARemoteConfig):
     """Handle the remote configuration for the Kipu API.
 
     Tokens are read from the in-memory cache, the ``KIPU_CLOUD_TOKEN`` environment variable, or
@@ -50,7 +50,7 @@ class KipuConfig(AbstractRemoteConfig):
 
     _organization_id: str | None = None
 
-    _FIELDS = AbstractRemoteConfig._FIELDS | {
+    _FIELDS = ARemoteConfig._FIELDS | {
         ORGANIZATION_ID_KEY: "_organization_id",
     }
 

@@ -26,10 +26,40 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+import json
 from math import sqrt
+from typing import Any
 
 from perceval.serialization import OutputArchive, Serialization, InputArchive
+
+def make_json_repr(roots: list[int], data: list[list[str | Any]]):
+    return {
+        "header": "pcvlar",
+        "archive_version": 0,
+        "roots": roots,
+        "data": data,
+    }
+
+
+def read_write_test(ar: OutputArchive) -> InputArchive:
+    # Test read
+    deser_ar = InputArchive.from_text(ar.to_text())
+    assert ar.memo_decoded() == deser_ar.memo_decoded()
+    assert ar.roots == deser_ar.roots
+
+    deser_ar_compress = InputArchive.from_text(ar.to_text(compress=True))
+    # If the memo and roots are the same for both text and another representation, we can test the deserialization results on only one
+    assert ar.memo_decoded() == deser_ar_compress.memo_decoded()
+    assert ar.roots == deser_ar_compress.roots
+
+    deser_ar_json = InputArchive.from_json(ar.to_json())
+    assert ar.memo_decoded() == deser_ar_json.memo_decoded()
+    assert ar.roots == deser_ar_json.roots
+
+    # Test no crash + Test exactly jsonifiable
+    assert json.loads(json.dumps(ar.to_json())) == ar.to_json()
+
+    return deser_ar
 
 
 def test_basic_objects():
@@ -41,42 +71,47 @@ def test_basic_objects():
     assert ar.memo_decoded() == [ ('int', 12) ]
     assert ar.roots == [ 0 ]
     assert ar.to_text() == "pcvlar 0 1 0 int 12"
+    assert ar.to_json() == make_json_repr([ 0 ], [["int", 12]])
 
     a2 = None
     Serialization.serialize(a2, ar)
     assert ar.memo_decoded() == [ ('int', 12), ('None', None) ]
     assert ar.roots == [ 0, 1 ]
     assert ar.to_text() == "pcvlar 0 2 0 1 int 12 None "
+    assert ar.to_json() == make_json_repr([ 0, 1 ], [["int", 12], ["None", None]])
 
     a3 = "Hello"
     Serialization.serialize(a3, ar)
     assert ar.memo_decoded() == [ ('int', 12), ('None', None), ('str', "Hello") ]
     assert ar.roots == [ 0, 1, 2 ]
     assert ar.to_text() == "pcvlar 0 3 0 1 2 int 12 None  str 5 Hello"
+    assert ar.to_json() == make_json_repr([ 0, 1, 2 ], [["int", 12], ["None", None], ["str", "Hello"]])
 
     a4 = 3.14
     Serialization.serialize(a4, ar)
     assert ar.memo_decoded() == [ ('int', 12), ('None', None), ('str', "Hello"), ('float', 3.14) ]
     assert ar.roots == [ 0, 1, 2, 3 ]
     assert ar.to_text() == "pcvlar 0 4 0 1 2 3 int 12 None  str 5 Hello float 3.14"
+    assert ar.to_json() == make_json_repr([ 0, 1, 2, 3 ], [["int", 12], ["None", None], ["str", "Hello"], ["float", 3.14]])
 
     a5 = complex(1, sqrt(3))/2
     Serialization.serialize(a5, ar)
     assert ar.memo_decoded() == [ ('int', 12), ('None', None), ('str', "Hello"), ('float', 3.14), ('complex', (0.5+0.8660254037844386j)) ]
     assert ar.roots == [ 0, 1, 2, 3, 4 ]
     assert ar.to_text() == "pcvlar 0 5 0 1 2 3 4 int 12 None  str 5 Hello float 3.14 complex 0.5 0.8660254037844386"
+    assert ar.to_json() == make_json_repr([ 0, 1, 2, 3, 4 ],
+                                          [["int", 12], ["None", None], ["str", "Hello"], ["float", 3.14], ["complex", [0.5, 0.8660254037844386]]])
 
     a6 = b"0x42"
     Serialization.serialize(a6, ar)
     assert ar.memo_decoded() == [ ('int', 12), ('None', None), ('str', "Hello"), ('float', 3.14), ('complex', (0.5+0.8660254037844386j)), ('bytes', b"0x42") ]
     assert ar.roots == [ 0, 1, 2, 3, 4, 5 ]
     assert ar.to_text() == "pcvlar 0 6 0 1 2 3 4 5 int 12 None  str 5 Hello float 3.14 complex 0.5 0.8660254037844386 bytes 8 MHg0Mg=="
+    assert ar.to_json() == make_json_repr([0, 1, 2, 3, 4, 5 ],
+                                          [["int", 12], ["None", None], ["str", "Hello"], ["float", 3.14],
+                                           ["complex", [0.5, 0.8660254037844386]], ["bytes", "MHg0Mg=="]])
 
-    # Test read
-    deser_ar = InputArchive.from_text(ar.to_text())
-    assert ar.memo_decoded() == deser_ar.memo_decoded()
-    assert ar.roots == deser_ar.roots
-
+    deser_ar = read_write_test(ar)
     assert Serialization.deserialize(deser_ar) == a1
     assert Serialization.deserialize(deser_ar) == a2
     assert Serialization.deserialize(deser_ar) == a3
@@ -92,12 +127,10 @@ def test_python_list():
     assert ar.memo_decoded() == [ ('list', [1, 2]), ('int', 12), ('int', 32) ]
     assert ar.roots == [ 0 ]
     assert ar.to_text() == "pcvlar 0 1 0 list 2 1 2 int 12 int 32"
+    assert ar.to_json() == make_json_repr([0], [ ['list', [1, 2]], ['int', 12], ['int', 32] ])
 
     # Test read
-    deser_ar = InputArchive.from_text(ar.to_text())
-    assert ar.memo_decoded() == deser_ar.memo_decoded()
-    assert ar.roots == deser_ar.roots
-
+    deser_ar = read_write_test(ar)
     assert Serialization.deserialize(deser_ar) == l
 
 
@@ -108,12 +141,10 @@ def test_python_tuple():
     assert ar.memo_decoded() == [ ('tuple', [1, 2]), ('int', 12), ('int', 32) ]
     assert ar.roots == [ 0 ]
     assert ar.to_text() == "pcvlar 0 1 0 tuple 2 1 2 int 12 int 32"
+    assert ar.to_json() == make_json_repr([0], [ ['tuple', [1, 2]], ['int', 12], ['int', 32] ])
 
     # Test read
-    deser_ar = InputArchive.from_text(ar.to_text())
-    assert ar.memo_decoded() == deser_ar.memo_decoded()
-    assert ar.roots == deser_ar.roots
-
+    deser_ar = read_write_test(ar)
     assert Serialization.deserialize(deser_ar) == l
 
 
@@ -121,15 +152,13 @@ def test_python_dict():
     ar = OutputArchive()
     l = { 'a': 12, 1: 32 }
     Serialization.serialize(l, ar)
-    assert ar.memo_decoded() == [ ('dict', [1, 2, 3, 4]), ('str', "a"), ('int', 1), ('int', 12), ('int', 32) ]
+    assert ar.memo_decoded() == [ ('dict', {1: 2, 3: 4}), ('str', "a"), ('int', 12), ('int', 1), ('int', 32) ]
     assert ar.roots == [ 0 ]
-    assert ar.to_text() == "pcvlar 0 1 0 dict 4 1 2 3 4 str 1 a int 1 int 12 int 32"
+    assert ar.to_text() == "pcvlar 0 1 0 dict 2 1 2 3 4 str 1 a int 12 int 1 int 32"
+    assert ar.to_json() == make_json_repr([0], [ ['dict', {"1": 2, "3": 4}], ['str', "a"], ['int', 12], ['int', 1], ['int', 32] ])
 
     # Test read
-    deser_ar = InputArchive.from_text(ar.to_text())
-    assert ar.memo_decoded() == deser_ar.memo_decoded()
-    assert ar.roots == deser_ar.roots
-
+    deser_ar = read_write_test(ar)
     assert Serialization.deserialize(deser_ar) == l
 
 
@@ -140,16 +169,15 @@ def test_python_set():
     assert ar.roots == [0]
     if ar.memo_decoded() == [('set', [1, 2]), ('str', "12"), ('int', 32)]:  # Order is unknown due to set properties
         assert ar.to_text() == "pcvlar 0 1 0 set 2 1 2 str 2 12 int 32"
+        assert ar.to_json() == make_json_repr([0], [ ['set', [1, 2]], ['str', "12"], ['int', 32] ])
     elif ar.memo_decoded() == [('set', [1, 2]), ('int', 32), ('str', "12")]:
         assert ar.to_text() == "pcvlar 0 1 0 set 2 1 2 int 32 str 2 12"
+        assert ar.to_json() == make_json_repr([0], [ ['set', [1, 2]], ['int', 32], ['str', "12"] ])
     else:
         raise AssertionError(f"{ar.memo_decoded()} != [('set', [1, 2]), ('str', '12'), ('int', 32)]")
 
     # Test read
-    deser_ar = InputArchive.from_text(ar.to_text())
-    assert ar.memo_decoded() == deser_ar.memo_decoded()
-    assert ar.roots == deser_ar.roots
-
+    deser_ar = read_write_test(ar)
     assert Serialization.deserialize(deser_ar) == l
 
 
@@ -160,12 +188,10 @@ def test_python_type():
     assert ar.memo_decoded() == [ ('type', "int") ]
     assert ar.roots == [ 0 ]
     assert ar.to_text() == "pcvlar 0 1 0 type 3 int"
+    assert ar.to_json() == make_json_repr([0], [ ['type', "int"] ])
 
     # Test read
-    deser_ar = InputArchive.from_text(ar.to_text())
-    assert ar.memo_decoded() == deser_ar.memo_decoded()
-    assert ar.roots == deser_ar.roots
-
+    deser_ar = read_write_test(ar)
     assert Serialization.deserialize(deser_ar) == l
 
 
@@ -177,12 +203,10 @@ def test_repeated_objects():
     assert ar.memo_decoded() == [('list', [1, 1]), ('list', [2]), ('int', 12)]
     assert ar.roots == [0]
     assert ar.to_text() == "pcvlar 0 1 0 list 2 1 1 list 1 2 int 12"
+    assert ar.to_json() == make_json_repr([0], [['list', [1, 1]], ['list', [2]], ['int', 12]] )
 
     # Test read
-    deser_ar = InputArchive.from_text(ar.to_text())
-    assert ar.memo_decoded() == deser_ar.memo_decoded()
-    assert ar.roots == deser_ar.roots
-
+    deser_ar = read_write_test(ar)
     deser = Serialization.deserialize(deser_ar)
     assert deser == l
     assert deser[0] is deser[1]
@@ -198,23 +222,9 @@ def test_nested_objects():
     assert ar.memo_decoded() == [('list', [1]), ('list', [0])]
     assert ar.roots == [0]
     assert ar.to_text() == "pcvlar 0 1 0 list 1 1 list 1 0"
+    assert ar.to_json() == make_json_repr([0], [ ['list', [1]], ['list', [0]] ])
 
     # Test read
-    deser_ar = InputArchive.from_text(ar.to_text())
-    assert ar.memo_decoded() == deser_ar.memo_decoded()
-    assert ar.roots == deser_ar.roots
-
+    deser_ar = read_write_test(ar)
     deser = Serialization.deserialize(deser_ar)
     assert deser[0][0] is deser
-
-
-def test_compression():
-    ar = OutputArchive()
-    l = 12
-
-    Serialization.serialize(l, ar)
-
-    # Test read
-    deser_ar = InputArchive.from_text(ar.to_text(compress=True))
-    deser = Serialization.deserialize(deser_ar)
-    assert deser == l

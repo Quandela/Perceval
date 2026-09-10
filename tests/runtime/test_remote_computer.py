@@ -28,10 +28,9 @@
 # SOFTWARE.
 import random
 import time
-from copy import copy
 from typing import TypeAlias
 
-from perceval import AbstractComputer, SimulatedComputer, Experiment, FockState, Computation, BSDistribution, JobStatus, \
+from perceval import AComputer, SimulatedComputer, Experiment, FockState, Computation, BSDistribution, ExecutionStatus, \
     Unitary, BS, PS, NoiseModel, Circuit, Detector, FFCircuitProvider, Command, P, PayloadGenerator, Execution
 from perceval.runtime.computation_iterator import ComputationIterator
 from perceval.runtime.platform_specs import PlatformSpecs
@@ -44,8 +43,12 @@ RemoteId: TypeAlias = Execution
 
 class ComputerProxy(CommunicationLayer):
 
-    def __init__(self, computer: AbstractComputer) -> None:
+    def __init__(self, computer: AComputer) -> None:
         self.computer = computer
+
+    @property
+    def name(self) -> str:
+        return self.computer.name
 
     def get_specs(self) -> PlatformSpecs:
         return self.computer.specs
@@ -53,15 +56,14 @@ class ComputerProxy(CommunicationLayer):
     def send(self, payload: dict) -> RemoteId:
         with PayloadGenerator.payload_applier(self.computer, payload):
             computation = PayloadGenerator.get_computation(payload)
-            # I'm not sure that payload_applier works well with execute_async, so we make a copy of self.computer
-            return Execution(computation, copy(self.computer)).execute_async()
+            return Execution(computation, self.computer).execute_async()
 
     def get_results(self, remote_id: RemoteId) -> dict:
         while not remote_id.is_complete:
             time.sleep(0.1)
         return remote_id.get_results(allow_partial_results=True)
 
-    def get_job_status(self, remote_id: RemoteId, refresh_errors: int = 0) -> JobStatus | None:
+    def get_job_status(self, remote_id: RemoteId, refresh_errors: int = 0) -> ExecutionStatus | None:
         return remote_id.status
 
     def get_remote_status(self) -> str:
@@ -78,6 +80,9 @@ class ComputerProxy(CommunicationLayer):
 
     def get_availability(self) -> int:
         return self.computer.available_jobs
+
+    def get_platform_details(self) -> dict:
+        return self.computer.details
 
 
 def test_remote_computer_basic():
@@ -117,12 +122,12 @@ def test_remote_computer_execute_async():
     e.min_detected_photons_filter(1)
 
     computation = Computation(remote_computer.get_command("probs"), e)
-    mitigations, noise, getter = remote_computer.execute_async(computation)
+    _, noise, getter = remote_computer.execute_async(computation)
 
     while not getter[0][0].is_complete:
         time.sleep(0.1)
 
-    res = remote_computer.get_results(computation, mitigations, noise, getter)
+    res = remote_computer.get_results(computation, noise, getter)
     assert res["results"] == BSDistribution(FockState([1, 0]))
 
     assert getter[0][0].is_complete
@@ -166,7 +171,7 @@ def test_remote_computer_execute_async_iterator():
     computation.add_iteration(input_state=FockState([1, 0]))
     computation.add_iteration(input_state=FockState([0, 1]))
 
-    mitigations, noise, getter = remote_computer.execute_async(computation)
+    _, noise, getter = remote_computer.execute_async(computation)
 
     assert len(getter) == 1, "Iterator must not be decomposed when there is no local mitigations"
     assert len(getter[0]) == 1, "Iterator must not be decomposed when there is no local mitigations"
@@ -174,7 +179,7 @@ def test_remote_computer_execute_async_iterator():
     while not getter[0][0].is_complete:
         time.sleep(0.1)
 
-    res = remote_computer.get_results(computation, mitigations, noise, getter)
+    res = remote_computer.get_results(computation, noise, getter)
 
     assert isinstance(res, dict)
     assert "results_list" in res

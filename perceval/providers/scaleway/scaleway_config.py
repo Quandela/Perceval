@@ -27,14 +27,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from ..abstract_config import AbstractRemoteConfig
+from ..abstract_config import ARemoteConfig
 
 TOKEN_ENV_VAR = "SCALEWAY_CLOUD_TOKEN"
 
 PROVIDER_KEY = "provider_name"
 
 
-class ScalewayConfig(AbstractRemoteConfig):
+class ScalewayConfig(ARemoteConfig):
     """Handle the remote configuration for the Scaleway API.
 
     Tokens are read from the in-memory cache, the ``SCALEWAY_CLOUD_TOKEN`` environment variable,
@@ -53,7 +53,7 @@ class ScalewayConfig(AbstractRemoteConfig):
 
     _provider_name: str = None
 
-    _FIELDS = AbstractRemoteConfig._FIELDS | {
+    _FIELDS = ARemoteConfig._FIELDS | {
         PROVIDER_KEY: "_provider_name",
     }
 

@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from perceval.runtime import AbstractComputer
+from perceval.runtime import AComputer
 from perceval.runtime.legacy import AProcessor
 
 from .processor_compatibility import computer_from_processor
@@ -35,7 +35,7 @@ from .processor_compatibility import computer_from_processor
 class AAlgorithm:
     _MAX_SHOTS_NAMED_PARAM = "max_shots_per_call"
 
-    def __init__(self, computer: AbstractComputer, **kwargs):
+    def __init__(self, computer: AComputer, **kwargs):
         # TODO: remove (deprecated since 1.3)
         if isinstance(computer, AProcessor):
             setattr(self, "_processor", computer)  # Do not use "self._processor = " to get IDE warnings

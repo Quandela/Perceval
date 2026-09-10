@@ -27,14 +27,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import random
-
 import pytest
 from exqalibur import FockState
-from exqalibur.exqalibur import PostSelect
 
-from perceval import CompilationAveraging, Computation, CommandFactory, Experiment, NoiseModel, Command, BSCount, \
-    apply_min_photons, apply_post_select, Imperfections
+from ..._test_utils import assert_bsd_close
+from perceval import CompilationAveraging, Computation, CommandFactory, Experiment, NoiseModel, Command, Imperfections, \
+    BSDistribution
 from perceval.utils.constants import KEY_SHOTS_USED
 
 
@@ -52,14 +50,16 @@ def test_computation_extension():
     assert len(comp_list) == 1
 
     # Test with "compilation_seed" in signature
-    command = Command("probs", [("max_shots", int, True), ("max_samples", int, False), ("compilation_seed", int, False)], apply_emt=True)
+    command = Command("sample_count",
+                      [("max_shots", int, True), ("max_samples", int, False), ("compilation_seed", int, False)],
+                      apply_emt=True)
 
     computation = Computation(command, Experiment())
     computation.add_params(max_shots = 50000, max_samples = 10000)
 
     comp_list = averaging.extend_computation(computation, imperfections)
     assert len(comp_list) == 3
-    assert all(comp.command.name == "sample_count" for comp in comp_list)
+    assert all(comp.command.name == "probs" for comp in comp_list)
     assert sum(comp.parameters["max_shots"] for comp in comp_list) == 50000
     assert sum(comp.parameters["max_samples"] for comp in comp_list) == 10000
 
@@ -74,42 +74,47 @@ def test_computation_extension():
 
 
 def prepare_test():
-    raw_results = BSCount({FockState([0, 1]): 16,
-                           FockState([1, 0]): 32,
-                           FockState([1, 1]): 64,
-                           FockState([2, 0]): 128,
-                           FockState([0, 2]): 256})
+    sub_results = [
+        {"results": BSDistribution({
+            FockState([1, 1]): 0.4,
+            FockState([2, 1]): 0.1,
+            FockState([3, 1]): 0.5,
+        }),
+            "global_perf": 0.3,
+            "physical_perf": 0.75,
+            "logical_perf": 0.4,
+            KEY_SHOTS_USED: 2500},
 
-    # Distributes to sub-results
-    raw_sub_results = [BSCount(), BSCount(), BSCount()]
+        {"results": BSDistribution({
+            FockState([1, 1]): 0.1,
+            FockState([2, 1]): 0.2,
+            FockState([3, 1]): 0.7,
+        }),
+            "global_perf": 0.2,
+            "physical_perf": 0.25,
+            "logical_perf": 0.8,
+            KEY_SHOTS_USED: 3500},
 
-    for state, count in raw_results.items():
-        for _ in range(count):
-            raw_sub_results[random.randint(0, len(raw_sub_results) - 1)][state] += 1
+        {"results": BSDistribution({
+            FockState([1, 1]): 0.6,
+            FockState([2, 1]): 0.1,
+            FockState([3, 1]): 0.3,
+        }),
+            "global_perf": 0.3,
+            "physical_perf": 0.5,
+            "logical_perf": 0.6,
+            KEY_SHOTS_USED: 4000}
+    ]
 
-    min_photons = 2
-    post_select = PostSelect("[1] >= 1")
-    heralds = {}
-
-    sub_results = []
-    for i, bsc in enumerate(raw_sub_results):
-        shots_used = bsc.total()
-        bsc, phys_perf = apply_min_photons(bsc, min_photons)
-        bsc, log_perf = apply_post_select(bsc, post_select, heralds, True)
-        sub_results.append({"results": bsc,
-                            "physical_perf": phys_perf,
-                            "logical_perf": log_perf,
-                            "global_perf": phys_perf * log_perf,
-                            KEY_SHOTS_USED: shots_used})
-
-    shots_used = raw_results.total()
-    raw_results, phys_perf = apply_min_photons(raw_results, min_photons)
-    raw_results, log_perf = apply_post_select(raw_results, post_select, heralds, True)
-    expected = {"results": raw_results,
-                "physical_perf": phys_perf,
-                "logical_perf": log_perf,
-                "global_perf": phys_perf * log_perf,
-                KEY_SHOTS_USED: shots_used}
+    expected = {"results": BSDistribution({
+        FockState([1, 1]): (0.4 + 0.1 + 0.6) / 3,
+        FockState([2, 1]): (0.1 + 0.2 + 0.1) / 3,
+        FockState([3, 1]): (0.5 + 0.7 + 0.3) / 3,
+    }),
+        "physical_perf": (0.75 + 0.25 + 0.5) / 3,
+        "logical_perf": (0.4 + 0.8 + 0.6) / 3,
+        "global_perf": (0.3 + 0.2 + 0.3) / 3,
+        KEY_SHOTS_USED: 10000}
 
     return expected, sub_results
 
@@ -119,9 +124,12 @@ def test_recombination():
 
     averaging = CompilationAveraging(3)
 
-    computation = Computation(CommandFactory.sample_count, Experiment())
-    computation.add_params(max_samples = expected["results"].total())
+    computation = Computation(CommandFactory.probs, Experiment())
+    computation.add_params(max_samples = expected[KEY_SHOTS_USED])
 
     res = averaging.parse_results(computation, sub_results, Imperfections(NoiseModel(), []))
 
+    bsd = res.pop("results")
+    bsd_expected = expected.pop("results")
     assert res == pytest.approx(expected)
+    assert_bsd_close(bsd, bsd_expected)

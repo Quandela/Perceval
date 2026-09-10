@@ -39,7 +39,8 @@ from ._pauli import (PauliType, PauliEigenStateType, get_pauli_eigen_state_prep_
 from .tomography_exp_configurer import experiment_circuit_configurator
 from ._decompose_perms import decompose_perms
 from .port import APort, Port, Herald, PortLocation, get_basic_state_from_ports
-from .detector import IDetector, DetectionType, Detector, BSLayeredPPNR, get_detection_type, check_heralds_detectors
+from .detector import IDetector, DetectionType, Detector, BSLayeredPPNR, get_detection_type, check_heralds_detectors, \
+    update_detectors, update_detectors_from_perfs
 from .unitary_components import BSConvention, BS, PS, WP, HWP, QWP, PR, Unitary, PERM, PBS, Barrier
 from .non_unitary_components import TD, LC
 from .component_catalog import Catalog

@@ -33,6 +33,7 @@
 
 from .abstract_serializer import ASerializer, PreRecorder
 from .archive import InputArchive, OutputArchive
+from .class_registry import ClassRegistry
 from .serialization import Serialization
 from .descriptors import (DescriptorFloat, DescriptorInteger, DescriptorComplex, DescriptorString, DescriptorList,
                           DescriptorClass, DescriptorNone, DescriptorBool, DescriptorBinary, ADescriptor, PartialRecord)

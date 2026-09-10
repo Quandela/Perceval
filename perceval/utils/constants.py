@@ -64,10 +64,20 @@ KEY_POSTSELECT = "postselect"
 KEY_HERALDS = "heralds"
 KEY_MIN_DETECTED_PHOTONS = "min_detected_photons"
 
-# Global data keys
+# Cloud data keys
 KEY_VERSION = "pcvl_version"  # Must match the name used by the cloud
 KEY_PROCESS_ID = "process_id"
 KEY_PAYLOAD = "payload"
 KEY_PLATFORM_NAME = "platform_name"
 KEY_JOB_NAME = "job_name"
 KEY_JOB_GROUP_NAME = "job_group_name"
+
+
+# Perf keys
+PERFS_KEY = "perfs"
+TRANSMITTANCE_KEY = "Transmittance (%)"
+INDISTINGUISHABILITY_KEY = "HOM (%)"
+G2_KEY = "g2 (%)"
+TRANSMISSION_PER_MODE = "Transmission per mode (%)"
+TRANSMITTANCE_IN = "t_in"
+TRANSMITTANCE_OUT = "t_out"

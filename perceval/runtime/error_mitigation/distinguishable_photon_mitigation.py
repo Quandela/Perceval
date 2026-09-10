@@ -37,12 +37,12 @@ from perceval.serialization import Serialization
 
 from ..computation import Computation
 from .imperfections import Imperfections, update_imperfections_from_results
-from .abstract_mitigation import AbstractMitigation
+from .abstract_mitigation import AMitigation
 from ._helpers.distinguishable_photon_mitigation import (generate_obb_states, apply_detection_filter, filter_extra_photons,
                                                          generate_obb_partition)
 
 
-class DistinguishablePhotonMitigation(AbstractMitigation):
+class DistinguishablePhotonMitigation(AMitigation, tag="DistinguishablePhoton"):
     """
     Partial distinguishability and g2 mitigation.
     Only FockState inputs are supported.

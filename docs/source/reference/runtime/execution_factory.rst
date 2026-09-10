@@ -61,7 +61,7 @@ computer advertises a :code:`custom_command`, it can be accessed as follows:
 
 >>> custom_execution = factory.custom_command
 
-Use :attr:`Computer.available_commands <perceval.runtime.abstract_computer.AbstractComputer.available_commands>`
+Use :attr:`Computer.available_commands <perceval.runtime.abstract_computer.AComputer.available_commands>`
 to discover the names supported by a computer.
 
 Building computations and executions

@@ -49,6 +49,12 @@ class CommunicationLayer(ABC):
     shared per-job state and make any mutable cache or session state concurrency-safe.
     """
 
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """The name of the remote platform."""
+        pass
+
     @abstractmethod
     def get_specs(self) -> PlatformSpecs:
         """Return the capabilities and constraints of the target platform.
@@ -137,6 +143,15 @@ class CommunicationLayer(ABC):
         Return ``0`` when the provider has no free capacity or availability cannot be established.
         Always returns ``1`` if there is no API call to get this number.
         The value must not be negative.
+        """
+        pass
+
+    @abstractmethod
+    def get_platform_details(self) -> dict:
+        """Return any kind of information that the platform could provide.
+        No particular field is guaranteed to exist here, nor do their types.
+        This should only be used for information purpose or on specific computers,
+        and always check that the read field exists before accessing it.
         """
         pass
 

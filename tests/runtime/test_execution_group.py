@@ -39,7 +39,6 @@ import perceval as pcvl
 from perceval import RunningStatus, RemoteComputer, FockState
 from perceval.components import Experiment
 from perceval.runtime import Computation, Execution, ExecutionGroup, SimulatedComputer
-from perceval.serialization import InputArchive, OutputArchive, Serialization
 from perceval.providers.quandela.rpc_handler import RPCHandler
 from perceval.providers.rpc_based_communication_layer import RPCBasedCommunicationLayer
 

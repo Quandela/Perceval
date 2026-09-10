@@ -32,7 +32,7 @@ from collections import defaultdict
 
 from perceval.components import PauliType, Experiment
 from perceval.utils import BasicState
-from perceval.runtime import AbstractComputer
+from perceval.runtime import AComputer
 
 from .abstract_process_tomography import AProcessTomography
 from .tomography_utils import (_matrix_basis, _matrix_to_vector, _vector_to_sq_matrix, _coef_linear_decomp,
@@ -56,7 +56,7 @@ class StateTomography(AAlgorithm, metaclass=ProcessorCompatibilityMeta):
     :param experiment: An Experiment describing the gate (or operation) on which state tomography will be performed.
     """
 
-    def __init__(self, computer: AbstractComputer, experiment: Experiment, **kwargs):
+    def __init__(self, computer: AComputer, experiment: Experiment, **kwargs):
         super().__init__(computer=computer, **kwargs)
         self._experiment = experiment.copy()
         self._nqubit, odd_modes = divmod(experiment.m, 2)
@@ -141,7 +141,7 @@ class ProcessTomography(AProcessTomography):
 
     """
 
-    def __init__(self, computer: AbstractComputer, experiment: Experiment, **kwargs):
+    def __init__(self, computer: AComputer, experiment: Experiment, **kwargs):
         super().__init__(computer, experiment, **kwargs)
         self._qst = StateTomography(self._computer, self._experiment, **kwargs)
 

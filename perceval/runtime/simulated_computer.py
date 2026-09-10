@@ -73,6 +73,10 @@ class SimulatedComputer(LocalComputer):
             self._backend = backend
 
     @property
+    def name(self) -> str:
+        return self._backend.name
+
+    @property
     def noise(self) -> NoiseModel:
         return self._noise
 
@@ -93,14 +97,8 @@ class SimulatedComputer(LocalComputer):
         self.check_min_detected_photons_filter(computation)
 
     @property
-    def specs(self) -> PlatformSpecs:
-        res = PlatformSpecs()
-        res.parameters = self.available_parameters
-        return res
-
-    @property
     def available_parameters(self) -> dict[str, str]:
-        return {"compute_physical_logical_perf": "bool. If True, physical and logical performances will be returned."
+        return {"compute_physical_logical_perf": "bool. If True, physical and logical performances will be returned. "
                                                  "Else, only a global performance will be returned."}
 
     def _create_source(self, experiment: Experiment) -> Source:
@@ -295,7 +293,7 @@ class SimulatedComputer(LocalComputer):
         return res
 
     def log_resources(self, method: str, experiment: Experiment, extra_parameters: dict):
-        """Log resources of the AbstractComputer
+        """Log resources of the AComputer
 
         :param method: name of the method used
         :param extra_parameters: extra parameters to log.

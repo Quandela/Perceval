@@ -38,7 +38,7 @@ from perceval.utils.logging import get_logger, channel
 from perceval.serialization import Serialization
 
 from ..computation import Computation
-from .abstract_mitigation import AbstractMitigation
+from .abstract_mitigation import AMitigation
 from .imperfections import Imperfections
 from ._helpers.photon_recycling import gen_lossy_dists, get_avg_exp_from_uni_dist, generate_one_photon_per_mode_mapping
 
@@ -116,7 +116,7 @@ def photon_recycling(noisy_input: BSCount | BSDistribution, ideal_photon_count: 
     return mitigated_distribution
 
 
-class PhotonRecycling(AbstractMitigation):
+class PhotonRecycling(AMitigation, tag="PhotonRecycling"):
     """Mitigate photon loss by applying photon recycling to computation results.
 
     The automatic layer applies only to compatible unitary experiments with a photon count of at least 3.

@@ -221,7 +221,7 @@ class RemoteJob(Job):
                 self._job_status.update_progress(_retrieve_from_response(response, 'progress', 0., float),
                                                  _retrieve_from_response(response, 'progress_message'))
             elif self._job_status.failed:
-                self._job_status._stop_message = _retrieve_from_response(response, 'status_message')
+                self._job_status._message = _retrieve_from_response(response, 'status_message')
 
             creation_datetime, duration, start_datetime = self._extract_job_times(response)
             self._job_status.update_times(creation_datetime, start_datetime, duration)

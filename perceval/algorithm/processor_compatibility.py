@@ -30,7 +30,7 @@
 from abc import ABCMeta
 from typing import Any
 
-from perceval.runtime import AbstractComputer, SimulatedComputer, RemoteComputer
+from perceval.runtime import AComputer, SimulatedComputer, RemoteComputer
 from perceval.runtime.legacy import AProcessor, Processor, RemoteProcessor
 from perceval.providers.rpc_based_communication_layer import RPCBasedCommunicationLayer
 from perceval.providers.kipu import KipuRPCHandler, KipuCommunicationLayer
@@ -41,7 +41,7 @@ from perceval.providers.scaleway import ScalewayCommunicationLayer, RPCHandler a
 
 # TODO: remove this file when removing the Processor support
 
-def computer_from_processor(processor: AProcessor) -> AbstractComputer:
+def computer_from_processor(processor: AProcessor) -> AComputer:
     # This method is a patch for places where a Processor is needed.
     # It should not be documented as it is intended for internal purpose only
     # This baseline should be adapted to specific cases if needed

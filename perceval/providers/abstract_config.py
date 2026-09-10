@@ -37,7 +37,7 @@ URL_KEY = "url"
 TOKEN_KEY = "token"
 
 
-class AbstractRemoteConfig:
+class ARemoteConfig:
     """Handle the remote configuration.
 
     :param persistent_data: The persistent data access to use. In a standard environment, always use the default.
@@ -85,12 +85,12 @@ class AbstractRemoteConfig:
 
         :param proxies: proxy configuration in the form of a dictionary which maps protocols to URLs
         """
-        AbstractRemoteConfig._proxies = proxies
+        ARemoteConfig._proxies = proxies
 
     def get_proxies(self) -> dict[str, str]:
         """Get the proxy configuration as a mapping of protocols to URLs."""
         if not self._proxies:
-            self.set_proxies(self._get_remote_config(PROXIES_KEY, AbstractRemoteConfig._REMOTE_KEY))
+            self.set_proxies(self._get_remote_config(PROXIES_KEY, ARemoteConfig._REMOTE_KEY))
         return self._proxies or {}
 
     @classmethod
@@ -158,7 +158,7 @@ class AbstractRemoteConfig:
     @classmethod
     def clear_cache(cls):
         """Delete the RemoteConfig cache."""
-        AbstractRemoteConfig._proxies = None
+        ARemoteConfig._proxies = None
         for field, attribute in cls._FIELDS.items():
             setattr(cls, attribute, None)
 
@@ -170,10 +170,10 @@ class AbstractRemoteConfig:
         config = self._persistent_data.load_config()
         if self._REMOTE_KEY not in config:
             config[self._REMOTE_KEY] = {}
-        if AbstractRemoteConfig._REMOTE_KEY not in config:
-            config[AbstractRemoteConfig._REMOTE_KEY] = {}
+        if ARemoteConfig._REMOTE_KEY not in config:
+            config[ARemoteConfig._REMOTE_KEY] = {}
 
-        config[AbstractRemoteConfig._REMOTE_KEY][PROXIES_KEY] = self._proxies
+        config[ARemoteConfig._REMOTE_KEY][PROXIES_KEY] = self._proxies
         for field, attribute in cls._FIELDS.items():
             config[self._REMOTE_KEY][field] = getattr(cls, attribute)
 

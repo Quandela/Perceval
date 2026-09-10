@@ -27,14 +27,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from ..abstract_config import AbstractRemoteConfig
+from ..abstract_config import ARemoteConfig
 
 
 QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
 TOKEN_ENV_VAR = "PCVL_CLOUD_TOKEN"
 
 
-class RemoteConfig(AbstractRemoteConfig):
+class RemoteConfig(ARemoteConfig):
     """Handle the remote configuration for Quandela provider.
 
     :param persistent_data: The persistent data access to use. In a standard environment, always use the default.

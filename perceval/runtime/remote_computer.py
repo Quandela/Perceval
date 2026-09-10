@@ -28,15 +28,16 @@
 # SOFTWARE.
 
 import time
-from copy import deepcopy
-from typing import Callable
+from copy import deepcopy, copy
+from typing import Callable, Any
 
+from .check_cancel import call_and_check_cancel
 from .communication_layer import CommunicationLayer, RemoteId
 from .computation import Computation
-from .abstract_computer import AbstractComputer
+from .abstract_computer import AComputer
 from .computation_iterator import ComputationIterator
 from .platform_specs import PlatformSpecs
-from .error_mitigation import AbstractMitigation, Imperfections
+from .error_mitigation import AMitigation, Imperfections
 from .execution_status import RunningStatus
 from .simulated_computer import SimulatedComputer
 from .async_getter import AsyncGetter
@@ -44,16 +45,16 @@ from .payload_generator import PayloadGenerator
 
 from perceval.utils import perf_dict_to_noise, ProgressCallback, NoiseModel, PostSelect, ContextManager
 from perceval.utils.logging import channel, get_logger
-from perceval.components import PortLocation, Experiment
+from perceval.components import PortLocation, Experiment, update_detectors_from_perfs
 from perceval.serialization import Serialization, InputArchive
 
 
 class _RemoteGetter(AsyncGetter):
     STATUS_REFRESH_DELAY = 1  # minimum job status refresh period (in s)
-    _MAX_ERROR = 5
 
     def __init__(self, communication_layer: CommunicationLayer, remote_id: RemoteId):
         super().__init__()
+        self._results = {}
         self._communication_layer = communication_layer
         self._remote_id = remote_id
         self._last_status_refresh = 0.
@@ -89,8 +90,11 @@ class _RemoteGetter(AsyncGetter):
         self._results = self._communication_layer.get_results(self._remote_id)
         return self._results
 
+    def get_details(self) -> str:
+        return f"Remote: {{id: {self._remote_id}, status: {self._status.status.name}, platform: {self._communication_layer.name}}}"
 
-class RemoteComputer(AbstractComputer):
+
+class RemoteComputer(AComputer):
     """
     A computer that sends Computations to a remote platform.
 
@@ -107,8 +111,12 @@ class RemoteComputer(AbstractComputer):
         self._specs = communication_layer.get_specs()
         self._perfs = communication_layer.get_performances()
         self._custom_noise: NoiseModel | None = None
-        self.use_mitigations_remotely: bool = True  # TODO: detect if the target supports mitigations ?
+        self.use_mitigations_remotely: bool = True
         self._available_jobs = 0
+
+    @property
+    def name(self) -> str:
+        return self._communication_layer.name
 
     @property
     def noise(self):
@@ -120,8 +128,18 @@ class RemoteComputer(AbstractComputer):
     def noise(self, noise: NoiseModel | None):
         self._custom_noise = noise
 
-    def _get_local_mitigations(self) -> list[AbstractMitigation]:
-        return [] if self.use_mitigations_remotely else super()._get_local_mitigations()
+    def _use_mitigations_remotely(self):
+        use_mitigations_remotely = self.use_mitigations_remotely
+        if self._error_mitigations is not None and use_mitigations_remotely:
+            for mitigation in self._error_mitigations:
+                if not mitigation.is_known_from(self.specs.known_mitigations):
+                    use_mitigations_remotely = False
+                    break
+
+        return use_mitigations_remotely
+
+    def _get_local_mitigations(self) -> list[AMitigation]:
+        return [] if self._use_mitigations_remotely() else super()._get_local_mitigations()
 
     @property
     def specs(self) -> PlatformSpecs:
@@ -133,8 +151,16 @@ class RemoteComputer(AbstractComputer):
         return self._perfs
 
     @property
+    def status(self) -> str:
+        return self._communication_layer.get_remote_status()
+
+    @property
     def available_parameters(self) -> dict[str, str]:
         return self._specs.parameters
+
+    @property
+    def details(self) -> dict[str, Any]:
+        return self._communication_layer.get_platform_details()
 
     def validate_single(self, computation: Computation) -> None:
         super().validate_single(computation)
@@ -154,7 +180,6 @@ class RemoteComputer(AbstractComputer):
 
     @staticmethod
     def check_min_detected_photons_filter(experiment: Experiment) -> None:
-        # TODO: if we have an iterator, the min_photons_filter can be set only by each iteration
         if experiment.min_photons_filter is None:
             raise ValueError("The value of min_detected_photons is not set."
                              " Use the method experiment.min_detected_photons_filter(value).")
@@ -229,18 +254,29 @@ class RemoteComputer(AbstractComputer):
 
     def _execute_command(self, computation: Computation, progress_cb: ProgressCallback = None) -> dict:
         async_getter = self._execute_single_async(computation)
-        # TODO: use the progress callback in the wait function
-        while not async_getter.is_complete:
+        status = async_getter.status
+        while not status.completed:
             time.sleep(1)
+            status = async_getter.status
+            if call_and_check_cancel(progress_cb, status.progress, status.message or ""):
+                async_getter.cancel()
+                break
         return async_getter.get_results()
 
     def _get_imperfections(self, computation: Computation | ComputationIterator) -> Imperfections:
         architecture = self.specs.architecture
         if architecture is not None:
-            detectors = architecture.detectors  # TODO: use the perfs to correct the efficiency automatically ?
+            detectors = copy(architecture.detectors)
+            update_detectors_from_perfs(detectors, self.performance)
         else:
             detectors = computation.experiment.detectors  # Supposes the remote can simulate them
-        return Imperfections(self.noise, detectors)  # We drop experiment.noise in this case (deprecated anyway)
+
+        if computation.experiment.noise is not None:
+            get_logger().warn("Noise given in the Experiment - Mitigations may behave weirdly")
+            noise = computation.experiment.noise
+        else:
+            noise = self.noise
+        return Imperfections(noise, detectors)
 
     def _execute_command_async(self, computation: Computation) -> _RemoteGetter:
         payload = self.prepare_payload(computation)
@@ -267,17 +303,12 @@ class RemoteComputer(AbstractComputer):
                 get_logger().info(f"Couldn't find a way to send any job for {int(start_info - start)} seconds - queue is full")
             self._available_jobs = self._communication_layer.get_availability()
 
-        self._available_jobs -= 1
-
-    def _release_resource(self):
-        self._available_jobs += 1
-
     def _reserve_resource(self) -> ContextManager:
-        return ContextManager(self._take_resource, self._release_resource)
+        return ContextManager(self._take_resource)
 
     def prepare_payload(self, computation: Computation) -> dict:
         if self._error_mitigations is not None:
-            if self.use_mitigations_remotely:
+            if self._use_mitigations_remotely():
                 remote_mitigations = self._error_mitigations
             else:
                 remote_mitigations = []

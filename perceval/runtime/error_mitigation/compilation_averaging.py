@@ -30,16 +30,16 @@
 import random
 from copy import deepcopy, copy
 
-from .abstract_mitigation import AbstractMitigation
+from .abstract_mitigation import AMitigation
 from .imperfections import Imperfections
 from ..computation import Computation
 
-from perceval.utils import BSCount
+from perceval.utils import BSDistribution
 from perceval.utils.constants import KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_GLOBAL_PERF, KEY_PHYSICAL_PERF, \
     KEY_LOGICAL_PERF, KEY_RESULTS
 from perceval.serialization import Serialization
 
-class CompilationAveraging(AbstractMitigation):
+class CompilationAveraging(AMitigation, tag="CompilationAveraging"):
     """Reduce sensitivity to a single physical compilation by averaging the results over several compilations.
 
     The requested samples and shots are divided between ``repetitions`` sub-computations, each
@@ -88,7 +88,7 @@ class CompilationAveraging(AbstractMitigation):
         res = []
         for i in range(self.repetitions):
             new_comp = deepcopy(computation)
-            new_comp.command.name = "sample_count"
+            new_comp.command.name = "probs"
 
             if shots_per_computation is not None:
                 new_comp.add_params(max_shots=shots_per_computation + (i < remaining_shots))
@@ -105,34 +105,37 @@ class CompilationAveraging(AbstractMitigation):
         if len(results) == 1:
             return results[0]
 
-        # Here, we know we have expanded the computation, so all results are BSCount
-        bsc = BSCount()
-
-        # global_perf = n_samples / n_clock; phys_perf = n_phys / n_clock; log_perf = n_samples / n_phys
-        n_clocks = 0
-        n_physical = 0
+        # Here, we know we have expanded the computation, so all results are BSDistributions
+        bsd = BSDistribution()
+        global_perf = 0
+        physical_perf = 0
+        logical_perf = 0
 
         for res in results:
-            res_bsc: BSCount = res[KEY_RESULTS]
-            for state, count in res_bsc.items():
-                bsc[state] += count
+            bsd += res[KEY_RESULTS]
+            global_perf += res[KEY_GLOBAL_PERF]
 
-            sub_n_clocks = res_bsc.total() / res[KEY_GLOBAL_PERF]
-            n_clocks += sub_n_clocks
-
-            if n_physical is not None and KEY_PHYSICAL_PERF in res:
-                n_physical += sub_n_clocks * res[KEY_PHYSICAL_PERF]
+            if physical_perf is not None and KEY_PHYSICAL_PERF in res:
+                physical_perf += res[KEY_PHYSICAL_PERF]
             else:
-                n_physical = None
+                physical_perf = None
+
+            if logical_perf is not None and KEY_LOGICAL_PERF in res:
+                logical_perf += res[KEY_LOGICAL_PERF]
+            else:
+                logical_perf = None
 
         res = copy(results[0])  # We are going to modify this to keep custom fields as much as we can
-        res[KEY_RESULTS] = bsc
-        n_samples = bsc.total()
-        res[KEY_GLOBAL_PERF] = n_samples / n_clocks
 
-        if n_physical is not None:
-            res[KEY_PHYSICAL_PERF] = n_physical / n_clocks
-            res[KEY_LOGICAL_PERF] = n_samples / n_physical
+        bsd.normalize()
+        res[KEY_RESULTS] = bsd
+        res[KEY_GLOBAL_PERF] = global_perf / len(results)
+
+        # Note: we lose the fact that phys_perf * log_perf = global_perf
+        if physical_perf is not None:
+            res[KEY_PHYSICAL_PERF] = physical_perf / len(results)
+        if logical_perf is not None:
+            res[KEY_LOGICAL_PERF] = logical_perf / len(results)
 
         return res
 

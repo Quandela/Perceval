@@ -38,10 +38,23 @@ from perceval.utils.constants import KEY_RESULTS, KEY_GLOBAL_PERF, KEY_PHYSICAL_
 from perceval.components import Experiment
 
 
-class AbstractMitigation(ABC):
+class AMitigation(ABC):
 
     APPLY_MIN_PHOTONS = True  # By default, avoid any accident at the cost of performance
     APPLY_LOGICAL_SELECTION = True
+    KNOWN_MITIGATIONS = []
+    _TAG: str
+
+    def __init_subclass__(cls, /, tag=None, **kwargs):
+        super().__init_subclass__(**kwargs)
+        tag = tag or cls.__name__
+        if tag in AMitigation.KNOWN_MITIGATIONS:
+            raise ValueError(f"Given mitigation tag {tag} already exists.")
+        AMitigation.KNOWN_MITIGATIONS.append(tag)
+        cls._TAG = tag
+
+    def is_known_from(self, known_classes: list[str]) -> bool:
+        return self._TAG in known_classes
 
     @abstractmethod
     def extend_computation(self, computation: Computation, imperfections: Imperfections) -> list[Computation]:
@@ -74,8 +87,6 @@ class AbstractMitigation(ABC):
 
         res, physical_perf, logical_perf = self._apply_filtering(computation.experiment, result[KEY_RESULTS])
 
-        # TODO: find a way to transmit the correct number of states between layers
-        #       We should not use computation.parameters
         res = ConversionHelper.convert_to(computation.command.name, res, **computation.parameters)
         result[KEY_RESULTS] = res
 

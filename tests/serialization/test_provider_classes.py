@@ -35,7 +35,7 @@ from perceval.providers.quandela.quandela_communication_layer import QuandelaCom
 from perceval.providers.quandela.rpc_handler import RPCHandler as QuandelaRPCHandler
 from perceval.providers.scaleway.scaleway_communication_layer import ScalewayCommunicationLayer
 from perceval.providers.scaleway.scaleway_rpc_handler import RPCHandler as ScalewayRPCHandler
-from perceval.providers import AbstractRemoteConfig, RemoteConfig
+from perceval.providers import ARemoteConfig, RemoteConfig
 from perceval.serialization import InputArchive, OutputArchive, Serialization
 
 
@@ -48,7 +48,7 @@ _PLATFORM_DETAILS = {
 }
 
 
-def config_manager(config: AbstractRemoteConfig, token: str, proxies = None):
+def config_manager(config: ARemoteConfig, token: str, proxies = None):
     initial_token = config.get_token()
     initial_proxies = config.get_proxies()
 

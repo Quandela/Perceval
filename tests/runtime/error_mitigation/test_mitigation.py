@@ -31,18 +31,23 @@ import copy
 import pytest
 from exqalibur import BSCount, BSSamples
 
-from perceval import AbstractMitigation, Computation, NoiseModel, CommandFactory, Experiment, BSDistribution, FockState, \
+from perceval import AMitigation, Computation, NoiseModel, CommandFactory, Experiment, BSDistribution, FockState, \
     Imperfections
 from tests._test_utils import assert_bsd_close
 
 
-class DummyMitigation(AbstractMitigation):
+class DummyMitigation(AMitigation):
 
     def extend_computation(self, computation: Computation, imperfections: Imperfections) -> list[Computation]:
         return [computation]
 
     def _parse_results(self, computation: Computation, results: list[dict],  imperfections: Imperfections) -> dict:
         return copy.copy(results[0])
+
+
+def test_known_mitigation():
+    mitigation = DummyMitigation()
+    assert mitigation.is_known_from(AMitigation.KNOWN_MITIGATIONS)
 
 
 def test_min_photon_filter():

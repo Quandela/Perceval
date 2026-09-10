@@ -120,8 +120,7 @@ class ExecutionStatus:
         self._duration: float | None = None
         self._completed_time: float | None = None
         self._running_progress: float = 0
-        self._running_phase: str | None = None
-        self._stop_message: str | None = None
+        self._message: str | None = None
 
     def __call__(self) -> str:
         """
@@ -163,7 +162,7 @@ class ExecutionStatus:
         self._duration = self._completed_time - self._init_time_start
         if cause == RunningStatus.SUCCESS:
             self._running_progress = 1
-        self._stop_message = mesg
+        self._message = mesg
 
     def update_progress(self, progress: float, phase: str | None = None):
         """
@@ -175,7 +174,7 @@ class ExecutionStatus:
         if self._status == RunningStatus.WAITING:
             self.start_run()
         self._running_progress = progress
-        self._running_phase = phase
+        self._message = phase
 
     def update_times(self, creation_datetime: float, start_time: float, duration: float):
         """
@@ -275,7 +274,7 @@ class ExecutionStatus:
         """
         :return: the execution stop message, if any. In case of a successful execution, this will be `None`.
         """
-        return self._stop_message
+        return self._message if self.failed else None
 
     @property
     def progress(self) -> float:
@@ -283,6 +282,13 @@ class ExecutionStatus:
         :return: the current execution progress (between 0 and 1, 1 meaning 100%)
         """
         return self._running_progress
+
+    @property
+    def message(self) -> str | None:
+        """
+        :return: The execution message, if any.
+        """
+        return self._message
 
     @property
     def running_time(self) -> float:
@@ -307,10 +313,8 @@ class ExecutionStatus:
             self._completed_time = status._completed_time
         if status._running_progress:
             self._running_progress = status._running_progress
-        if status._running_phase:
-            self._running_phase = status._running_phase
-        if status._stop_message:
-            self._stop_message = status._stop_message
+        if status._message:
+            self._message = status._message
 
     @staticmethod
     def merge_status(status: list[ExecutionStatus]) -> ExecutionStatus:
@@ -345,8 +349,7 @@ class ExecutionStatus:
         res._running_progress = sum(stat._running_progress for stat in status) / len(status)
 
         current_maximum_status = status[running_index]
-        res._running_phase = current_maximum_status._running_phase
-        res._stop_message = current_maximum_status._stop_message
+        res._message = current_maximum_status._message
 
         return res
 
@@ -368,7 +371,6 @@ Serialization.register_class(
                       "_duration",
                       "_completed_time",
                       "_running_progress",
-                      "_running_phase",
-                      "_stop_message",
+                      "_message",
                       ],
 )

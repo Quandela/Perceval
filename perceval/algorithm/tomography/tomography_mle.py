@@ -36,7 +36,7 @@ from perceval.utils import BasicState
 from perceval.utils.algorithms.norm import frobenius_inner_product
 from perceval.components import (PauliType, PauliEigenStateType, get_pauli_eigenvector_matrix,
     get_pauli_eigenvectors, Experiment)
-from perceval.runtime import AbstractComputer
+from perceval.runtime import AComputer
 
 from .abstract_process_tomography import AProcessTomography
 from .tomography_utils import _state_to_dens_matrix, _matrix_to_vector, _get_fixed_basis_ops, _compute_probs, \
@@ -55,7 +55,7 @@ class TomographyMLE(AAlgorithm, metaclass=ProcessorCompatibilityMeta):
     :param experiment: A perceval Experiment with gate (or operation) on which process tomography
         needs to be performed
     """
-    def __init__(self, computer: AbstractComputer, experiment: Experiment, **kwargs):
+    def __init__(self, computer: AComputer, experiment: Experiment, **kwargs):
 
         # experiment is needed due to multiple inheritance problems
         super().__init__(computer=computer, experiment=experiment, **kwargs)
@@ -257,7 +257,7 @@ class StateTomographyMLE(TomographyMLE):
     :param experiment: A perceval Experiment with gate (or operation) on which process tomography
         needs to be performed
     """
-    def __init__(self, computer: AbstractComputer, experiment: Experiment, **kwargs):
+    def __init__(self, computer: AComputer, experiment: Experiment, **kwargs):
         super().__init__(computer, experiment, **kwargs)
         self._guess_density_matrix = np.eye(2 ** self._nqubit) / (2 ** self._nqubit)
         self._povm_data()  # to set self._data_function -> all the measured data
@@ -327,7 +327,7 @@ class ProcessTomographyMLE(TomographyMLE, AProcessTomography):
     :param experiment: A perceval Experiment with gate (or operation) on which process tomography
         needs to be performed
     """
-    def __init__(self, computer: AbstractComputer, experiment: Experiment, **kwargs):
+    def __init__(self, computer: AComputer, experiment: Experiment, **kwargs):
         TomographyMLE.__init__(self, computer, experiment, **kwargs)
         AProcessTomography.__init__(self, computer, experiment, **kwargs)
 

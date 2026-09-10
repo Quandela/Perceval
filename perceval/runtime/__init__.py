@@ -35,7 +35,7 @@ from .computation import Computation
 from .computation_iterator import ComputationIterator
 from .command import Command, CommandFactory
 from .error_mitigation import *
-from .abstract_computer import AbstractComputer, acquire
+from .abstract_computer import AComputer, acquire
 from .local_computer import LocalComputer
 from .simulated_computer import SimulatedComputer
 from .remote_computer import RemoteComputer, CommunicationLayer

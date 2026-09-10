@@ -40,7 +40,7 @@ from perceval.runtime.error_mitigation import (
     PhotonRecycling,
 )
 from perceval.runtime.execution import Execution
-from perceval.runtime.execution_status import JobStatus, RunningStatus
+from perceval.runtime.execution_status import ExecutionStatus, RunningStatus
 from perceval.runtime.remote_computer import RemoteComputer, _RemoteGetter
 from perceval.runtime.simulated_computer import SimulatedComputer
 from perceval.runtime.local_computer import _ThreadedGetter
@@ -75,15 +75,14 @@ def _round_trip(obj):
 
 
 def test_job_status_serialization():
-    status = JobStatus()
+    status = ExecutionStatus()
     status._status = RunningStatus.ERROR
     status._init_time_start = 10.
     status._running_time_start = 12.
     status._duration = 3.
     status._completed_time = 15.
     status._running_progress = .75
-    status._running_phase = "processing"
-    status._stop_message = "failed"
+    status._message = "failed"
 
     restored = _round_trip(status)
 
@@ -116,7 +115,7 @@ def test_remote_getter_serialization():
 
     assert restored._remote_id == getter._remote_id
     assert restored._results == getter._results
-    assert restored._status.__dict__ == getter._status.__dict__  # We don't have __eq__ for JobStatus
+    assert restored._status.__dict__ == getter._status.__dict__  # We don't have __eq__ for ExecutionStatus
     assert restored._communication_layer == 42
     assert restored._last_status_refresh == getter._last_status_refresh
     assert restored._job_status_errors == 0

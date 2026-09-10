@@ -32,14 +32,14 @@ import numpy as np
 
 from perceval.algorithm.abstract_algorithm import AAlgorithm
 from perceval.components import Experiment
-from perceval.runtime import AProcessor, AbstractComputer
+from perceval.runtime import AProcessor, AComputer
 
 from .tomography_utils import _vector_to_sq_matrix, _krauss_repr_ops, _get_canonical_basis_ops
 from ..processor_compatibility import AProcessorCompatibilityMeta
 
 
 class AProcessTomography(AAlgorithm, metaclass=AProcessorCompatibilityMeta):
-    def __init__(self, computer: AbstractComputer, experiment: Experiment, **kwargs):
+    def __init__(self, computer: AComputer, experiment: Experiment, **kwargs):
         super().__init__(computer, **kwargs)
         self._experiment = experiment
         self._nqubit = experiment.m // 2

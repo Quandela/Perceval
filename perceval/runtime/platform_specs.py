@@ -30,8 +30,8 @@
 from typing import Any
 
 from .command import Command, CommandFactory
-from .error_mitigation import AbstractMitigation
-from perceval.serialization import Serialization
+from .error_mitigation import AMitigation
+from perceval.serialization import Serialization, serialize, OutputArchive
 from perceval.serialization.library.serializers import SerializerDict
 from perceval.utils import FockState, deprecated, ProcessorType
 from perceval.utils.logging import channel, get_logger
@@ -309,7 +309,7 @@ class PlatformSpecs(dict):
             self_type = self._getitem("type")
             if isinstance(self_type, ProcessorType):
                 return self_type
-            return ProcessorType.SIMULATOR if self_type == "simulator" else ProcessorType.PHYSICAL
+            return ProcessorType.SIMULATOR if self_type.lower() == "simulator" else ProcessorType.PHYSICAL
         return ProcessorType.SIMULATOR
 
     @type.setter
@@ -319,16 +319,47 @@ class PlatformSpecs(dict):
         self["type"] = "simulator" if value == ProcessorType.SIMULATOR else "qpu"
 
     @property
-    def default_mitigations(self) -> list[AbstractMitigation]:
+    def default_mitigations(self) -> list[AMitigation]:
         if "default_mitigations" in self:
             return self._getitem("default_mitigations")
         return []
 
     @default_mitigations.setter
-    def default_mitigations(self, value: list[AbstractMitigation]):
+    def default_mitigations(self, value: list[AMitigation]):
         assert isinstance(value, list)
-        assert all(isinstance(val, AbstractMitigation) for val in value)
+        assert all(isinstance(val, AMitigation) for val in value)
         self["default_mitigations"] = value
+
+    @property
+    def known_mitigations(self) -> list[str]:
+        if "known_mitigations" in self:
+            return self._getitem("known_mitigations")
+        return []
+
+    @known_mitigations.setter
+    def known_mitigations(self, value: list[str]):
+        assert isinstance(value, list)
+        assert all(isinstance(val, str) for val in value)
+        self["known_mitigations"] = value
+
+
+def _encode(value: Any) -> str:
+    archive = OutputArchive()
+    Serialization.serialize(value, archive)
+    return archive.to_text(compress=True)
+
+
+def serialize_specs_backward_compatibility(specs: PlatformSpecs) -> dict:
+    """Serializes the specs such that old perceval will continue to be able to receive specs serialized here"""
+    # For use in workers (e.g. see QuandelaQPUHandler in perceval-interop)
+    specs_dict: dict = serialize(specs)
+
+    if "commands" in specs:
+        specs_dict["commands"] = _encode(specs.commands)
+    if "default_mitigations" in specs:
+        specs_dict["default_mitigations"] = _encode(specs.default_mitigations)
+    return specs_dict
+
 
 class SerializerSpecs(SerializerDict):
     type = PlatformSpecs

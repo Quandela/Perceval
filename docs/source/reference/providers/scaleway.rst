@@ -41,7 +41,7 @@ Choose a platform listed by Scaleway, then create the communication layer and re
 >>> computer = pcvl.RemoteComputer(communication_layer)
 
 Scaleway requires a QaaS session. The computer lifecycle creates and terminates it, so use
-:meth:`Computer.acquire <perceval.runtime.abstract_computer.AbstractComputer.acquire>` around all executions sharing
+:meth:`Computer.acquire <perceval.runtime.abstract_computer.AComputer.acquire>` around all executions sharing
 the session. Try to start and stop the session only once to avoid overhead:
 
 >>> experiment = pcvl.Experiment(pcvl.BS())

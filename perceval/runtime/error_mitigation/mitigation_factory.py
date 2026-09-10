@@ -30,7 +30,7 @@
 from typing import Type
 from enum import IntEnum
 
-from .abstract_mitigation import AbstractMitigation
+from .abstract_mitigation import AMitigation
 from .compilation_averaging import CompilationAveraging
 from .photon_recycling import PhotonRecycling
 from .distinguishable_photon_mitigation import DistinguishablePhotonMitigation
@@ -60,7 +60,7 @@ class MitigationFactory:
     :param level: Initial preset level. The default is :attr:`MitigationLevel.low`.
     """
 
-    MITIGATION_ORDER: list[Type[AbstractMitigation]] = [
+    MITIGATION_ORDER: list[Type[AMitigation]] = [
         CompilationAveraging,
         DistinguishablePhotonMitigation,
         PhotonRecycling,  # Never set by the default levels, but can be added by hand by the user
@@ -68,18 +68,18 @@ class MitigationFactory:
     ]
 
     def __init__(self, level: MitigationLevel = MitigationLevel.low):
-        self._mitigations: list[AbstractMitigation | None] = []
+        self._mitigations: list[AMitigation | None] = []
         self.reset_to_level(level)
 
-    def build(self) -> list[AbstractMitigation]:
+    def build(self) -> list[AMitigation]:
         """Return the configured mitigations in their recommended application order."""
         return [mitigation for mitigation in self._mitigations if mitigation is not None]
 
-    def _set_mitigation(self, mitigation_type: Type[AbstractMitigation], mitigation: AbstractMitigation | None):
+    def _set_mitigation(self, mitigation_type: Type[AMitigation], mitigation: AMitigation | None):
         idx = self.MITIGATION_ORDER.index(mitigation_type)
         self._mitigations[idx] = mitigation
 
-    def set_custom_mitigation(self, mitigation: AbstractMitigation):
+    def set_custom_mitigation(self, mitigation: AMitigation):
         """Replace the configured instance of a supported mitigation type.
 
         This method accepts the exact built-in types listed in :attr:`MITIGATION_ORDER`;

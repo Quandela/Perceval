@@ -251,9 +251,13 @@ def deserialize(obj, strict=True):
         raise TypeError("Generic deserialize function does not handle binary representation. "
                         "Use specialized functions (e.g. deserialize_circuit) instead.")
     if isinstance(obj, dict):
-        r = {}
-        for k, v in obj.items():
-            r[deserialize(k, strict=strict)] = deserialize(v, strict=strict)
+        if obj.get("header", "") == InputArchive.header:
+            archive = InputArchive.from_json(obj)
+            r = Serialization.deserialize(archive)
+        else:
+            r = {}
+            for k, v in obj.items():
+                r[deserialize(k, strict=strict)] = deserialize(v, strict=strict)
     elif isinstance(obj, list):
         r = []
         for k in obj:

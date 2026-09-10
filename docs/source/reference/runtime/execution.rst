@@ -67,8 +67,8 @@ execution object, whose status can then be monitored:
 
 .. warning::
    A computer must remain started until all asynchronous executions associated with it have finished. Use
-   :meth:`Computer.start <perceval.runtime.abstract_computer.AbstractComputer.start>` and
-   :meth:`Computer.stop <perceval.runtime.abstract_computer.AbstractComputer.stop>` when launching an execution and
+   :meth:`Computer.start <perceval.runtime.abstract_computer.AComputer.start>` and
+   :meth:`Computer.stop <perceval.runtime.abstract_computer.AComputer.stop>` when launching an execution and
    waiting for its completion in different scopes.
 
 Cancellation and rerunning

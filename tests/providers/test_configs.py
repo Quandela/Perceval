@@ -28,10 +28,10 @@
 # SOFTWARE.
 
 from perceval.utils import ContextManager
-from perceval.providers import RemoteConfig, ScalewayConfig, KipuConfig, AbstractRemoteConfig
+from perceval.providers import RemoteConfig, ScalewayConfig, KipuConfig, ARemoteConfig
 
 
-def config_manager(config: AbstractRemoteConfig, token: str, url: str, proxies = None):
+def config_manager(config: ARemoteConfig, token: str, url: str, proxies = None):
     initial_token = config.get_token()
     initial_url = config.get_url()
     initial_proxies = config.get_proxies()

@@ -27,12 +27,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from ._validated_params import AValidatedParam, ValidatedBool, ValidatedFloat
+from .constants import TRANSMITTANCE_KEY, G2_KEY, INDISTINGUISHABILITY_KEY
 from math import pi
-
-
-TRANSMITTANCE_KEY = "Transmittance (%)"
-INDISTINGUISHABILITY_KEY = "HOM (%)"
-G2_KEY = "g2 (%)"
 
 
 class NoiseModel:

@@ -31,7 +31,7 @@ from perceval.components import Experiment
 from perceval.utils.logging import get_logger, channel
 from perceval.utils.constants import KEY_MAX_SHOTS
 
-from .abstract_computer import AbstractComputer
+from .abstract_computer import AComputer
 from .computation import Computation
 from .computation_iterator import ComputationIterator
 from .execution import Execution
@@ -54,7 +54,7 @@ class ExecutionFactory:
         A positive value is mandatory for remote computers.
     """
 
-    def __init__(self, computer: AbstractComputer, experiment: Experiment, max_shots_per_call: int = None):
+    def __init__(self, computer: AComputer, experiment: Experiment, max_shots_per_call: int = None):
         self.computer = computer
         self.experiment = experiment
         self.max_shots_per_call = max_shots_per_call
