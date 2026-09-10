@@ -29,11 +29,14 @@
 
 from abc import abstractmethod, ABC
 import base64
-from typing import TypeAlias
+from typing import TypeAlias, TypeVar
 
 # from typing import Self  # TODO: python 3.11
 
 from .string_buffer import StringBuffer
+
+
+JsonType = TypeVar("JsonType")  # Any JSON serializable type
 
 
 class ADescriptor(ABC):
@@ -47,12 +50,14 @@ class ADescriptor(ABC):
     def from_txt(s: StringBuffer):
         raise NotImplementedError()
 
-    def to_txt_list(self) -> list[str]:
-        return [self.to_txt()]
+    def to_json(self) -> JsonType:
+        """Can return any *json* serializable type."""
+        return self.to_txt()
 
     @classmethod
-    def from_txt_list(cls, s: list[StringBuffer]):
-        return cls.from_txt(s[0])
+    def from_json(cls, s: JsonType):
+        """Directly takes the return value of `to_json`"""
+        return cls.from_txt(StringBuffer(s))
 
 
 class DescriptorNone(ADescriptor):
@@ -68,11 +73,11 @@ class DescriptorNone(ADescriptor):
         s.get_n(0)
         return DescriptorNone(None)
 
-    def to_txt_list(self) -> list[str]:
-        return []
+    def to_json(self) -> None:
+        return None
 
     @classmethod
-    def from_txt_list(cls, s: list[StringBuffer]) -> "DescriptorNone":
+    def from_json(cls, _) -> "DescriptorNone":
         return DescriptorNone(None)
 
 
@@ -88,33 +93,40 @@ class DescriptorString(ADescriptor):
         size = s.get_int()
         return DescriptorString(s.get_n(size))
 
-    def to_txt_list(self) -> list[str]:
-        return [self.value]
+    def to_json(self) -> str:
+        return self.value
 
     @classmethod
-    def from_txt_list(cls, s: list[StringBuffer]) -> "DescriptorString":
-        return DescriptorString(s[0].s)
+    def from_json(cls, s: str) -> "DescriptorString":
+        return DescriptorString(s)
 
 
 class DescriptorBinary(ADescriptor):
     def __init__(self, b: bytes):
         self.value = b
 
-    def to_txt(self) -> str:
-        s = base64.b64encode(self.value).decode("utf-8")
-        return f"{len(s)} {s}"
-
-    @staticmethod
-    def from_txt(s: StringBuffer) -> "DescriptorBinary":
-        size = s.get_int()
-        return DescriptorBinary(base64.b64decode(s.get_n(size)))
-
-    def to_txt_list(self) -> list[str]:
-        return [base64.b64encode(self.value).decode("utf-8")]
+    def _encode(self) -> str:
+        return base64.b64encode(self.value).decode("utf-8")
 
     @classmethod
-    def from_txt_list(cls, s: list[StringBuffer]) -> "DescriptorBinary":
-        return DescriptorBinary(base64.b64decode(s[0].s))
+    def _decode(cls, value) -> "DescriptorBinary":
+        return cls(base64.b64decode(value))
+
+    def to_txt(self) -> str:
+        s = self._encode()
+        return f"{len(s)} {s}"
+
+    @classmethod
+    def from_txt(cls, s: StringBuffer) -> "DescriptorBinary":
+        size = s.get_int()
+        return cls._decode(s.get_n(size))
+
+    def to_json(self) -> str:
+        return self._encode()
+
+    @classmethod
+    def from_json(cls, s: str) -> "DescriptorBinary":
+        return cls._decode(s)
 
 
 class DescriptorBool(ADescriptor):
@@ -133,6 +145,13 @@ class DescriptorBool(ADescriptor):
             return DescriptorBool(False)
         raise RuntimeError(f"invalid boolean token '{b}'")
 
+    def to_json(self) -> bool:
+        return self.value
+
+    @classmethod
+    def from_json(cls, s: bool) -> "DescriptorBool":
+        return DescriptorBool(s)
+
 
 class DescriptorInteger(ADescriptor):
     def __init__(self, i: int):
@@ -144,6 +163,13 @@ class DescriptorInteger(ADescriptor):
     @staticmethod
     def from_txt(s: StringBuffer) -> "DescriptorInteger":
         return DescriptorInteger(int(s.get_next()))
+
+    def to_json(self) -> int:
+        return self.value
+
+    @classmethod
+    def from_json(cls, s: int) -> "DescriptorInteger":
+        return DescriptorInteger(s)
 
 
 class DescriptorFloat(ADescriptor):
@@ -158,6 +184,13 @@ class DescriptorFloat(ADescriptor):
     def from_txt(s: StringBuffer) -> "DescriptorFloat":
         return DescriptorFloat(float(s.get_next()))
 
+    def to_json(self) -> float:
+        return self.value
+
+    @classmethod
+    def from_json(cls, s: float) -> "DescriptorFloat":
+        return DescriptorFloat(s)
+
 
 class DescriptorComplex(ADescriptor):
     def __init__(self, c: complex):
@@ -170,12 +203,12 @@ class DescriptorComplex(ADescriptor):
     def from_txt(s: StringBuffer) -> "DescriptorComplex":
         return DescriptorComplex(complex(float(s.get_next()), float(s.get_next())))
 
-    def to_txt_list(self) -> list[str]:
-        return [str(self.value.real), str(self.value.imag)]
+    def to_json(self) -> list[float]:
+        return [self.value.real, self.value.imag]
 
     @classmethod
-    def from_txt_list(cls, s: list[StringBuffer]) -> "DescriptorComplex":
-        return DescriptorComplex(complex(float(s[0].get_next()), float(s[1].get_next())))
+    def from_json(cls, values: list[float]) -> "DescriptorComplex":
+        return DescriptorComplex(complex(values[0], values[1]))
 
 
 class DescriptorList(ADescriptor):
@@ -193,12 +226,35 @@ class DescriptorList(ADescriptor):
         size = s.get_int()
         return DescriptorList( [ s.get_int() for _ in range(size) ] )
 
-    def to_txt_list(self) -> list[str]:
-        return [str(index) for index in self.value]
+    def to_json(self) -> list[int]:
+        return self.value
 
     @classmethod
-    def from_txt_list(cls, s: list[StringBuffer]) -> "DescriptorList":
-        return DescriptorList( [ sub.get_int() for sub in s ] )
+    def from_json(cls, s: list[int]) -> "DescriptorList":
+        return DescriptorList(s)
+
+
+class DescriptorDict(ADescriptor):
+    def __init__(self, d: dict[int, int]):
+        self.value = d
+
+    def to_txt(self) -> str:
+        res = str(len(self.value))
+        for key, value in self.value.items():
+            res += f" {str(key)} {str(value)}"
+        return res
+
+    @staticmethod
+    def from_txt(s: StringBuffer) -> "DescriptorDict":
+        size = s.get_int()
+        return DescriptorDict({s.get_int(): s.get_int() for _ in range(size)} )
+
+    def to_json(self) -> dict[str, int]:
+        return {str(key): value for key, value in self.value.items()}  # Json always consider keys as str
+
+    @classmethod
+    def from_json(cls, s: dict[str, int]) -> "DescriptorDict":
+        return DescriptorDict({int(key): value for key, value in s.items()} )
 
 
 class DescriptorClass(ADescriptor):
@@ -218,25 +274,12 @@ class DescriptorClass(ADescriptor):
         size = s.get_int()
         return DescriptorClass(version, [ (s.get_next(), s.get_int()) for _ in range(size) ])
 
-    def to_txt_list(self) -> list[str]:
-        version, members = self.value
-        res = [str(version)]
-        for name, value in members:
-            res += [name, str(value)]
-        return res
+    def to_json(self) -> tuple[int, list[tuple[str, int]]]:
+        return self.value
 
     @classmethod
-    def from_txt_list(cls, s: list[StringBuffer]) -> "DescriptorClass":
-        version = s[0].get_int()
-
-        members = []
-        member_name = None
-        for member in s[1:]:
-            if member_name is None:
-                member_name = member.get_next()
-            else:
-                members.append( (member_name, member.get_int()) )
-                member_name = None
+    def from_json(cls, s: tuple[int, list[tuple[str, int]]]) -> "DescriptorClass":
+        version, members = s
         return DescriptorClass( version, members )
 
 

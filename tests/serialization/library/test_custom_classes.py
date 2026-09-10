@@ -26,11 +26,47 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import json
+from typing import Any
 
 # Note: this file is both an example on how to integrate custom classes to the serialization system and a test on the system itself
 
 from perceval.serialization import Serialization, OutputArchive, InputArchive, PartialRecord, DescriptorString, PreRecorder
 
+
+def make_json_repr(roots: list[int], data: list[list[str | Any]]):
+    return {
+        "header": "pcvlar",
+        "archive_version": 0,
+        "roots": roots,
+        "data": data,
+    }
+
+
+def read_write_test(ar: OutputArchive, do_json_load = False) -> InputArchive:
+    # Test read
+    deser_ar = InputArchive.from_text(ar.to_text())
+    assert ar.memo_decoded() == deser_ar.memo_decoded()
+    assert ar.roots == deser_ar.roots
+
+    deser_ar_compress = InputArchive.from_text(ar.to_text(compress=True))
+    # If the memo and roots are the same for both text and another representation, we can test the deserialization results on only one
+    assert ar.memo_decoded() == deser_ar_compress.memo_decoded()
+    assert ar.roots == deser_ar_compress.roots
+
+    deser_ar_json = InputArchive.from_json(ar.to_json())
+    assert ar.memo_decoded() == deser_ar_json.memo_decoded()
+    assert ar.roots == deser_ar_json.roots
+
+    # Test no crash
+    if do_json_load:
+        # + Test exactly jsonifiable
+        assert json.loads(json.dumps(ar.to_json())) == ar.to_json()
+    else:
+        # Tuples are stored as lists by json
+        json.dumps(ar.to_json())
+
+    return deser_ar
 
 def test_data_class():
     # In this scenario, we always serialize the same given members of a class
@@ -57,19 +93,13 @@ def test_data_class():
     Serialization.serialize(a, ar)
 
     assert ar.to_text() == "pcvlar 0 1 0 A_data 42 3 a 1 b 2 c 3 int 10 int 20 int 30"
-    deser = InputArchive.from_text(ar.to_text())
-    assert Serialization.deserialize(deser) == a
+    assert ar.to_json() == make_json_repr([0],
+                                          [["A_data", (42, [("a", 1), ("b", 2), ("c", 3)])],
+                                           ["int", 10],
+                                           ["int", 20],
+                                           ["int", 30]])
 
-    assert ar.to_json() == {
-        "header": "pcvlar",
-        "archive_version": 0,
-        "roots": [0],
-        "data": [("A_data", "42", "a", "1", "b", "2", "c", "3"),
-                 ("int", "10"),
-                 ("int", "20"),
-                 ("int", "30")]
-    }
-    deser = InputArchive.from_json(ar.to_json())
+    deser = read_write_test(ar)
     assert Serialization.deserialize(deser) == a
 
     class B:
@@ -87,19 +117,13 @@ def test_data_class():
     Serialization.serialize(a, ar)
 
     assert ar.to_text() == "pcvlar 0 1 0 B_test 420 2 a 1 b 2 float 3.14 list 1 3 str 4 test"
-    deser = InputArchive.from_text(ar.to_text())
-    assert Serialization.deserialize(deser) == a
+    assert ar.to_json() == make_json_repr([0],
+                                          [["B_test", (420, [("a", 1), ("b", 2)])],
+                                           ["float", 3.14],
+                                           ["list", [3]],
+                                           ["str", "test"]])
 
-    assert ar.to_json() == {
-        "header": "pcvlar",
-        "archive_version": 0,
-        "roots": [0],
-        "data": [("B_test", "420", "a", "1", "b", "2"),
-                 ("float", "3.14"),
-                 ("list", "3"),
-                 ("str", "test")]
-    }
-    deser = InputArchive.from_json(ar.to_json())
+    deser = read_write_test(ar)
     assert Serialization.deserialize(deser) == a
 
 
@@ -152,8 +176,12 @@ def test_data_split():
     Serialization.serialize(a, ar)
 
     assert ar.to_text() == f"pcvlar 0 1 0 {A.class_tag} {A.class_version} 2 a 1 _b 2 float 3.14 int 2"
+    assert ar.to_json() == make_json_repr([0],
+                                          [[A.class_tag, (A.class_version, [("a", 1), ("_b", 2)])],
+                                           ["float", 3.14],
+                                           ["int", 2]])
 
-    deser = InputArchive.from_text(ar.to_text())
+    deser = read_write_test(ar)
     assert Serialization.deserialize(deser) == a
 
     # Now, suppose we have the serialization from version 0
@@ -161,6 +189,13 @@ def test_data_split():
     deser = InputArchive.from_text(old_serialized)
     assert Serialization.deserialize(deser) == a
 
+    # Same with the json serialization from version 0
+    old_serialized = make_json_repr([0],
+                                    [[A.class_tag, (0, [("a", 1), ("b", 2)])],
+                                     ["float", 3.14],
+                                     ["int", 3]])
+    deser = InputArchive.from_json(old_serialized)
+    assert Serialization.deserialize(deser) == a
 
     # Now, we can do the same by giving everything externally
     class B:
@@ -194,13 +229,26 @@ def test_data_split():
     Serialization.serialize(a, ar)
 
     assert ar.to_text() == f"pcvlar 0 1 0 {B_tag} 1 2 a 1 _b 2 float 3.14 int 2"
+    assert ar.to_json() == make_json_repr([0],
+                                          [[B_tag, (1, [("a", 1), ("_b", 2)])],
+                                           ["float", 3.14],
+                                           ["int", 2]]
+                                          )
 
-    deser = InputArchive.from_text(ar.to_text())
+    deser = read_write_test(ar)
     assert Serialization.deserialize(deser) == a
 
     # Now, suppose we have the serialization from version 0
     old_serialized = f"pcvlar 0 1 0 {B_tag} 0 2 a 1 b 2 float 3.14 int 3"
     deser = InputArchive.from_text(old_serialized)
+    assert Serialization.deserialize(deser) == a
+
+    old_serialized = make_json_repr([0],
+                                    [[B_tag, (0, [("a", 1), ("b", 2)])],
+                                     ["float", 3.14],
+                                     ["int", 3]]
+                                    )
+    deser = InputArchive.from_json(old_serialized)
     assert Serialization.deserialize(deser) == a
 
 
@@ -237,8 +285,10 @@ def test_class():
     Serialization.serialize(a, ar)
 
     assert ar.to_text() == f"pcvlar 0 1 0 {A.class_tag} 4 test"
+    assert ar.to_json() == make_json_repr([0],
+                                          [[A.class_tag, "test"]])
 
-    deser = InputArchive.from_text(ar.to_text())
+    deser = read_write_test(ar, do_json_load=True)
     assert Serialization.deserialize(deser) == a
 
     # Again, everything can be externally given
@@ -260,6 +310,8 @@ def test_class():
     ar = OutputArchive()
     Serialization.serialize(a, ar)
     assert ar.to_text() == f"pcvlar 0 1 0 B_class 6 test b"
+    assert ar.to_json() == make_json_repr([0],
+                                          [["B_class", "test b"]])
 
-    deser = InputArchive.from_text(ar.to_text())
+    deser = read_write_test(ar, do_json_load=True)
     assert Serialization.deserialize(deser) == a

@@ -122,7 +122,7 @@ class OutputArchive(Archive):
         self.memo.extend( [ self.NoValue ] * (len(self.ids) - len(self.memo)) )
 
     # To storable object
-    def to_json(self) -> dict:
+    def to_json(self) -> dict[str, Any]:
         """
         :return: A dict representation of the archive, that can be converted to str using json.dumps
         """
@@ -133,7 +133,7 @@ class OutputArchive(Archive):
         objects = []
         for entry in self.memo:
             tag, desc = entry
-            objects.append((tag, *desc.to_txt_list()))
+            objects.append([tag, desc.to_json()])
 
         res["data"] = objects
 
@@ -228,10 +228,9 @@ class InputArchive(Archive):
         self.roots = json_obj["roots"]
         self.memo = []
 
-        for tag, *desc_str in json_obj["data"]:
+        for tag, data in json_obj["data"]:
             t = ClassRegistry.get_by_tag(tag)
-            buffers = [StringBuffer(desc) for desc in desc_str]
-            desc = t.descriptor_type.from_txt_list(buffers)
+            desc = t.descriptor_type.from_json(data)
             self.memo.append( (tag, desc) )
 
         self.created = [ self.NoValue ] * len(self.memo)

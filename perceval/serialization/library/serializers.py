@@ -33,7 +33,7 @@ from typing import Type, Generic
 from .abstract_serializer import ASerializer, T, DescriptorType, PreRecorder, ClassWriter, DataReader, ClassReader
 from .archive import InputArchive, OutputArchive
 from .descriptors import PartialRecord, DescriptorClass, DescriptorNone, DescriptorBool, DescriptorInteger, \
-    DescriptorFloat, DescriptorComplex, DescriptorString, DescriptorList, DescriptorBinary
+    DescriptorFloat, DescriptorComplex, DescriptorString, DescriptorList, DescriptorBinary, DescriptorDict
 from .class_registry import ClassRegistry
 
 
@@ -116,27 +116,21 @@ class SerializerList(ASerializer):
 class SerializerDict(ASerializer):
     type = dict
     class_tag = 'dict'
-    descriptor_type = DescriptorList
+    descriptor_type = DescriptorDict
 
     def write(self, obj: dict, ar: OutputArchive) -> PartialRecord:
-        keys_then_values = list(obj.keys()) + list(obj.values())
+        key_values = [item for pair in obj.items() for item in pair]  # Order key0, value0, key1, value1...
 
-        ar.pre_record(keys_then_values)
+        ar.pre_record(key_values)
 
-        return DescriptorList([ar.get_index(c) for c in keys_then_values]), keys_then_values
+        return DescriptorDict({ar.get_index(key): ar.get_index(val) for key, val in obj.items()}), key_values
 
-    def read(self, ar: InputArchive, desc: DescriptorList, pre_recorder: PreRecorder) -> dict:
+    def read(self, ar: InputArchive, desc: DescriptorDict, pre_recorder: PreRecorder) -> dict:
         obj = self.type()  # Allows inheriting from this class, as long as the type acts as a dict
         # first record empty dict so children can point to it
         pre_recorder(obj)
 
-        size = len(desc.value)
-        if size % 2 == 1:
-            raise RuntimeError(f"total count of keys+values is {size}")
-        keys = desc.value[:size//2]
-        values = desc.value[size//2:]
-
-        for k, v in zip(keys, values):
+        for k, v in desc.value.items():
             obj[ar.create(k)] = ar.create(v)
 
         return obj
