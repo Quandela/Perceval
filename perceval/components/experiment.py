@@ -78,7 +78,7 @@ class Experiment:
     _no_copiable_attributes = { '_noise_changed_observers' }
 
     def __init__(self, m_circuit: int | ACircuit = None, noise: NoiseModel = None, name: str = "Experiment"):
-        self._input_state = None
+        self._input_state: FockState | AnnotatedFockState | SVDistribution | None = None
         self.name: str = name
 
         self._min_detected_photons_filter: int | None = None
