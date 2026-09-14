@@ -44,11 +44,18 @@ def deserialize_state_list(states):
     return [deserialize_state(s) for s in state_list]
 
 
+def simplify_float(value: float) -> float | int:
+    int_v = int(value)
+    if value == int_v:
+        return int_v
+    return value
+
+
 def serialize_statevector(sv: StateVector) -> str:
     sv.normalize()
     ls = []
     for key, value in sv:
-        ls.append(f"({value.real},{value.imag})*{key}")
+        ls.append(f"({simplify_float(value.real)},{simplify_float(value.imag)})*{key}")
     return "+".join(ls)
 
 
@@ -77,13 +84,13 @@ def serialize_bssamples(bss: BSSamples) -> str:
 
 def serialize_svdistribution(dist: SVDistribution) -> str:
     return "{" \
-        + ";".join(f"{serialize_statevector(state)}={prob}"
+        + ";".join(f"{serialize_statevector(state)}={simplify_float(prob)}"
                    for state, prob in dist.items()) \
         + "}"
 
 def serialize_bsdistribution(dist: BSDistribution) -> str:
     return "{" \
-        + ";".join(f"{serialize_state(state)}={probability}"
+        + ";".join(f"{serialize_state(state)}={simplify_float(probability)}"
                    for state, probability in dist.items()) \
         + "}"
 
