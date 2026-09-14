@@ -27,7 +27,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from perceval.utils.states import BasicState, StateVector, BSSamples, SVDistribution, BSCount, BSDistribution
-from perceval.utils import simple_float
 from ast import literal_eval
 import re
 
@@ -49,9 +48,7 @@ def serialize_statevector(sv: StateVector) -> str:
     sv.normalize()
     ls = []
     for key, value in sv:
-        real = simple_float(value.real, nsimplify=False)[1]
-        imag = simple_float(value.imag, nsimplify=False)[1]
-        ls.append("(%s,%s)*%s" % (real, imag, str(key)))
+        ls.append(f"({value.real},{value.imag})*{key}")
     return "+".join(ls)
 
 
@@ -59,7 +56,7 @@ def deserialize_statevector(s) -> StateVector:
     sv = StateVector()
     for c in s.split("+"):
         m = re.match(r"\((.*),(.*)\)\*(.*)$", c)
-        assert m, "invalid state vector serialization: %s" % s
+        assert m, f"invalid state vector serialization: {s}"
         sv += BasicState(m.group(3)) * (float(m.group(1)) + 1j * float(m.group(2)))
     return sv
 
@@ -80,13 +77,13 @@ def serialize_bssamples(bss: BSSamples) -> str:
 
 def serialize_svdistribution(dist: SVDistribution) -> str:
     return "{" \
-        + ";".join(f"{serialize_statevector(state)}={simple_float(prob, nsimplify=False)[1]}"
+        + ";".join(f"{serialize_statevector(state)}={prob}"
                    for state, prob in dist.items()) \
         + "}"
 
 def serialize_bsdistribution(dist: BSDistribution) -> str:
     return "{" \
-        + ";".join(f"{serialize_state(state)}={simple_float(probability, nsimplify=False)[1]}"
+        + ";".join(f"{serialize_state(state)}={probability}"
                    for state, probability in dist.items()) \
         + "}"
 
