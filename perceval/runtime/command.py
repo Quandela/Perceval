@@ -102,6 +102,14 @@ class Command:
         s += ")"
         return s
 
+    def __eq__(self, other):
+        if not isinstance(other, Command):
+            return NotImplemented
+        return self.name == other.name and self.signature == other.signature and self.apply_emt == other.apply_emt
+
+    def __hash__(self):
+        return hash((self.name, tuple(self.signature), self.apply_emt))
+
 
 class CommandFactoryClass:
 

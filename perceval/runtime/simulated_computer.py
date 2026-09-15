@@ -86,6 +86,18 @@ class SimulatedComputer(LocalComputer):
             noise = NoiseModel()
         self._noise = noise
 
+    @property
+    def specs(self) -> PlatformSpecs:
+        sp = super().specs
+        accepted_state_kinds = ["FS", "NFS", "SVD"]
+        if isinstance(self._backend, AStrongSimulationBackend):
+            accepted_state_kinds += ["AFS", "SV"]
+
+        sp.constraints = {
+            "accepted_state_kinds": accepted_state_kinds
+        }
+        return sp
+
     def _get_imperfections(self, computation: Computation | ComputationIterator) -> Imperfections:
         experiment = computation.experiment
         return Imperfections(experiment.noise or self.noise, computation.experiment.detectors)

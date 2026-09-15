@@ -43,5 +43,6 @@ from .execution import Execution
 from .execution_factory import ExecutionFactory
 from .execution_group import ExecutionGroup
 from .platform_specs import PlatformSpecs
+from .contraint_checker import ConstraintChecker
 
 from .legacy import *
