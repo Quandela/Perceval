@@ -31,6 +31,7 @@ import time
 from copy import deepcopy, copy
 from typing import Callable, Any
 
+from .contraint_checker import ConstraintChecker
 from .check_cancel import call_and_check_cancel
 from .communication_layer import CommunicationLayer, RemoteId
 from .computation import Computation
@@ -43,7 +44,7 @@ from .simulated_computer import SimulatedComputer
 from .async_getter import AsyncGetter
 from .payload_generator import PayloadGenerator
 
-from perceval.utils import perf_dict_to_noise, ProgressCallback, NoiseModel, PostSelect, ContextManager, FockState, BasicState
+from perceval.utils import perf_dict_to_noise, ProgressCallback, NoiseModel, PostSelect, ContextManager
 from perceval.utils.logging import channel, get_logger
 from perceval.components import PortLocation, Experiment, update_detectors_from_perfs
 from perceval.serialization import Serialization, InputArchive
@@ -182,59 +183,8 @@ class RemoteComputer(AComputer):
                              " Use the method experiment.min_detected_photons_filter(value).")
 
     def check_experiment(self, experiment: Experiment) -> None:
-        input_state = experiment.input_state
-        if input_state is None:
-            raise ValueError("The experiment has no input_state (call `with_input()`)")
-
         self.check_min_detected_photons_filter(experiment)
-
-        constraints = self.specs.constraints
-        if constraints:
-            # Checks on state
-            if not constraints.get("support_any_state_kind", False):
-                # Transmit the supported types directly? Do we check here that there is no superposition for sim:clifford or on the cloud?
-                if not isinstance(input_state, FockState):
-                    raise RuntimeError(f"Unsupported input state type (got {type(input_state).__name__}). "
-                                       f"{self.name} can only handle FockState")
-
-            n_photons = input_state.n if isinstance(input_state, BasicState) else input_state.n_max
-            if 'max_photon_count' in constraints and n_photons > constraints['max_photon_count']:
-                n_heralds = sum(experiment.in_heralds.values())
-                raise RuntimeError(
-                    f"Too many photons in input state ({n_photons - n_heralds} + {n_heralds} heralds > {constraints['max_photon_count']})")
-            if 'min_photon_count' in constraints and n_photons < constraints['min_photon_count']:
-                raise RuntimeError(
-                    f"Not enough photons in input state ({n_photons} < {constraints['min_photon_count']})")
-            if 'support_multi_photon' in constraints and not constraints['support_multi_photon']:
-                if isinstance(input_state, BasicState):
-                    if not all(mode_photon_cnt <= 1 for mode_photon_cnt in input_state):
-                        raise RuntimeError(f"Input state ({input_state}) is not permitted."
-                                           " QPU/QPU simulators doesn't accept more than 1 photon per mode")
-                else:
-                    # SVD
-                    for sv in input_state.keys():
-                        for state in sv.keys():
-                            if not all(mode_photon_cnt <= 1 for mode_photon_cnt in state):
-                                raise RuntimeError(f"Input state ({state}) is not permitted."
-                                                   " QPU/QPU simulators doesn't accept more than 1 photon per mode")
-
-            # Checks on circuit
-            m = experiment.circuit_size
-            if 'max_mode_count' in constraints and m > constraints['max_mode_count']:
-                raise RuntimeError(f"Circuit too big ({m} modes > {constraints['max_mode_count']})")
-            if 'min_mode_count' in constraints and m < constraints['min_mode_count']:
-                raise RuntimeError(f"Circuit too small ({m} < {constraints['min_mode_count']})")
-
-        # TODO: Check that the component matches what the platform can do
-        # if new_component is not None:
-        #     if isinstance(new_component, Experiment):
-        #         if not new_component.is_unitary:
-        #             raise RuntimeError('Cannot compose a RemoteProcessor with a processor containing non linear components')
-        #         if new_component.has_feedforward:
-        #             raise RuntimeError('Cannot compose a RemoteProcessor with a processor containing feed-forward')
-        #
-        #     elif not isinstance(new_component, IDetector) and not isinstance(new_component, ACircuit):
-        #         raise NotImplementedError("Non linear components not implemented for RemoteProcessors")
+        ConstraintChecker.verify_experiment(self.specs.constraints, experiment)
 
     def _handle_iterator(self, comp: Computation | ComputationIterator, out: dict | None)\
             -> tuple[dict, Callable[[dict], None]]:
