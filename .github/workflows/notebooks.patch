@@ -1,6 +1,6 @@
 --- a/docs/source/notebooks/BS-based_implementation.ipynb
 +++ b/docs/source/notebooks/BS-based_implementation.ipynb
-@@ -85,13 +85,13 @@
+@@ -85,14 +85,14 @@
     "metadata": {},
     "outputs": [],
     "source": [
@@ -20,7 +20,7 @@
     ]
 --- a/docs/source/notebooks/Boson_sampling.ipynb
 +++ b/docs/source/notebooks/Boson_sampling.ipynb
-@@ -54,9 +54,9 @@
+@@ -53,9 +53,9 @@
     "metadata": {},
     "outputs": [],
     "source": [
@@ -33,6 +33,25 @@
     ]
    },
    {
+--- a/docs/source/notebooks/Error_Mitigation_Tutorial.ipynb
++++ b/docs/source/notebooks/Error_Mitigation_Tutorial.ipynb
+@@ -35,6 +35,7 @@
+    "metadata": {},
+    "outputs": [],
+    "source": [
++    "import os\n",
+     "from perceval import (Experiment, BS, FockState, pdisplay, SimulatedComputer, NoiseModel, RemoteComputer,\n",
+     "                      ExecutionFactory,\n",
+     "                      Detector, MitigationFactory, MitigationLevel, DetectorBalancing, DistinguishablePhotonMitigation,\n",
+@@ -524,7 +525,7 @@
+     }
+    ],
+    "source": [
+-    "comp = RemoteComputer(QuandelaCommunicationLayer(\"qpu:belenos\"))\n",
++    "comp = RemoteComputer(QuandelaCommunicationLayer(\"sim:slos\", os.environ.get(\"CLOUD_TOKEN\")))\n",
+     "\n",
+     "print(comp.specs.default_mitigations)"
+    ]
 --- a/docs/source/notebooks/Gedik_qudit.ipynb
 +++ b/docs/source/notebooks/Gedik_qudit.ipynb
 @@ -48,6 +48,7 @@
@@ -43,17 +62,17 @@
      "import numpy as np\n",
      "import matplotlib.pyplot as plt\n",
      "import perceval as pcvl\n",
-@@ -404,8 +405,8 @@
+@@ -393,8 +394,8 @@
     "outputs": [],
     "source": [
-     "# Save your token and proxies into Perceval persistent data, you only need to do it once.\n",
+     "# Save your token and proxies into Perceval persistent data; you only need to do it once.\n",
 -    "pcvl.RemoteConfig.set_token(\"MY_TOKEN\")\n",
 -    "pcvl.RemoteConfig.set_proxies({\"https\": \"socks5h://USER:PASSWORD@HOST:PORT\"})\n",
 +    "pcvl.RemoteConfig.set_token(os.environ.get(\"CLOUD_TOKEN\"))\n",
 +    "pcvl.RemoteConfig.set_proxies({})\n",
      "pcvl.RemoteConfig().save()\n",
      "\n",
-     "remote_pr = pcvl.RemoteProcessor(\"sim:belenos\")"
+     "communication_layer = pcvl.QuandelaCommunicationLayer(\"sim:belenos\")\n",
 --- a/docs/source/notebooks/Remote_Computation_Tutorial.ipynb
 +++ b/docs/source/notebooks/Remote_Computation_Tutorial.ipynb
 @@ -37,6 +37,7 @@
@@ -64,19 +83,19 @@
      "from pprint import pprint\n",
      "from tqdm.notebook import tqdm\n",
      "\n",
-@@ -82,7 +83,7 @@
-     "# - The 2nd parameter is an authentication token to the Cloud provider we're using (by default, the Quandela Cloud).\n",
-     "#    Let's assume we have a valid token, for now. We'll see how to generate one, later on, in this tutorial.\n",
-     "# - Noise parameters can still be set\n",
--    "processor = RemoteProcessor(\"sim:slos\", \"a valid authentication token\", noise=noise_model)\n",
-+    "processor = RemoteProcessor(\"sim:slos\", os.environ.get(\"CLOUD_TOKEN\"), noise=noise_model)\n",
-     "processor.add(0, circuit)  # Add the circuit to the remote processor\n",
+@@ -84,7 +85,7 @@
+     "#   - The 2nd parameter is an authentication token to the Cloud provider we're using (by default, the Quandela Cloud).\n",
+     "#      Let's assume we have a valid token, for now. We'll see how to generate one, later on, in this tutorial.\n",
+     "# - Noise parameters can still be set, since this is a simulation platform\n",
+-    "computer = RemoteComputer(QuandelaCommunicationLayer(\"sim:slos\", \"a valid authentication token\"))\n",
++    "computer = RemoteComputer(QuandelaCommunicationLayer(\"sim:slos\", os.environ.get(\"CLOUD_TOKEN\")))\n",
+     "computer.noise = noise_model\n",
      "\n",
-     "# Starting from here, Processor and RemoteProcessor are fully interchangeable\n",
-@@ -130,9 +131,9 @@
+     "# Starting from here, SimulatedComputer and RemoteComputer are fully interchangeable\n",
+@@ -145,9 +146,9 @@
      "# You only need to do this once per machine, data will be shared among different Perceval installs on the same machine.\n",
      "# If your token changes, you'll need to redo this step once.\n",
-     "remote_config = RemoteConfig()\n",
+     "remote_config = RemoteConfig()  # The RemoteConfig is for the Quandela Provider\n",
 -    "remote_config.set_token(\"MY_TOKEN\")\n",
 +    "remote_config.set_token(os.environ.get(\"CLOUD_TOKEN\"))\n",
      "remote_config.set_url(\"https://api.cloud.quandela.com\") # Optional, by default the url is https://api.cloud.quandela.com\n",
