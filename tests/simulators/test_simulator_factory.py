@@ -122,7 +122,13 @@ def test_create_simulator_with_slos_mpi():
     assert isinstance(simu._backend, SLOSMPIBackend)
 
     results = simu.probs(BasicState("|1,0>"))
-    assert np.isclose(sum(results.values()), 1)
+    from mpi4py import MPI
+    assert simu._backend.process_count == MPI.COMM_WORLD.size
+    assert simu._backend.rank == MPI.COMM_WORLD.rank
+    if simu._backend.rank == 0:
+        assert np.isclose(sum(results.values()), 1)
+    else:
+        assert len(results) == 0
 
 
 @pytest.mark.skipif(not hasattr(xq, "SLOS_MPI"), reason="Exqalibur was built without MPI support")

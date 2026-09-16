@@ -39,9 +39,9 @@ class SLOSMPIBackend(AStrongSimulationBackend):
     """Rank-local wrapper around Exqalibur's distributed SLOS backend.
 
     Result-producing methods are collective and must be called in the same
-    order on every MPI rank. Amplitude arrays and state vectors contain only
-    the slice owned by the calling rank. Probability distributions are merged
-    across ranks so they satisfy Perceval's backend contract.
+    order on every MPI rank. Exqalibur keeps the calculation distributed, then
+    gathers complete Perceval results on rank 0. Other ranks return empty
+    containers after participating in the same collective calls.
     """
 
     def __init__(self, mask=None):
@@ -79,14 +79,12 @@ class SLOSMPIBackend(AStrongSimulationBackend):
         return abs(self.prob_amplitude(output_state)) ** 2
 
     def prob_distribution(self) -> BSDistribution:
-        local_distribution = [
-            (tuple(state), probability)
-            for state, probability in self._slos.distribution().items()
-        ]
         result = BSDistribution()
-        for rank_distribution in MPI.COMM_WORLD.allgather(local_distribution):
-            for occupations, probability in rank_distribution:
-                result.add(FockState(occupations), probability)
+        # Exqalibur gathers contiguous C++ buffers with MPI_Gatherv.  Only
+        # rank 0 materializes the complete distribution; other ranks return
+        # an empty result while still participating in the collective call.
+        for state, probability in self._slos.gather_distribution(root=0).items():
+            result.add(state, probability)
         return result
 
     def all_prob_ampli(self) -> list[complex]:
@@ -94,12 +92,14 @@ class SLOSMPIBackend(AStrongSimulationBackend):
 
     def all_prob(self, input_state: FockState = None) -> list[float]:
         self._slos.set_input_state(input_state or self._input_state)
-        return self._slos.all_probabilities()
+        return self._slos.gather_probabilities(root=0)
 
     def evolve(self) -> StateVector:
         self._slos.set_input_state(self._input_state)
         result = StateVector()
-        for output_state, amplitude in zip(self._slos.get_states(), self._slos.all_amplitudes()):
+        states = self._slos.gather_states(root=0)
+        amplitudes = self._slos.gather_amplitudes(root=0)
+        for output_state, amplitude in zip(states, amplitudes):
             result += output_state * amplitude
         return result
 
