@@ -46,13 +46,13 @@ def test_payload_basics():
     """test payload basics infos"""
     rp = _get_remote_processor()
     rp.min_detected_photons_filter(4)
-    data = rp.prepare_job_payload(COMMAND_NAME)
-    assert 'platform_name' in data and data['platform_name'] == rp._rpc_handler.name
-    assert 'pcvl_version' in data
-    assert 'process_id' in data
-    assert 'payload' in data
+    cloud_data = rp.prepare_job_payload(COMMAND_NAME)
+    assert 'platform_name' in cloud_data and cloud_data['platform_name'] == rp._rpc_handler.name
+    assert 'pcvl_version' in cloud_data
+    assert 'process_id' in cloud_data
+    assert 'payload' in cloud_data
 
-    payload = data['payload']
+    payload = cloud_data['payload']
     assert 'command' in payload and payload['command'] == COMMAND_NAME
     assert 'experiment' in payload and payload['experiment'].startswith(ZIP_PREFIX)  # Circuits are compressed in payloads
 
@@ -90,25 +90,25 @@ def test_payload_cnot():
 
     rp.min_detected_photons_filter(4)
 
-    data = rp.prepare_job_payload(COMMAND_NAME)
-    assert 'platform_name' in data and data['platform_name'] == rp._rpc_handler.name
-    assert 'pcvl_version' in data
-    assert 'process_id' in data
-    assert 'payload' in data
+    cloud_data = rp.prepare_job_payload(COMMAND_NAME)
+    assert 'platform_name' in cloud_data and cloud_data['platform_name'] == rp._rpc_handler.name
+    assert 'pcvl_version' in cloud_data
+    assert 'process_id' in cloud_data
+    assert 'payload' in cloud_data
 
-    payload = data['payload']
+    payload = cloud_data['payload']
     assert 'command' in payload and payload['command'] == COMMAND_NAME
     assert 'experiment' in payload and payload['experiment'].startswith(
         ZIP_PREFIX)  # Circuits are compressed in payloads
 
 def test_payload_generator():
-    data = PayloadGenerator.generate_payload(COMMAND_NAME)
+    cloud_data = PayloadGenerator.generate_payload(COMMAND_NAME)
 
-    assert 'pcvl_version' in data
-    assert 'process_id' in data
-    assert 'payload' in data
+    assert 'pcvl_version' in cloud_data
+    assert 'process_id' in cloud_data
+    assert 'payload' in cloud_data
 
-    payload = data['payload']
+    payload = cloud_data['payload']
     assert 'command' in payload and payload['command'] == COMMAND_NAME
     assert 'experiment' in payload and payload['experiment'].startswith(ZIP_PREFIX)  # Circuits are compressed in payloads
 

@@ -221,10 +221,10 @@ class KipuRPCHandler:
         # because RemoteJob._to_dict() reads it (job serialization / rerun).
         return {}
 
-    def create_job(self, payload: dict) -> str:
+    def create_job(self, cloud_data: dict) -> str:
         """Submit a Perceval job payload to the Hub. Returns the Hub job id."""
         qhub = _import_qhub()
-        inner = payload.get(KEY_PAYLOAD) or {}
+        inner = cloud_data.get(KEY_PAYLOAD) or {}
         shots = inner.get(KEY_MAX_SHOTS) or inner.get(KEY_MAX_SAMPLES) or 0
 
         input_cls = qhub["input"][self._backend_id]
@@ -236,11 +236,11 @@ class KipuRPCHandler:
             input=input_cls(value=inner),
             input_format="PERCEVAL",
             input_params=params_cls(
-                pcvl_version=payload.get(KEY_VERSION),
-                process_id=payload.get(KEY_PROCESS_ID),
+                pcvl_version=cloud_data.get(KEY_VERSION),
+                process_id=cloud_data.get(KEY_PROCESS_ID),
             ),
             sdk_provider="PERCEVAL",
-            name=payload.get(KEY_JOB_NAME),
+            name=cloud_data.get(KEY_JOB_NAME),
         )
         return job.id
 
