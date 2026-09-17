@@ -164,6 +164,20 @@ class PhotonRecycling(AMitigation, tag="PhotonRecycling"):
 
         return [comp]
 
+    def _get_filtering_parameters(self, computation: Computation, results: list[dict], imperfections: Imperfections):
+        expected_photons = self._ideal_photon_number(computation)
+        post_select = PostSelect()
+        heralds = {}
+        min_photons = 0
+        if expected_photons >= 3:
+            experiment = computation.experiment
+            if experiment.post_select_fn.has_condition or len(experiment.heralds):
+                heralds = experiment.heralds
+                post_select = experiment.post_select_fn
+            if experiment.min_photons_filter is not None and experiment.min_photons_filter > expected_photons - 2:
+                min_photons = experiment.min_photons_filter
+        return heralds, post_select, min_photons
+
     def _parse_results(self, computation: Computation, results: list[dict], imperfections: Imperfections) -> dict:
         ideal_photon_count = self._ideal_photon_number(computation)
         res = results[0]

@@ -28,20 +28,18 @@
 # SOFTWARE.
 from abc import abstractmethod, ABC
 
-from exqalibur import BSCount, BSSamples
-
 from .imperfections import Imperfections
 from ..computation import Computation
 
-from perceval.utils import ConversionHelper, apply_min_photons, apply_post_select, BSDistribution
+from perceval.utils import ConversionHelper, apply_min_photons, apply_post_select, PostSelect
 from perceval.utils.constants import KEY_RESULTS, KEY_GLOBAL_PERF, KEY_PHYSICAL_PERF, KEY_LOGICAL_PERF, KEY_SHOTS_USED
-from perceval.components import Experiment
 
 
 class AMitigation(ABC):
 
     APPLY_MIN_PHOTONS = True  # By default, avoid any accident at the cost of performance
-    APPLY_LOGICAL_SELECTION = True
+    APPLY_LOGICAL_SELECTION = True  # /!\ Apply this only when the heralds and postselection are removed
+                                    # - conditional removal should involve subclassing _get_filtering_parameters()
     KNOWN_MITIGATIONS = []
     _TAG: str
 
@@ -75,6 +73,21 @@ class AMitigation(ABC):
         """
         pass
 
+    def _get_filtering_parameters(self, computation: Computation, results: list[dict], imperfections: Imperfections) \
+            -> tuple[dict[int, int], PostSelect, int]:
+        """
+        Return the heralds, post_select, and min_photons values to apply to the parsed results of this mitigation.
+        They should be non-empty or non-null iif they were modified by this layer extend_computation().
+
+        :param computation: The computation asked by the upper layer
+        :param results: The results for the list of computations obtained through extend_computation()
+        :param imperfections: Collection of data that will be useful for the mitigations (Noise model, detector descriptions, ...)
+        :return: The mitigated result, matching the expectations of computation
+        """
+        return (computation.experiment.heralds if self.APPLY_LOGICAL_SELECTION else {},
+                computation.experiment.post_select_fn if self.APPLY_LOGICAL_SELECTION else PostSelect(),
+                (computation.experiment.min_photons_filter or 0) if self.APPLY_MIN_PHOTONS else 0)
+
     def parse_results(self, computation: Computation, results: list[dict], imperfections: Imperfections) -> dict:
         """
         Parses the results obtained from an iterator obtained through extend_computation().
@@ -85,7 +98,9 @@ class AMitigation(ABC):
         """
         result = self._parse_results(computation, results, imperfections)
 
-        res, physical_perf, logical_perf = self._apply_filtering(computation.experiment, result[KEY_RESULTS])
+        heralds, post_select, min_photons = self._get_filtering_parameters(computation, results, imperfections)
+        res, physical_perf = apply_min_photons(result[KEY_RESULTS], min_photons)
+        res, logical_perf = apply_post_select(res, post_select, heralds, False)
 
         res = ConversionHelper.convert_to(computation.command.name, res, **computation.parameters)
         result[KEY_RESULTS] = res
@@ -107,17 +122,3 @@ class AMitigation(ABC):
             result[KEY_SHOTS_USED] = shots_used
 
         return result
-
-    def _apply_filtering(self, experiment: Experiment, result: BSDistribution | BSCount | BSSamples) -> tuple[BSDistribution | BSCount | BSSamples, float, float]:
-        if self.APPLY_MIN_PHOTONS:
-            min_photons = experiment.min_photons_filter or 0
-            result, physical_perf = apply_min_photons(result, min_photons)
-        else:
-            physical_perf = 1.
-
-        if self.APPLY_LOGICAL_SELECTION:
-            result, logical_perf = apply_post_select(result, experiment.post_select_fn, experiment.heralds, False)
-        else:
-            logical_perf = 1.
-
-        return result, physical_perf, logical_perf

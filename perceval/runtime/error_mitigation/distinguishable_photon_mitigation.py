@@ -31,7 +31,7 @@ import math
 from copy import copy, deepcopy
 
 from perceval.components import DetectionType, get_detection_type
-from perceval.utils import BSDistribution, FockState, NoiseModel, get_logger
+from perceval.utils import BSDistribution, FockState, NoiseModel, get_logger, PostSelect
 from perceval.utils.constants import KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_RESULTS
 from perceval.serialization import Serialization
 
@@ -90,6 +90,8 @@ class DistinguishablePhotonMitigation(AMitigation, tag="DistinguishablePhoton"):
         input_state = self._validate_input_state(input_state)
 
         resolved_order = self._resolve_order(input_state.n)
+        if resolved_order == 0:
+            return [computation]
 
         # Note: We need the extension to be deterministic
         new_input_states = generate_obb_states(input_state, resolved_order)
@@ -118,6 +120,12 @@ class DistinguishablePhotonMitigation(AMitigation, tag="DistinguishablePhoton"):
             sub_computations.append(comp)
 
         return sub_computations
+
+    def _get_filtering_parameters(self, computation: Computation, results: list[dict], imperfections: Imperfections):
+        if len(results) == 1:
+            # Order = 0 or no g2 and indistinguishability - Computation was returned as is
+            return {}, PostSelect(), 0
+        return super()._get_filtering_parameters(computation, results, imperfections)
 
     def _parse_results(
         self,
