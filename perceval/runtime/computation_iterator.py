@@ -36,7 +36,7 @@ from .computation import Computation
 from perceval.utils import BasicState, PostSelect
 from perceval.utils.constants import KEY_SHOTS_USED, KEY_RESULTS_LIST, KEY_ITERATION
 from perceval.components import Experiment
-from perceval.serialization import register_to_serialization
+from perceval.serialization import Serialization
 
 
 class ComputationIterator:
@@ -107,15 +107,15 @@ class ComputationIterator:
                     assert isinstance(param_value, Number), \
                         f"Iteration: circuit parameters have to be numerical values (got {param_value})"
                     assert param_name in self.experiment.get_circuit_parameters(), \
-                        f"Iteration: circuit parameter {param_name} does not exist in processor"
+                        f"Iteration: circuit parameter {param_name} does not exist in experiment"
             elif key == 'input_state':
                 assert val.m == self.experiment.m, \
-                    f"Iteration: input state and processor size mismatch (processor size is {self.experiment.m})"
+                    f"Iteration: input state and experiment size mismatch (experiment size is {self.experiment.m})"
                 self.experiment.check_input(iter_params['input_state'])
 
     def add_iteration(self, **kwargs):
         """
-        Add a single iteration to future jobs.
+        Add a single iteration to future executions.
 
         :param kwargs: List of accepted keywords:
 
@@ -159,6 +159,15 @@ class ComputationIterator:
             except AttributeError:
                 raise KeyError(f"Received unknown iteration key: {key}")
         return computation
+
+    def add_params(self, *args, **kwargs) -> None:
+        """
+        Adds or replace parameters of the common computation with the given values, following the signature given by the command
+
+        :param args: The user given positional arguments
+        :param kwargs: The user given keyword arguments
+        """
+        self.base_computation.add_params(*args, **kwargs)
 
     def validate(self) -> bool:
         # Already done by the _check_iteration at construction for other computations
@@ -212,4 +221,4 @@ class ComputationIterator:
     def _set_compilation_seed(compilation_seed: int, computation: Computation):
         computation.add_params(compilation_seed = compilation_seed)
 
-register_to_serialization(ComputationIterator, default_compress=True)
+Serialization.register_class(ComputationIterator, ["base_computation", "_iterations"])

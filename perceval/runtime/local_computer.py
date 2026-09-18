@@ -28,27 +28,29 @@
 # SOFTWARE.
 
 from abc import ABC
+from copy import deepcopy
 from threading import Thread
 from typing import Callable, Any
 
 from perceval.utils import ProgressCallback, parse_signature
+from perceval.utils.constants import PERFS_KEY
 from perceval.components import Experiment
 
-from .job_status import RunningStatus
-from .abstract_computer import AbstractComputer
+from .execution_status import RunningStatus
+from .abstract_computer import AComputer
 from .computation import Computation
 from .async_getter import AsyncGetter
 from .command import Command
 
 
-class _ThreadedExecution(AsyncGetter):
+class _ThreadedGetter(AsyncGetter):
     """Async execution for local computer - Private class"""
 
     def __init__(self, method: Callable, args: tuple=(), kwargs: dict = None):
         super().__init__()
+        self._results = None
         self._thread = Thread(target=self._encapsulate(method), args=args, kwargs=kwargs)
         self._canceled = False
-        self._user_callback: ProgressCallback | None = None  # Do we want to pass a user callback if this is async ?
         self._thread.start()
 
     def _update_status(self) -> None:
@@ -96,15 +98,16 @@ class _ThreadedExecution(AsyncGetter):
         self._status.update_progress(progress, message)
         if self._canceled:
             return True
-        if self._user_callback is not None:
-            return self._user_callback(progress, message)
         return self._canceled
 
     def is_complete(self) -> bool:
         return not self._thread.is_alive()
 
+    def get_details(self) -> str:
+        return f"Local: {{status: {self._status.status.name}}}"
 
-class LocalComputer(AbstractComputer, ABC):
+
+class LocalComputer(AComputer, ABC):
     """An abstract computer for local computer. Must implement at least "probs", "sample_count", and "samples" methods."""
 
     def __init__(self):
@@ -150,9 +153,19 @@ class LocalComputer(AbstractComputer, ABC):
             else:
                 raise e
 
-    def _execute_command_async(self, computation: Computation) -> _ThreadedExecution:
-        return _ThreadedExecution(self._execute_single, args=(computation,))
+    def _execute_command_async(self, computation: Computation) -> _ThreadedGetter:
+        # Copy so external changes won't interfere
+        return _ThreadedGetter(deepcopy(self)._execute_single, args=(computation,))
 
     @property
     def is_remote(self) -> bool:
         return False
+
+    @property
+    def details(self) -> dict[str, Any]:
+        return {
+            "status": self.status,
+            "specs": self.specs,
+            "type": self.type.name.lower(),
+            PERFS_KEY: self.performance,
+        }

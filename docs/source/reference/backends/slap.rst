@@ -10,7 +10,7 @@ so this backend is more memory efficient, with the downside of being slower when
 (for instance with relatively few photons :math:`n < 10`).
 If only a few output states are needed, other backends like :ref:`NaiveBackend` are more suited.
 
-This backend is available in :ref:`Processor` by using the name :code:`"SLAP"`.
+This backend is available in :ref:`SimulatedComputer` by using the name :code:`"SLAP"`.
 
 >>> import perceval as pcvl
 >>> c = pcvl.Unitary(pcvl.Matrix.random_unitary(4))

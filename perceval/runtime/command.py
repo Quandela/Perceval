@@ -30,7 +30,7 @@
 from typing import Any
 
 from perceval.utils.constants import KEY_MAX_SAMPLES, KEY_MAX_SHOTS
-from perceval.serialization import register_to_serialization
+from perceval.serialization import Serialization
 
 
 class Command:
@@ -44,14 +44,14 @@ class Command:
         # Signature is essentially a dict, but the ordering is important
         # Even though python preserves dict order, we prefer not to rely on it
         self.name = name
-        self.signature = signature  # Does a type serialize well? If not, better removing it and delay the check to the execution
+        self.signature = signature
         self.apply_emt = apply_emt
 
     def check(self, parameters: dict[str, Any]):
         """
         Checks if the parameters are valid
 
-        :param parameters: The final parameters that will be given as **kwargs in the command
+        :param parameters: The final parameters that will be given as :attr:`**kwargs` in the command
         """
         for name, t, mandatory in self.signature:
             if name not in parameters and mandatory:
@@ -62,7 +62,7 @@ class Command:
         :param args: The user given positional arguments
         :param kwargs: The user given keyword arguments
         :raises TypeError: If arguments do not match signature
-        :return: A dictionary to use as **kwargs in the final command, compatible with the signature
+        :return: A dictionary to use as :attr:`**kwargs` in the final command, compatible with the signature
         """
         res = dict()
 
@@ -102,6 +102,14 @@ class Command:
         s += ")"
         return s
 
+    def __eq__(self, other):
+        if not isinstance(other, Command):
+            return NotImplemented
+        return self.name == other.name and self.signature == other.signature and self.apply_emt == other.apply_emt
+
+    def __hash__(self):
+        return hash((self.name, tuple(self.signature), self.apply_emt))
+
 
 class CommandFactoryClass:
 
@@ -117,4 +125,4 @@ class CommandFactoryClass:
 CommandFactory = CommandFactoryClass()
 
 
-register_to_serialization(Command)
+Serialization.register_class(Command, ["name", "signature", "apply_emt"])

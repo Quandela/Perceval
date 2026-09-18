@@ -1,7 +1,7 @@
 conversion
 ^^^^^^^^^^
 
-Perceval provides helper methods to convert the three types of results of the :ref:`Sampler`
+Perceval provides helper methods to convert the three types of results of the :ref:`Computer` standard commands
 (namely the :ref:`Basic State Distribution`, :ref:`BSCount` and :ref:`BSSamples`) into each other.
 
 >>> import perceval as pcvl

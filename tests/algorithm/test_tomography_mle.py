@@ -29,6 +29,8 @@
 
 import pytest
 import numpy as np
+
+from perceval import SimulatedComputer, Experiment
 from perceval.components import catalog, BS
 from perceval.algorithm import ProcessTomographyMLE, StateTomographyMLE
 from perceval.algorithm.tomography.tomography_utils import process_fidelity, is_physical
@@ -41,9 +43,9 @@ GHZ_TARGET = np.zeros((8, 8))
 GHZ_TARGET[0, 0], GHZ_TARGET[0, -1], GHZ_TARGET[-1, 0], GHZ_TARGET[-1, -1] = 1, 1, 1, 1
 GHZ_TARGET /= 2
 
-def fidelity_op_mle_process_tomography(op_proc):
+def fidelity_op_mle_process_tomography(experiment):
     # create mle process tomography object
-    qpt_mle = ProcessTomographyMLE(operator_processor=op_proc)
+    qpt_mle = ProcessTomographyMLE(SimulatedComputer("SLOS"), experiment)
     chi_op = qpt_mle.chi_matrix()
 
     chi_op_ideal = qpt_mle.chi_target(CNOT_TARGET)
@@ -54,7 +56,7 @@ def fidelity_op_mle_process_tomography(op_proc):
 
 @pytest.mark.long_test
 def test_fidelity_heralded_cnot():
-    cnot_p = Processor("SLOS", catalog["heralded cnot"].build_experiment())
+    cnot_p = catalog["heralded cnot"].build_experiment()
     cnot_fidelity_mle = fidelity_op_mle_process_tomography(cnot_p)
 
     assert cnot_fidelity_mle == pytest.approx(1)
@@ -63,12 +65,12 @@ def test_fidelity_heralded_cnot():
 def test_ghz_state_tomography_mle():
     h_cnot_circ = catalog["klm cnot"].build_experiment()
 
-    ghz_state_proc = Processor("SLOS", 6)
+    ghz_state_proc = Experiment(6)
     ghz_state_proc.add(0, BS.H())
     ghz_state_proc.add(0, h_cnot_circ)
     ghz_state_proc.add(2, h_cnot_circ)
 
-    s_mle = StateTomographyMLE(ghz_state_proc)
+    s_mle = StateTomographyMLE(SimulatedComputer("SLOS"), ghz_state_proc)
 
     ghz_state = s_mle.state_tomography_density_matrix()
 
@@ -79,9 +81,9 @@ def test_ghz_state_tomography_mle():
 
 @pytest.mark.long_test
 def test_chi_cnot_from_mle_is_physical():
-    cnot_p = Processor("SLOS", catalog["klm cnot"].build_experiment())
+    cnot_p = catalog["klm cnot"].build_experiment()
 
-    qpt = ProcessTomographyMLE(operator_processor=cnot_p)
+    qpt = ProcessTomographyMLE(SimulatedComputer("SLOS"), cnot_p)
 
     chi_op = qpt.chi_matrix()
     res = is_physical(chi_op, nqubit=2)

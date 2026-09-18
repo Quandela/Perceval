@@ -2,7 +2,7 @@ PersistentData
 ==============
 
 :code:`PersistentData` is a class that allows to save and store data across perceval launches.
-Most importantly, it is used to save :ref:`RemoteConfig`, :ref:`JobGroup`...
+Most importantly, it is used to save :ref:`RemoteConfig`, :ref:`ExecutionGroup`...
 
 .. warning::
   The folder created by :code:`PersistentData` is never emptied automatically.

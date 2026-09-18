@@ -107,15 +107,14 @@ The possible kwargs when displaying a :code:`Circuit` are
 - :code:`nsimplify`. If :code:`True` (default), some values will be displayed with known mathematical values (pi, sqrt, fractions) if close enough
 - :code:`skin`. The skin to use. If none is provided, the skin from the :code:`DisplayConfig` will be used.
 
-Display a Processor
-^^^^^^^^^^^^^^^^^^^
+Display an Experiment
+^^^^^^^^^^^^^^^^^^^^^
 
-Like circuits, :code:`Processor` can also be displayed using :code:`pdisplay`.
-Note that the behaviour is strictly the same for :code:`Experiment` and :code:`RemoteProcessor`.
+Like circuits, :code:`Experiment` can also be displayed using :code:`pdisplay`.
 
-For a :code:`Processor` containing only a circuit, the result is the same as for displaying a :code:`Circuit`.
+For a :code:`Experiment` containing only a circuit, the result is the same as for displaying a :code:`Circuit`.
 
-However, some objects defined in the :code:`Processor` will also be displayed if defined, modifying the look of the results.
+However, some objects defined in the :code:`Experiment` will also be displayed if defined, modifying the look of the results.
 Every object that can be named will display its name near to where it is shown.
 
 We take the same example as before for this demonstration.
@@ -125,10 +124,10 @@ Ports
 
 When defined, ports are represented by encapsulating the mode numbers in rectangles.
 
->>> proc = pcvl.Processor("SLOS", mzi)
->>> proc.add_port(0, pcvl.Port(pcvl.Encoding.DUAL_RAIL, "two modes"), location=pcvl.PortLocation.INPUT)
->>> proc.add_port(0, pcvl.Port(pcvl.Encoding.RAW, "one mode"), location=pcvl.PortLocation.OUTPUT)
->>> pcvl.pdisplay(proc, recursive=True)
+>>> exp = pcvl.Experiment("SLOS", mzi)
+>>> exp.add_port(0, pcvl.Port(pcvl.Encoding.DUAL_RAIL, "two modes"), location=pcvl.PortLocation.INPUT)
+>>> exp.add_port(0, pcvl.Port(pcvl.Encoding.RAW, "one mode"), location=pcvl.PortLocation.OUTPUT)
+>>> pcvl.pdisplay(exp, recursive=True)
 
 .. figure:: ../../_static/img/proc_with_ports.png
   :align: center
@@ -143,11 +142,11 @@ When defined, detectors are displayed at the right of the circuit with different
 - PPNR detectors are represented by a polygon
 - threshold detectors are represented by a triangle
 
->>> proc = pcvl.Processor("SLOS", 3).add(0, mzi)
->>> proc.add(0, pcvl.Detector.pnr())
->>> proc.add(1, pcvl.Detector.ppnr(24))
->>> proc.add(2, pcvl.Detector.threshold())
->>> pcvl.pdisplay(proc, recursive=True)
+>>> exp = pcvl.Experiment("SLOS", 3).add(0, mzi)
+>>> exp.add(0, pcvl.Detector.pnr())
+>>> exp.add(1, pcvl.Detector.ppnr(24))
+>>> exp.add(2, pcvl.Detector.threshold())
+>>> pcvl.pdisplay(exp, recursive=True)
 
 .. figure:: ../../_static/img/proc_with_detectors.png
   :align: center
@@ -165,9 +164,9 @@ When defined, heralds are displayed using half-circles with their value inside t
 Also, they hide a part of the optical path to be as close as possible to the components they are used in.
 The modes numbers on which the heralds are defined are not shown.
 
->>> proc = pcvl.Processor("SLOS", mzi)
->>> proc.with_input(pcvl.BasicState([1, 0]))
->>> pcvl.pdisplay(proc, recursive=True)
+>>> exp = pcvl.Experiment("SLOS", mzi)
+>>> exp.with_input(pcvl.BasicState([1, 0]))
+>>> pcvl.pdisplay(exp, recursive=True)
 
 .. figure:: ../../_static/img/proc_with_herald.png
   :align: center
@@ -179,12 +178,12 @@ Notice that for PNR detectors, the shape doesn't change, but the number of expec
 Input state
 -----------
 
-If possible, the photons of the input state will be displayed at the left of the processor.
-This is globally the case when the input state is a :code:`BasicState`, and the processor is displayed in a SVG format.
+If possible, the photons of the input state will be displayed at the left of the experiment.
+This is globally the case when the input state is a :code:`BasicState`, and the experiment is displayed in a SVG format.
 
->>> proc = pcvl.Processor("SLOS", mzi)
->>> proc.with_input(pcvl.BasicState([1, 0]))
->>> pcvl.pdisplay(proc, recursive=True)
+>>> exp = pcvl.Experiment("SLOS", mzi)
+>>> exp.with_input(pcvl.BasicState([1, 0]))
+>>> pcvl.pdisplay(exp, recursive=True)
 
 .. figure:: ../../_static/img/proc_with_input.png
   :align: center
@@ -330,23 +329,23 @@ The possible kwargs when displaying a tomography algorithm are:
 - :code:`precision`. The numerical precision to display numbers.
 - :code:`render_size`. The size to create the matplotlib figure.
 
-Display a JobGroup
-^^^^^^^^^^^^^^^^^^
+Display an ExecutionGroup
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
-:code:`pdisplay` can be used to represent a :code:`JobGroup`.
-The result is a table showing a resume of the status of the jobs inside the job group.
+:code:`pdisplay` can be used to represent an :code:`ExecutionGroup`.
+The result is a table showing a resume of the status of the executions inside the execution group.
 
->>> jg = pcvl.JobGroup("example")  # Result might change depending on what is in this group
->>> pcvl.pdisplay(jg)
+>>> eg = pcvl.ExecutionGroup("example")  # Result might change depending on what is in this group
+>>> pcvl.pdisplay(eg)
 +--------------+-------+--------------------------------------+
-| Job Category | Count |               Details                |
+|   Category   | Count |               Details                |
 +--------------+-------+--------------------------------------+
 |    Total     |   8   |                                      |
 |   Finished   |   5   | {'successful': 4, 'unsuccessful': 1} |
 |  Unfinished  |   3   |      {'sent': 1, 'not sent': 2}      |
 +--------------+-------+--------------------------------------+
 
-The possible kwargs when displaying a tomography algorithm are:
+The possible kwargs when displaying an execution group are:
 
 - :code:`output_format`. The format to use for the output, from the :code:`Perceval.Format` enum.
   The available formats are TEXT (default), LATEX and HTML.

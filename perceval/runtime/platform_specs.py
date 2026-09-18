@@ -30,6 +30,9 @@
 from typing import Any
 
 from .command import Command, CommandFactory
+from .error_mitigation import AMitigation
+from perceval.serialization import Serialization, serialize, OutputArchive
+from perceval.serialization.library.serializers import SerializerDict
 from perceval.utils import FockState, deprecated, ProcessorType
 from perceval.utils.logging import channel, get_logger
 from perceval.components import Experiment, ACircuit, Detector
@@ -39,15 +42,15 @@ DEFAULT_MIN_VERSION = "0.10.0"
 
 class PlatformSpecs(dict):
     """
-    This class represents the specs of any RemoteProcessor.
+    This class represents the specs of any RemoteComputer.
     It guarantees that some common fields exist by giving some default values.
 
     Common fields are accessible through properties, and should be accessed through them.
-    If a given common field is not filled by the processor, it will return None or a default value of the correct type.
-    If a given RemoteProcessor specs contain a field unknown to this class, it can still be accessed through the dict item syntax
+    If a given common field is not filled by the computer, it will return None or a default value of the correct type.
+    If a given RemoteComputer specs contain a field unknown to this class, it can still be accessed through the dict item syntax
 
-    >>> rp = RemoteProcessor(...)
-    >>> rs = rp.specs  # This is a PlatformSpecs object
+    >>> rc = RemoteComputer(...)
+    >>> rs = rc.specs  # This is a PlatformSpecs object
     >>> pdisplay(rs.architecture)
     >>> print(rs["this_platform_specific_spec"])
 
@@ -64,7 +67,7 @@ class PlatformSpecs(dict):
 
     def __getitem__(self, item):
         if hasattr(self, item):
-            get_logger().warn(f"Getting {item} from a RemoteProcessor specs should be done using `specs.{item}`"
+            get_logger().warn(f"Getting {item} from a PlatformSpecs should be done using `specs.{item}`"
                               "as it is a common spec key", channel.user)
             return getattr(self, item)
         return self._getitem(item)
@@ -82,8 +85,8 @@ class PlatformSpecs(dict):
             * optical components
             * detectors if they are imperfect
 
-        :return: The experiment representing the physical hardware of the RemoteProcessor,
-            or None if the RemoteProcessor isn't linked to a hardware chip,
+        :return: The experiment representing the physical hardware of the RemoteComputer,
+            or None if the RemoteComputer isn't linked to a hardware chip,
         """
         if "architecture" in self:
             return self._getitem("architecture")
@@ -196,7 +199,7 @@ class PlatformSpecs(dict):
         """
         if "commands" in self:
             return self._getitem("commands")
-        return [getattr(CommandFactory, cmd) for cmd in self.get("available_commands", [])]
+        return [getattr(CommandFactory, cmd) for cmd in self.get("available_commands", []) if hasattr(CommandFactory, cmd)]
 
     @commands.setter
     def commands(self, value: list[Command]):
@@ -262,7 +265,7 @@ class PlatformSpecs(dict):
     def parameters(self) -> dict[str, str]:
         """
         :return: A dictionary containing the possible parameters of the platform.
-            * The key must be given to the platform using the :code:`set_parameters()` method of the RemoteProcessor.
+            * The key must be given to the platform using the :code:`set_parameters()` method of the RemoteComputer.
             * The value is a description of what the parameter does.
         """
         return self.get("parameters", {})
@@ -306,7 +309,7 @@ class PlatformSpecs(dict):
             self_type = self._getitem("type")
             if isinstance(self_type, ProcessorType):
                 return self_type
-            return ProcessorType.SIMULATOR if self_type == "simulator" else ProcessorType.PHYSICAL
+            return ProcessorType.SIMULATOR if self_type.lower() == "simulator" else ProcessorType.PHYSICAL
         return ProcessorType.SIMULATOR
 
     @type.setter
@@ -314,3 +317,53 @@ class PlatformSpecs(dict):
         assert isinstance(value, ProcessorType)
         # Store as a str so we can serialize it easily
         self["type"] = "simulator" if value == ProcessorType.SIMULATOR else "qpu"
+
+    @property
+    def default_mitigations(self) -> list[AMitigation]:
+        if "default_mitigations" in self:
+            return self._getitem("default_mitigations")
+        return []
+
+    @default_mitigations.setter
+    def default_mitigations(self, value: list[AMitigation]):
+        assert isinstance(value, list)
+        assert all(isinstance(val, AMitigation) for val in value)
+        self["default_mitigations"] = value
+
+    @property
+    def known_mitigations(self) -> list[str]:
+        if "known_mitigations" in self:
+            return self._getitem("known_mitigations")
+        return []
+
+    @known_mitigations.setter
+    def known_mitigations(self, value: list[str]):
+        assert isinstance(value, list)
+        assert all(isinstance(val, str) for val in value)
+        self["known_mitigations"] = value
+
+
+def _encode(value: Any) -> str:
+    archive = OutputArchive()
+    Serialization.serialize(value, archive)
+    return archive.to_text(compress=True)
+
+
+def serialize_specs_backward_compatibility(specs: PlatformSpecs) -> dict:
+    """Serializes the specs such that old perceval will continue to be able to receive specs serialized here"""
+    # For use in workers (e.g. see QuandelaQPUHandler in perceval-interop)
+    specs_dict: dict = serialize(specs)
+
+    if "commands" in specs:
+        specs_dict["commands"] = _encode(specs.commands)
+    if "default_mitigations" in specs:
+        specs_dict["default_mitigations"] = _encode(specs.default_mitigations)
+    return specs_dict
+
+
+class SerializerSpecs(SerializerDict):
+    type = PlatformSpecs
+    class_tag = "Specs"
+
+
+Serialization.register(SerializerSpecs())

@@ -30,8 +30,8 @@ It offers tools to:
 
 * Control the flow of quantum computations and choose where they are run:
 
-  * Locally with the :ref:`Processor`, remotely with the :ref:`RemoteProcessor`
-  * Manage your :ref:`jobs<Job>` with the :ref:`JobGroup`
+  * Locally with the :ref:`SimulatedComputer`, remotely with the :ref:`RemoteComputer`
+  * Manage your :ref:`jobs<Execution>` with the :ref:`ExecutionGroup`
 
 Installing Perceval
 ^^^^^^^^^^^^^^^^^^^
@@ -57,19 +57,18 @@ on the user's computer in a noisy situation, and retrieve both a sample count an
 strong simulation back-end.
 
 >>> import perceval as pcvl
->>> from perceval.algorithm import Sampler
 >>>
->>> input_state = pcvl.BasicState("|1,1>")  # Inject one photon on each input mode...
->>> circuit = pcvl.BS()                     # ... of a perfect beam splitter
->>> noise_model = pcvl.NoiseModel(transmittance=0.05, indistinguishability=0.85)  # Define some noise level
+>>> experiment = pcvl.Experiment(pcvl.BS())          # In a perfect beam splitter experiment...
+>>> experiment.with_input(pcvl.BasicState("|1,1>"))  # ... we inject one photon into each mode
+>>> experiment.min_detected_photons_filter(1)  # Accept all output states containing at least 1 photon
 >>>
->>> processor = pcvl.Processor("SLOS", circuit, noise=noise_model)  # Use SLOS, a strong simulation back-end
->>> processor.min_detected_photons_filter(1)  # Accept all output states containing at least 1 photon
->>> processor.with_input(input_state)
+>>> computer = pcvl.SimulatedComputer("SLOS")  # Use SLOS, a strong simulation back-end
+>>> computer.noise = pcvl.NoiseModel(transmittance=0.05, indistinguishability=0.85)  # Define some noise level
 >>>
->>> sampler = Sampler(processor)
->>> samples = sampler.sample_count(10_000)['results']  # Ask to generate 10k samples, and get back only the raw results
->>> probs = sampler.probs()['results']  # Ask for the exact probabilities
+>>> factory = pcvl.ExecutionFactory(computer, experiment)
+>>> with computer.acquire():  # Good practice - may be used to warm the computer up
+...     samples = factory.sample_count(10_000)['results']  # Ask to generate 10k samples, and get back only the raw results
+...     probs = factory.probs()['results']  # Ask for the exact probabilities
 >>> print(f"Samples: {samples}")
 >>> print(f"Probabilities: {probs}")
 Samples: {

@@ -28,6 +28,8 @@
 # SOFTWARE.
 
 import re
+from typing import Any
+
 import pytest
 import time
 import warnings
@@ -53,6 +55,18 @@ TEST_IMG_DIR = Path(__file__).resolve().parent / 'rendering' / 'imgs'
 
 def strip_line_12(s: str) -> str:
     return s.strip().replace("            ", "")
+
+
+def assert_unordered_lists_equal(left: list, right: list):
+    # This algorithm is inefficient for hashable or sortable values, but can be used with anything
+    right = list(right)   # make a mutable copy
+    for elem in left:
+        try:
+            right.remove(elem)
+        except ValueError:
+            raise ValueError(f"Unordered list comparison failed: right argument is missing {elem}")
+    if len(right):
+        raise ValueError(f"Unordered list comparison failed: left argument is missing {right[0]}")
 
 
 def check_sv_close(sv1: StateVector, sv2: StateVector) -> bool:
@@ -114,13 +128,13 @@ def assert_svd_close(lhsvd, rhsvd):
         assert found_in_rh, f"sv not found {lh_sv}"
 
 
-def assert_bsd_close(lhbsd, rhbsd):
+def assert_bsd_close(lhbsd, rhbsd, rel: Any = None, abs: Any = None):
     lhbsd.normalize()
     rhbsd.normalize()
     assert len(lhbsd) == len(rhbsd), f"len are different, {len(lhbsd)} vs {len(rhbsd)}"
 
     for lh_bs, prob in lhbsd.items():
-        assert rhbsd.get(lh_bs, 0) == pytest.approx(prob), f"different probabilities for {lh_bs}, {prob} vs {rhbsd[lh_bs]}"
+        assert rhbsd.get(lh_bs, 0) == pytest.approx(prob, rel, abs), f"different probabilities for {lh_bs}, {prob} vs {rhbsd[lh_bs]}"
 
 
 def assert_circuits_eq(c_a: Circuit, c_b: Circuit):

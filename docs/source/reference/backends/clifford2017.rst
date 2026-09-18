@@ -10,7 +10,7 @@ This backend has the advantage of being able to handle more modes and photons th
 and does not need to represent the whole output space, so it is much more memory efficient, at the cost of only being
 able to approximate the resulting distribution.
 
-This backend is available in :ref:`Processor` by using the name :code:`"CliffordClifford2017"`.
+This backend is available in :ref:`SimulatedComputer` by using the name :code:`"CliffordClifford2017"`.
 
 >>> import perceval as pcvl
 >>> c = pcvl.BS()

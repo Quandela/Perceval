@@ -17,12 +17,12 @@ For example to get an heralded CZ gate, you must call it as followed:
    from perceval import catalog
    catalog['heralded cz']
 
-You can after either get it as a circuit or a processor:
+You can after either get it as a circuit or an experiment:
 
 .. code-block:: Python
 
    from perceval import catalog
-   processor = catalog['heralded cz'].build_experiment() # Will return an experiment
+   experiment = catalog['heralded cz'].build_experiment() # Will return an experiment
    circuit = catalog['heralded cz'].build_circuit() # Will return a circuit
 
 If a gate have parameters, like for instance a Mach-Zehnder interferometer phase first you can set those parameters as followed:

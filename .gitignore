@@ -11,3 +11,4 @@ venv*
 .coverage
 .vscode*
 .venv
+execution_groups/

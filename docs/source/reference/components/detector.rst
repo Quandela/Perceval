@@ -10,8 +10,8 @@ They all share a common interface for your own usage.
 >>> d.detect(3)  # Common method for all kind of detectors
 |1>
 
-Detectors can also be added to :ref:`Processor` or :ref:`Experiment` mode by mode for an automatic usage.
-Once a detector is added to a :code:`Processor` or an :code:`Experiment` mode, this mode is considered to be a classical mode,
+Detectors can also be added to :ref:`Experiment` mode by mode for an automatic usage.
+Once a detector is added to an :code:`Experiment` mode, this mode is considered to be a classical mode,
 so optical components can no longer be added to it, but classical components can now be added to it.
 
 >>> import perceval as pcvl

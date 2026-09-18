@@ -1,3 +1,5 @@
+# SKIP LICENSE INSERTION
+
 # MIT License
 #
 # Copyright (c) 2026 Kipu Quantum GmbH
@@ -29,9 +31,14 @@
 
 from datetime import datetime
 
+from perceval.serialization import InputArchive, Serialization
+from perceval.utils.constants import KEY_VERSION, KEY_PROCESS_ID, KEY_JOB_NAME, KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_PAYLOAD
+
+from .kipu_config import KipuConfig
+
 _MISSING_QHUB_MSG = (
     "The Kipu Quantum Hub provider requires the 'qhub-api' package. "
-    "Install it with: pip install perceval[kipu]"
+    "Install it with: pip install 'perceval-quandela[kipu]'"
 )
 
 _SIM_BELENOS = "quandela.sim.belenos"
@@ -168,13 +175,16 @@ class KipuRPCHandler:
     :param client: optional pre-built HubQuantumClient (used for testing)
     """
 
-    def __init__(self, platform_name, url=None, token=None, organization_id=None,
-                 proxies=None, client=None):
+    def __init__(self, platform_name, url: str = None, token: str = None, organization_id: str = None,
+                 proxies: dict[str, str] = None, client=None):
+
+        config = KipuConfig()
+
         self._platform_name = platform_name
-        self._url = url
-        self._token = token
-        self._organization_id = organization_id
-        self._proxies = proxies or {}
+        self._url = url or config.get_url()
+        self._token = token or config.get_token() or None  # When None, taken from the environment or the qhubctl
+        self._organization_id = organization_id or config.get_organization_id()
+        self._proxies = proxies or config.get_proxies()
         self._backend_id = _resolve_backend_id(platform_name)
         self._client = client if client is not None else self._build_client()
 
@@ -211,11 +221,11 @@ class KipuRPCHandler:
         # because RemoteJob._to_dict() reads it (job serialization / rerun).
         return {}
 
-    def create_job(self, payload: dict) -> str:
+    def create_job(self, cloud_data: dict) -> str:
         """Submit a Perceval job payload to the Hub. Returns the Hub job id."""
         qhub = _import_qhub()
-        inner = payload.get("payload") or {}
-        shots = inner.get("max_shots") or inner.get("max_samples") or 0
+        inner = cloud_data.get(KEY_PAYLOAD) or {}
+        shots = inner.get(KEY_MAX_SHOTS) or inner.get(KEY_MAX_SAMPLES) or 0
 
         input_cls = qhub["input"][self._backend_id]
         params_cls = qhub["params"][self._backend_id]
@@ -226,11 +236,11 @@ class KipuRPCHandler:
             input=input_cls(value=inner),
             input_format="PERCEVAL",
             input_params=params_cls(
-                pcvl_version=payload.get("pcvl_version"),
-                process_id=payload.get("process_id"),
+                pcvl_version=cloud_data.get(KEY_VERSION),
+                process_id=cloud_data.get(KEY_PROCESS_ID),
             ),
             sdk_provider="PERCEVAL",
-            name=payload.get("job_name"),
+            name=cloud_data.get(KEY_JOB_NAME),
         )
         return job.id
 
@@ -312,3 +322,28 @@ class KipuRPCHandler:
         hub_type = "SIMULATOR" if ".sim." in self._backend_id else "QPU"
         details.setdefault("type", _BACKEND_TYPE_MAP.get(hub_type, "simulator"))
         return details
+
+
+def _load_kipu_rpc_handler(
+    handler: KipuRPCHandler,
+    archive: InputArchive,
+    members,
+    version: int,
+):
+    values = {name: archive.create(index) for name, index in members}
+    handler.__init__(
+        platform_name=values["_platform_name"],
+        url=values["_url"],
+        token = None, # to be filled by the KipuConfig,
+        organization_id=values["_organization_id"],
+        proxies = None # to be filled by the KipuConfig,
+    )
+
+
+Serialization.register_class(
+    KipuRPCHandler,
+    class_serial_members_write=lambda handler, archive: archive.save_attr(
+        handler, ["_platform_name", "_url", "_organization_id"]
+    ),
+    class_serial_members_read=_load_kipu_rpc_handler,
+)

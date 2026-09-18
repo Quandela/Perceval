@@ -36,11 +36,12 @@ from ._experiment_serialization import serialize_experiment
 from ._matrix_serialization import serialize_matrix
 from ._circuit_serialization import serialize_circuit, serialize_component, serialize_herald, serialize_port, \
     serialize_compiled_circuit, serialize_compiled_circuit_version
-from ._state_serialization import serialize_state, serialize_statevector, serialize_bssamples
+from ._state_serialization import serialize_state, serialize_statevector, serialize_bssamples, serialize_bsdistribution, \
+    serialize_bscount, serialize_svdistribution
 from perceval.components import ACircuit, BSLayeredPPNR, Detector, AComponent, Herald, Port, Experiment, CompiledCircuit
 from perceval.components.compiled_circuit import CompiledCircuitVersion
 from perceval.utils import Matrix, BasicState, SVDistribution, BSDistribution, BSCount, BSSamples, StateVector, \
-    simple_float, NoiseModel, PostSelect
+    NoiseModel, PostSelect
 from base64 import b64encode
 import json
 
@@ -177,10 +178,7 @@ def serialize(dist: SVDistribution, compress=None) -> str:
         compress = False
     tag = SVD_TAG
     compress = _handle_compress_parameter(compress, tag)
-    serial_svd = f"{PCVL_PREFIX}{tag}{SEP}{{" \
-           + ";".join(["%s=%s" % (serialize_statevector(k), simple_float(v, nsimplify=False)[1])
-                       for k, v in dist.items()]) \
-           + "}"
+    serial_svd = f"{PCVL_PREFIX}{tag}{SEP}" + serialize_svdistribution(dist)
     return _handle_compression(serial_svd, do_compress=compress)
 
 
@@ -190,9 +188,7 @@ def serialize(dist: BSDistribution, compress=None) -> str:
         compress = True
     tag = BSD_TAG
     compress = _handle_compress_parameter(compress, tag)
-    serial_bsd = f"{PCVL_PREFIX}{tag}{SEP}{{" \
-           + ";".join(["%s=%s" % (serialize_state(k), simple_float(v, nsimplify=False)[1]) for k, v in dist.items()]) \
-           + "}"
+    serial_bsd = f"{PCVL_PREFIX}{tag}{SEP}" + serialize_bsdistribution(dist)
     return _handle_compression(serial_bsd, do_compress=compress)
 
 
@@ -202,9 +198,7 @@ def serialize(obj, compress=None) -> str:
         compress = True
     tag = BSC_TAG
     compress = _handle_compress_parameter(compress, tag)
-    serial_bsc = f"{PCVL_PREFIX}{tag}{SEP}{{" \
-           + ";".join(["%s=%s" % (serialize_state(k), str(v)) for k, v in obj.items()]) \
-           + "}"
+    serial_bsc = f"{PCVL_PREFIX}{tag}{SEP}" + serialize_bscount(obj)
     return _handle_compression(serial_bsc, do_compress=compress)
 
 
@@ -253,15 +247,6 @@ def serialize(obj: Detector, compress=None):
     compress = _handle_compress_parameter(compress, tag)
     return _handle_compression(f"{PCVL_PREFIX}{tag}{SEP}" + b64encoding(serialize_detector(obj).SerializeToString()),
                                do_compress=compress)
-
-
-@dispatch(type, compress=(list, bool))
-def serialize(obj: type, compress=None):
-    if compress is None:
-        compress = False
-    tag = TYPE_TAG
-    compress = _handle_compress_parameter(compress, tag)
-    return _handle_compression(f"{PCVL_PREFIX}{tag}{SEP}{obj.__name__}", do_compress=compress)
 
 
 @dispatch(dict, compress=(list, bool))

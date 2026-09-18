@@ -33,9 +33,8 @@ from perceval.utils import samples_to_sample_count, samples_to_probs, sample_cou
     sample_count_to_probs, probs_to_samples, probs_to_sample_count, ProgressCallback
 from perceval.utils.logging import get_logger, channel
 from perceval.utils.constants import KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_RESULTS_LIST, KEY_ITERATION
-from perceval.runtime.parameter_iterator import ParameterIterator
-from perceval.runtime.abstract_processor import AProcessor
-from perceval.runtime import Job, RemoteJob, LocalJob
+from perceval.runtime.legacy.parameter_iterator import ParameterIterator
+from perceval.runtime.legacy import Job, RemoteJob, LocalJob, AProcessor
 
 
 class Sampler(AAlgorithm):
@@ -120,16 +119,16 @@ class Sampler(AAlgorithm):
             job_context = None
             if converter:
                 job_context = {"result_mapping": ['perceval.utils', converter.__name__]}
-            payload = self._processor.prepare_job_payload(primitive)
+            cloud_data = self._processor.prepare_job_payload(primitive)
             if self._iterator:
-                payload['payload']['iterator'] = self._iterator.iterations
-            payload['payload']['max_shots'] = self._max_shots
+                cloud_data['payload']['iterator'] = self._iterator.iterations
+            cloud_data['payload']['max_shots'] = self._max_shots
             job_name = self.default_job_name if self.default_job_name is not None else method
-            job = RemoteJob(payload, self._processor.get_rpc_handler(), job_name,
+            job = RemoteJob(cloud_data, self._processor.get_rpc_handler(), job_name,
                             command_param_names=command_param_names,
                             delta_parameters=delta_parameters, job_context=job_context)
             get_logger().info(
-                f"Prepare remote job (command: {primitive} on {payload['platform_name']})", channel.general)
+                f"Prepare remote job (command: {primitive} on {cloud_data['platform_name']})", channel.general)
             return job
         else:
             func_name = f"_{primitive}_iterate_locally" if self._iterator else f"_{primitive}_wrapper"

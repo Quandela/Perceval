@@ -52,5 +52,5 @@ from .noise_model import NoiseModel, perf_dict_to_noise, noise_to_perf_dict
 from .logging import get_logger, use_perceval_logger, use_python_logger, LoggerConfig, deprecated
 from .progress_cb import partial_progress_callable, ProgressCallback
 from .dist_metrics import tvd_dist, kl_divergence
-from .context_manager import ContextManager, ContextManagerDecorator, encapsulate_managers
+from .context_manager import ContextManager, ContextManagerDecorator, encapsulate_managers, encapsulate_manager_list
 from .inspection import parse_signature, has_kwargs, has_arguments

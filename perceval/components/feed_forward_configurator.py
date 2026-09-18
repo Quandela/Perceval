@@ -126,7 +126,7 @@ class FFCircuitProvider(AFFConfigurator):
     def __init__(self, m: int, offset: int, default_circuit: ACircuit, name: str = None):
         assert not isinstance(default_circuit, AFFConfigurator), \
             "Can't add directly a Feed-forward configurator to a configurator (use an Experiment)"
-        from perceval.runtime.abstract_processor import AProcessor
+        from perceval.runtime.legacy.abstract_processor import AProcessor
         if isinstance(default_circuit, AProcessor):
             default_circuit = default_circuit.experiment
         super().__init__(m, offset, default_circuit, name)
@@ -171,7 +171,7 @@ class FFCircuitProvider(AFFConfigurator):
             if circuit.m != self._max_circuit_size:
                 raise RuntimeError(f"Circuit size mismatch (got {circuit.m}, expected {self._max_circuit_size} modes)")
 
-        from perceval.runtime.abstract_processor import AProcessor
+        from perceval.runtime.legacy.abstract_processor import AProcessor
         if isinstance(circuit, AProcessor):
             circuit = circuit.experiment
 

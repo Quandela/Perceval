@@ -16,8 +16,7 @@ They can be used in two ways:
     >>> print(pcvl.get_basic_state_from_ports(ports, ls))
     |0,1,0,1,0,0>
 
-- With :code:`Processor`, :code:`Experiment` or :code:`RemoteProcessor` that has Ports defined
-  (recommended when using composition):
+- With :code:`Experiment` that has Ports defined (recommended when using composition):
 
     >>> import perceval as pcvl
     >>> encodings = [pcvl.Encoding.DUAL_RAIL, pcvl.Encoding.QUDIT2]

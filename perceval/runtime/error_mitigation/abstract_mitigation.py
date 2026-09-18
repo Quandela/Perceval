@@ -26,56 +26,82 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
 from abc import abstractmethod, ABC
 
-from exqalibur import BSCount, BSSamples
-
+from .imperfections import Imperfections
 from ..computation import Computation
 
-from perceval.utils import NoiseModel, ConversionHelper, apply_min_photons, apply_post_select, BSDistribution
-from perceval.utils.constants import KEY_RESULTS, KEY_GLOBAL_PERF, KEY_PHYSICAL_PERF, KEY_LOGICAL_PERF
-from perceval.components import Experiment
+from perceval.utils import ConversionHelper, apply_min_photons, apply_post_select, PostSelect
+from perceval.utils.constants import KEY_RESULTS, KEY_GLOBAL_PERF, KEY_PHYSICAL_PERF, KEY_LOGICAL_PERF, KEY_SHOTS_USED
 
 
-class AbstractMitigation(ABC):
+class AMitigation(ABC):
 
     APPLY_MIN_PHOTONS = True  # By default, avoid any accident at the cost of performance
-    APPLY_LOGICAL_SELECTION = True
+    APPLY_LOGICAL_SELECTION = True  # /!\ Apply this only when the heralds and postselection are removed
+                                    # - conditional removal should involve subclassing _get_filtering_parameters()
+    KNOWN_MITIGATIONS = []
+    _TAG: str
+
+    def __init_subclass__(cls, /, tag=None, **kwargs):
+        super().__init_subclass__(**kwargs)
+        tag = tag or cls.__name__
+        if tag in AMitigation.KNOWN_MITIGATIONS:
+            raise ValueError(f"Given mitigation tag {tag} already exists.")
+        AMitigation.KNOWN_MITIGATIONS.append(tag)
+        cls._TAG = tag
+
+    def is_known_from(self, known_classes: list[str]) -> bool:
+        return self._TAG in known_classes
 
     @abstractmethod
-    def extend_computation(self, computation: Computation, noise: NoiseModel) -> list[Computation]:
+    def extend_computation(self, computation: Computation, imperfections: Imperfections) -> list[Computation]:
         """
         :param computation: The computation asked by the upper layer
-        :param noise: The Computer noise
+        :param imperfections: The Computer imperfections
         :return: a list of all computations to execute to apply the mitigation
         """
         pass
 
     @abstractmethod
-    def _parse_results(self, computation: Computation, results: list[dict], noise: NoiseModel) -> dict:
+    def _parse_results(self, computation: Computation, results: list[dict], imperfections: Imperfections) -> dict:
         """
         Parses the results obtained from an iterator obtained through extend_computation().
         :param results: The results for the list of computations obtained through extend_computation()
-        :param noise: The Computer noise with which the results were obtained
+        :param imperfections: Collection of data that will be useful for the mitigations (Noise model, detector descriptions, ...)
         :return: A dict with the fields "results", "global_perf", "nb_shots_used"
         """
         pass
 
-    def parse_results(self, computation: Computation, results: list[dict], noise: NoiseModel) -> dict:
+    def _get_filtering_parameters(self, computation: Computation, results: list[dict], imperfections: Imperfections) \
+            -> tuple[dict[int, int], PostSelect, int]:
+        """
+        Return the heralds, post_select, and min_photons values to apply to the parsed results of this mitigation.
+        They should be non-empty or non-null iif they were modified by this layer extend_computation().
+
+        :param computation: The computation asked by the upper layer
+        :param results: The results for the list of computations obtained through extend_computation()
+        :param imperfections: Collection of data that will be useful for the mitigations (Noise model, detector descriptions, ...)
+        :return: The mitigated result, matching the expectations of computation
+        """
+        return (computation.experiment.heralds if self.APPLY_LOGICAL_SELECTION else {},
+                computation.experiment.post_select_fn if self.APPLY_LOGICAL_SELECTION else PostSelect(),
+                (computation.experiment.min_photons_filter or 0) if self.APPLY_MIN_PHOTONS else 0)
+
+    def parse_results(self, computation: Computation, results: list[dict], imperfections: Imperfections) -> dict:
         """
         Parses the results obtained from an iterator obtained through extend_computation().
         :param computation: The computation asked by the upper layer
         :param results: The results for the list of computations obtained through extend_computation()
-        :param noise: The Computer noise with which the results were obtained
+        :param imperfections: Collection of data that will be useful for the mitigations (Noise model, detector descriptions, ...)
         :return: The mitigated result, matching the expectations of computation
         """
-        result = self._parse_results(computation, results, noise)
+        result = self._parse_results(computation, results, imperfections)
 
-        res, physical_perf, logical_perf = self._apply_filtering(computation.experiment, result[KEY_RESULTS])
+        heralds, post_select, min_photons = self._get_filtering_parameters(computation, results, imperfections)
+        res, physical_perf = apply_min_photons(result[KEY_RESULTS], min_photons)
+        res, logical_perf = apply_post_select(res, post_select, heralds, False)
 
-        # TODO: find a way to transmit the correct number of states between layers
-        #       We should not use computation.parameters
         res = ConversionHelper.convert_to(computation.command.name, res, **computation.parameters)
         result[KEY_RESULTS] = res
 
@@ -85,18 +111,14 @@ class AbstractMitigation(ABC):
         if KEY_LOGICAL_PERF in result:
             result[KEY_LOGICAL_PERF] *= logical_perf
 
+        shots_used = 0
+        for sub_res in results:
+            if shots_used is not None and KEY_SHOTS_USED in sub_res:
+                shots_used += sub_res[KEY_SHOTS_USED]
+            else:
+                shots_used = None
+
+        if shots_used is not None:
+            result[KEY_SHOTS_USED] = shots_used
+
         return result
-
-    def _apply_filtering(self, experiment: Experiment, result: BSDistribution | BSCount | BSSamples) -> tuple[BSDistribution | BSCount | BSSamples, float, float]:
-        if self.APPLY_MIN_PHOTONS:
-            min_photons = experiment.min_photons_filter or 0
-            result, physical_perf = apply_min_photons(result, min_photons)
-        else:
-            physical_perf = 1.
-
-        if self.APPLY_LOGICAL_SELECTION:
-            result, logical_perf = apply_post_select(result, experiment.post_select_fn, experiment.heralds, False)
-        else:
-            logical_perf = 1.
-
-        return result, physical_perf, logical_perf

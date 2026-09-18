@@ -1,3 +1,5 @@
+# SKIP LICENSE INSERTION
+
 # MIT License
 #
 # Copyright (c) 2026 Kipu Quantum GmbH
@@ -29,5 +31,5 @@
 
 from .kipu_session import Session
 from .kipu_rpc_handler import KipuRPCHandler
-
-__all__ = ["Session", "KipuRPCHandler"]
+from .kipu_communication_layer import KipuCommunicationLayer
+from .kipu_config import KipuConfig

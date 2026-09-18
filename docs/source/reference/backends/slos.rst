@@ -13,7 +13,7 @@ As such, this backend is well suited with a relatively small number of photons a
 it is necessary to compute everything (or at least everything that befalls into a mask).
 If only a few output states are needed, other backends like :ref:`NaiveBackend` are more suited.
 
-This backend is available in :ref:`Processor` by using the name :code:`"SLOS_LEGACY"`.
+This backend is available in :ref:`SimulatedComputer` by using the name :code:`"SLOS_LEGACY"`.
 
 The name :code:`"SLOS"` now refers to the C++ implementation :code:`SLOSExqaliburBackend` which shares the same interface.
 

@@ -30,12 +30,20 @@
 import time
 import pytest
 
-from perceval import LocalComputer, Execution, Computation, Experiment, NoiseModel, RunningStatus, SimulatedComputer
+from perceval import LocalComputer, Execution, Computation, Experiment, NoiseModel, RunningStatus, SimulatedComputer, \
+    FockState
 import perceval as pcvl
+from perceval.serialization import Serialization
+from perceval.utils.constants import KEY_PHYSICAL_PERF
+
 
 # This test file is heavily inspired and copied from the tests on the old Job class
 
 class ComputerForTest(LocalComputer):
+
+    @property
+    def name(self) -> str:
+        return "Test"
 
     @property
     def noise(self):
@@ -67,6 +75,11 @@ class ComputerForTest(LocalComputer):
             l.append(i ** 2)
         assert not must_fail, "Expected failure"  # Dummy failure condition
         return {"results": l}
+
+Serialization.register_class(
+    ComputerForTest,
+    ["_error_mitigations", "_parameters"]
+)  # Needed to test ExecutionGroup - This serialization is flawed, fix it if needed
 
 
 @pytest.fixture
@@ -172,3 +185,19 @@ def test_get_res_run_async():
 
     assert res_1st_call["results"] == res_2nd_call["results"]
     assert res_1st_call["global_perf"] == res_2nd_call["global_perf"]
+
+
+def test_run_async_parameter_change_safe():
+    e = Experiment(6)
+    e.with_input(FockState([1, 0, 1, 0, 1, 0]))
+    computer = SimulatedComputer("SLOS")
+    computation = Computation(computer.get_command("sample_count"), e)
+    execution = Execution(computation, computer)
+    execution.execute_async(10000)
+    computer.compute_physical_logical_perf(True)
+    while not execution.is_complete:
+        time.sleep(0.01)
+
+    res = execution.get_results()
+
+    assert KEY_PHYSICAL_PERF not in res

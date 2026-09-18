@@ -30,34 +30,36 @@
 import random
 from copy import deepcopy, copy
 
-from .abstract_mitigation import AbstractMitigation
+from .abstract_mitigation import AMitigation
+from .imperfections import Imperfections
 from ..computation import Computation
 
-from perceval.utils import NoiseModel, BSCount
-from perceval.utils.constants import KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_SHOTS_USED, KEY_GLOBAL_PERF, KEY_PHYSICAL_PERF, \
+from perceval.utils import BSDistribution
+from perceval.utils.constants import KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_GLOBAL_PERF, KEY_PHYSICAL_PERF, \
     KEY_LOGICAL_PERF, KEY_RESULTS
+from perceval.serialization import Serialization
 
-class CompilationAveraging(AbstractMitigation):
+class CompilationAveraging(AMitigation, tag="CompilationAveraging"):
+    """Reduce sensitivity to a single physical compilation by averaging the results over several compilations.
+
+    The requested samples and shots are divided between ``repetitions`` sub-computations, each
+    using a different compilation seed. Their sample counts are combined during post-processing.
+    Commands that do not accept a ``compilation_seed`` parameter are left unchanged.
+
+    :param repetitions: Number of compilations to average. More repetitions require more compilation work.
+    :param starting_seed: Optional first compilation seed. When omitted, choose one randomly.
+    """
 
     APPLY_MIN_PHOTONS = False
     APPLY_LOGICAL_SELECTION = False
 
     def __init__(self, repetitions: int, starting_seed: int = None):
-        """
-        A mitigation process that splits the requested computation into :code:`repetitions` sub-computations,
-        where the requested shots and samples are equally divided, asking for a new compilation seed every time.
-
-        At post-processing, it adds up the results.
-
-        :param repetitions: The number of subdivisions. The greater this number, the more time will be spent on compilation
-        :param starting_seed: Optional, seed to use as a starting point for the compilation seed.
-        """
         self.repetitions = repetitions
-        assert isinstance(self.repetitions, int) and repetitions >= 1,\
+        assert isinstance(self.repetitions, int) and repetitions >= 1, \
             f"Number of repetitions must be a positive integer (got {repetitions})"
         self.starting_seed = starting_seed
 
-    def extend_computation(self, computation: Computation, noise: NoiseModel) -> list[Computation]:
+    def extend_computation(self, computation: Computation, imperfections: Imperfections) -> list[Computation]:
         if not any(signature[0] == "compilation_seed" for signature in computation.command.signature):
             return [computation]  # Can't do anything
 
@@ -86,7 +88,7 @@ class CompilationAveraging(AbstractMitigation):
         res = []
         for i in range(self.repetitions):
             new_comp = deepcopy(computation)
-            new_comp.command.name = "sample_count"
+            new_comp.command.name = "probs"
 
             if shots_per_computation is not None:
                 new_comp.add_params(max_shots=shots_per_computation + (i < remaining_shots))
@@ -98,47 +100,44 @@ class CompilationAveraging(AbstractMitigation):
 
         return res
 
-    def _parse_results(self, computation: Computation, results: list[dict], noise: NoiseModel) -> dict:
+    def _parse_results(self, computation: Computation, results: list[dict], imperfections: Imperfections) -> dict:
         # First, do nothing if nothing was done - for example no compilation seed could be set
         if len(results) == 1:
             return results[0]
 
-        # Here, we know we have expanded the computation, so all results are BSCount
-        bsc = BSCount()
-
-        # global_perf = n_samples / n_clock; phys_perf = n_phys / n_clock; log_perf = n_samples / n_phys
-        n_clocks = 0
-        n_physical = 0
-        shots_used = 0
+        # Here, we know we have expanded the computation, so all results are BSDistributions
+        bsd = BSDistribution()
+        global_perf = 0
+        physical_perf = 0
+        logical_perf = 0
 
         for res in results:
-            res_bsc: BSCount = res[KEY_RESULTS]
-            for state, count in res_bsc.items():
-                bsc[state] += count
+            bsd += res[KEY_RESULTS]
+            global_perf += res[KEY_GLOBAL_PERF]
 
-            if shots_used is not None and KEY_SHOTS_USED in res:
-                shots_used += res[KEY_SHOTS_USED]
+            if physical_perf is not None and KEY_PHYSICAL_PERF in res:
+                physical_perf += res[KEY_PHYSICAL_PERF]
             else:
-                shots_used = None
+                physical_perf = None
 
-            sub_n_clocks = res_bsc.total() / res[KEY_GLOBAL_PERF]
-            n_clocks += sub_n_clocks
-
-            if n_physical is not None and KEY_PHYSICAL_PERF in res:
-                n_physical += sub_n_clocks * res[KEY_PHYSICAL_PERF]
+            if logical_perf is not None and KEY_LOGICAL_PERF in res:
+                logical_perf += res[KEY_LOGICAL_PERF]
             else:
-                n_physical = None
+                logical_perf = None
 
         res = copy(results[0])  # We are going to modify this to keep custom fields as much as we can
-        res[KEY_RESULTS] = bsc
-        n_samples = bsc.total()
-        res[KEY_GLOBAL_PERF] = n_samples / n_clocks
 
-        if n_physical is not None:
-            res[KEY_PHYSICAL_PERF] = n_physical / n_clocks
-            res[KEY_LOGICAL_PERF] = n_samples / n_physical
+        bsd.normalize()
+        res[KEY_RESULTS] = bsd
+        res[KEY_GLOBAL_PERF] = global_perf / len(results)
 
-        if shots_used is not None:
-            res[KEY_SHOTS_USED] = shots_used
+        # Note: we lose the fact that phys_perf * log_perf = global_perf
+        if physical_perf is not None:
+            res[KEY_PHYSICAL_PERF] = physical_perf / len(results)
+        if logical_perf is not None:
+            res[KEY_LOGICAL_PERF] = logical_perf / len(results)
 
         return res
+
+
+Serialization.register_class(CompilationAveraging, ["repetitions", "starting_seed"])

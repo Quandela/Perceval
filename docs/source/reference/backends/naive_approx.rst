@@ -9,11 +9,11 @@ to approximate it with a 99% confidence interval (see :cite:t:`gurvits2002`).
 It is very efficient to compute very precise output states, but not to compute the whole distribution, and it can be used
 with more modes and photons than the :ref:`NaiveBackend` at the cost of losing precision on the result.
 
-Thus, using it is not recommended in :ref:`Simulator` (except when using :meth:`probability()`) or :ref:`Processor`,
+Thus, using it is not recommended in :ref:`Simulator` (except when using :meth:`probability()`) or :ref:`SimulatedComputer`,
 but it is well suited for applications where only a few output probabilities matter with many photons.
 If the whole or most of the computational space is needed, other backends like :ref:`SLOSBackend` are more suited.
 
-This backend is available in :ref:`Processor` by using the name :code:`"NaiveApprox"`.
+This backend is available in :ref:`SimulatedComputer` by using the name :code:`"NaiveApprox"`.
 
 Unlike other backends, this backend needs a number of iterations to use to estimate the permanent.
 Also, in addition to the generic backend methods, this backend offers means to get a 99% confidence interval on the probability

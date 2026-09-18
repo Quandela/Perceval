@@ -30,20 +30,23 @@ import os
 import json
 import tempfile
 import warnings
+
 from platformdirs import PlatformDirs
 
 from .versions import PMetadata
 from ._enums import FileFormat
 
 _CONFIG_FILE_NAME = "config.json"
+
+# Keep job_group ? The only use is an exclusion for the clear_all_data() method
 SUB_DIRECTORIES = ['logs', 'job_group']
 
 class PersistentData:
     r"""
     PersistentData is a class that stores data on the drive to save data between launches of perceval.
     On init, it creates a directory (if it doesn't exist) for storing perceval persistent data.
-    This directory can be set via an environment variable PCVL_PERSISTENT_PATH.
-    Default directory depends on the os:
+    This directory can be set via an argument, or via an environment variable PCVL_PERSISTENT_PATH if not given.
+    If none is given, the default directory depends on the os:
 
     * Linux: '/home/my_user/.local/share/perceval-quandela'
     * Windows: 'C:\\Users\\my_user\\AppData\\Local\\quandela\\perceval-quandela'
@@ -53,10 +56,10 @@ class PersistentData:
     If the configured directory or the temporary directory cannot be created or read/write in, an error will be raised.
     """
 
-    def __init__(self):
+    def __init__(self, directory_path: str = None):
         is_default_folder = False
-        # first, try the env var
-        self._directory = os.getenv('PCVL_PERSISTENT_PATH')
+        # first, try the given argument, or the env var if not given
+        self._directory = directory_path or os.getenv('PCVL_PERSISTENT_PATH')
         if not self._directory:
             # second, try the default folder
             self._directory = PlatformDirs(PMetadata.package_name(), PMetadata.author()).user_data_dir
@@ -154,7 +157,7 @@ class PersistentData:
         :param data: data to write
         """
         if file_format != FileFormat.BINARY and file_format != FileFormat.TEXT:
-            raise NotImplementedError(f"format {format} is not supported")
+            raise NotImplementedError(f"format {file_format} is not supported")
         if self.is_writable():
             file_path = self.get_full_path(filename)
             try:
@@ -193,7 +196,7 @@ class PersistentData:
                 data = str(file.read())
             data = data.removesuffix('\n').rstrip()
         else:
-            raise NotImplementedError(f"format {format} is not supported")
+            raise NotImplementedError(f"format {file_format} is not supported")
         return data
 
     def load_config(self) -> dict:
@@ -209,7 +212,7 @@ class PersistentData:
                 warnings.warn("Cannot read config file")
         return config
 
-    def save_config(self, config: dict):
+    def save_config(self, config: dict) -> None:
         """Save config into persistent data, update any config previously saved
 
         :param config: config to save

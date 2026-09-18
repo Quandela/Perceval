@@ -16,7 +16,7 @@ Thus, using it is recommended only for small circuits with small components wher
 the exact value of the probabilities is not needed.
 In any other case, other backends like :ref:`SLOSBackend` or :ref:`NaiveBackend` are more suited.
 
-This backend is available in :ref:`Processor` by using the name :code:`"MPS"`.
+This backend is available in :ref:`SimulatedComputer` by using the name :code:`"MPS"`.
 
 Unlike other backends, this backend needs a cutoff number that will induce imprecision on the results.
 Higher values give more accurate results at the cost of a heavier computation.

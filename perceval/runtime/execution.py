@@ -33,27 +33,45 @@ from copy import deepcopy
 
 from .check_cancel import cancel_requested
 from .async_getter import AsyncGetter
-from .abstract_computer import AbstractComputer
+from .abstract_computer import AComputer
 from .computation import Computation
 from .computation_iterator import ComputationIterator
-from .job_status import JobStatus, RunningStatus
-from .error_mitigation import AbstractMitigation
-from perceval.utils import NoiseModel, ProgressCallback
+from .execution_status import ExecutionStatus, RunningStatus
+from .error_mitigation import AMitigation, Imperfections
+
+from perceval.utils import ProgressCallback, deprecated
+from perceval.serialization import InputArchive, Serialization
+from perceval.serialization.library.class_registry import ClassRegistry
 
 
 class Execution:
+    """
+    A class aimed at controlling the execution flow of a computation on a given computer.
+    It provides means to compute synchronously or asynchronously, hiding the complexity of handling intermediate objects.
 
-    def __init__(self, computation: Computation | ComputationIterator, computer: AbstractComputer):
+    Depending on the mitigations that are set into the computer, one or several jobs
+    (i.e. a unit computation on the cloud, or a single simulation call) may be created.
+    This complexity is hidden by this object, but may appear on a provider's cloud interface.
+
+    >>> execution = Execution(computation, computer)
+    >>> res = execution(max_shots = 10000)  # Synchronous call - Computation parameters can be given here
+
+    :param computation: The computation to be executed
+    :param computer: The computer that will execute the computation
+    """
+
+    def __init__(self, computation: Computation | ComputationIterator, computer: AComputer):
         self._computation = deepcopy(computation)
         self._computer = computer
         self._name = computation.job_name
         self._job_group_name = computation.job_group_name
         self._results = {}
-        self._status: JobStatus = JobStatus()
+        self._status: ExecutionStatus = ExecutionStatus()
 
         # Storage for async run
-        self._mitigations: list[AbstractMitigation] = []
-        self._noise: NoiseModel | None = None
+        self._parameters = {}  # computer parameters
+        self._mitigations: list[AMitigation] = []
+        self._imperfections: Imperfections | None = None
         self._getters: list[list[AsyncGetter]] = []
 
         # Not serialized
@@ -70,6 +88,9 @@ class Execution:
         For asynchronous execution, call self.cancel() to cancel,
         or self.status, self.is_complete... to monitor the progress.
 
+        .. note::
+           This callback is never serialized.
+
         :param callback: callback function
         """
         self._user_cb = callback
@@ -84,32 +105,41 @@ class Execution:
         return None
 
     @property
+    def computation(self) -> Computation | ComputationIterator:
+        return self._computation
+
+    @property
+    def computer(self) -> AComputer:
+        return self._computer
+
+    @property
     def name(self) -> str:
         """
-        The job name
+        The execution name, that will be used to name generated jobs
         """
         return self._name
 
     @name.setter
     def name(self, new_name: str):
         if not isinstance(new_name, str):
-            raise TypeError("A job name must be a string")
+            raise TypeError("An execution name must be a string")
         self._name = new_name
 
     @property
-    def job_group_name(self) -> str:
+    def job_group_name(self) -> str | None:
         """
-        The job name
+        The execution group name, that will be used to give a job group name to the generated jobs
         """
-        return self._name
+        return self._job_group_name
 
     @job_group_name.setter
     def job_group_name(self, new_name: str):
-        if not isinstance(new_name, str):
-            raise TypeError("A job name must be a string")
+        if not isinstance(new_name, str) or len(new_name) == 0:
+            raise TypeError("A job group name must be a non-empty string")
         self._job_group_name = new_name
 
-    def set_job_group_name(self, new_name: str):  # TODO: legacy; remove ?
+    @deprecated(version="1.3.0", reason="Use the `job_group_name` property instead")
+    def set_job_group_name(self, new_name: str):
         self.job_group_name = new_name
 
     def _transmit_args(self, *args, **kwargs):
@@ -122,18 +152,18 @@ class Execution:
 
     def __call__(self, *args, **kwargs) -> dict:
         """
-        Execute the job synchronously
+        Execute the execution synchronously. Shortcut for self.execute_sync().
         """
         return self.execute_sync(*args, **kwargs)
 
     @property
-    def status(self) -> JobStatus:
+    def status(self) -> ExecutionStatus:
         """
-        The job status metadata structure
+        The execution status metadata structure
         """
         if len(self._getters) > 0 and not self._status.completed:
             all_status = [getter.status for getters in self._getters for getter in getters]
-            self._status.copy_from(JobStatus.merge_status(all_status))
+            self._status.copy_from(ExecutionStatus.merge_status(all_status))
 
         return self._status
 
@@ -163,7 +193,7 @@ class Execution:
 
     def cancel(self):
         """
-        Request the cancellation of the job.
+        Request the cancellation of the execution.
         """
         if not self.was_sent:
             raise RuntimeError("Execution has not been launched")
@@ -193,24 +223,41 @@ class Execution:
         """
         if not self.status.failed:
             raise RuntimeError(
-                f"Cannot rerun current job because job status is: {self.status} (should be either CANCELED or ERROR)")
+                f"Cannot rerun current execution because its status is: {self.status} (should be either CANCELED or ERROR)")
 
         return self.clone().execute_async()
 
+    def reset_results_cache(self) -> None:
+        """
+        Reset the results cache.
+        May be useful in case of a communication error during :code:`get_results()` with :code:`allow_partial_results=True`
+        """
+        self._results = {}
+
     def execute_sync(self, *args, allow_partial_results: bool = False, **kwargs) -> dict:
+        """
+        Execute the task synchronously.
+
+        :param args: arguments to pass to the task function
+        :param allow_partial_results: If True, results will be returned even if there is an error somewhere.
+                 Else, the error will be raised
+        :param kwargs: keyword arguments to pass to the task function
+        :return: results dictionary. You can expect a "results" or a "results_list" field, performance scores and other
+                 data corresponding to the computation and computer nature.
+        :raises: RuntimeError if the execution hasn't been launched, or if there is an error and allow_partial_results is False."""
         if self._results:
-            return self._results  # Problem here if we try to reuse a job with different args and kwargs
+            return self._results  # Problem here if we try to reuse an execution with different args and kwargs
 
         self._status.start_run()
-        with self._computer.acquire():
-            try:
-                self._transmit_args(*args, **kwargs)
-                self._computer.execute(self._computation, self._results, progress_callback=self._progress_callback)
-            except Exception as e:
-                if not allow_partial_results:
-                    self._results = {}
-                    self._status.stop_run(RunningStatus.ERROR, f"{type(e).__name__}: {e}")
-                    raise e
+        try:
+            self._transmit_args(*args, **kwargs)
+            self._computer.execute(self._computation, self._results, progress_callback=self._progress_callback)
+        except Exception as e:
+            if not allow_partial_results:
+                self._results = {}
+                self._status.stop_run(RunningStatus.ERROR, f"{type(e).__name__}: {e}")
+                raise e
+
         if self._status.canceled:
             self._status.stop_run(RunningStatus.CANCELED, "Canceled")
         else:
@@ -220,7 +267,7 @@ class Execution:
     def execute_async(self, *args, **kwargs) -> Execution:
         """
         Execute the task asynchronously. This call is non-blocking allowing for concurrency. Results cannot be expected
-        to be ready as soon as this call ends. The results have to be retrieved only when the job status says it's
+        to be ready as soon as this call ends. The results have to be retrieved only when the execution status says it's
         completed.
 
         :param args: arguments to pass to the task function
@@ -232,18 +279,19 @@ class Execution:
 
         self._status.start_run()
         self._transmit_args(*args, **kwargs)
-        self._mitigations, self._noise, self._getters = self._computer.execute_async(self._computation)
+        self._mitigations, self._imperfections, self._getters = self._computer.execute_async(self._computation)
+        self._parameters = deepcopy(self._computer.parameters)
         return self
 
     def get_results(self, allow_partial_results: bool = False) -> dict:
         """
-        Retrieve the results of the job.
+        Retrieve the results of the execution.
 
         :param allow_partial_results: If True, results will be returned even if there is an error somewhere.
                  Else, the error will be raised
         :return: results dictionary. You can expect a "results" or a "results_list" field, performance scores and other
-                 data corresponding to the job nature.
-        :raises: RuntimeError if the job hasn't been launched, or if there is an error and allow_partial_results is False.
+                 data corresponding to the computation and computer nature.
+        :raises: RuntimeError if the execution hasn't been launched, or if there is an error and allow_partial_results is False.
         """
         if not self.was_sent:
             raise RuntimeError("Execution has not been launched")
@@ -255,15 +303,79 @@ class Execution:
             raise RuntimeError(f"Execution failed: {self._status.stop_message}")
 
         try:
-            self._computer.get_results(self._computation, self._mitigations, self._noise, self._getters, self._results)
+            with self._computer.apply_configuration(self._mitigations, self._imperfections.noise, self._parameters):
+                self._computer.get_results(self._computation, self._imperfections, self._getters, self._results)
         except Exception as e:
             if not allow_partial_results:
-                self._results = {}  # Return None as in legacy ?
+                self._results = {}
                 raise e
         return self._results
 
+    def get_details(self) -> str:
+        """
+        :return: A str representing the details of the execution.
+        """
+        res = f"Execution: {{Computer: {self._computer.name}, name: {self.name}, status: {self._status.status.name if self.was_sent else 'NOT SENT'}"
+        if len(self._getters):
+            res += f", getters: ["
+            res += ", ".join(getter.get_details() for getters in self._getters for getter in getters)
+            res += "]"
+        res += "}"
+        return res
+
     def __str__(self):
         if not self.was_sent:
-            return f"Execution '{self.name}', status:not sent"
+            return f"Execution ('{self.name}', status: not sent)"
         else:
-            return f"Execution '{self.name}', status:{self._status}"
+            return f"Execution ('{self.name}', status: {self._status})"
+
+
+_EXECUTION_MEMBERS = [
+    "_computation",
+    "_computer",
+    "_name",
+    "_job_group_name",
+    "_results",
+    "_status",
+    "_parameters",  # Async memory must be the last ones due to the way _save_execution() is written
+    "_mitigations",
+    "_imperfections",
+    "_getters",
+]
+
+
+def _getter_is_serializable(getter: AsyncGetter) -> bool:
+    try:
+        ClassRegistry.get_by_class(type(getter))
+        return True
+    except RuntimeError:
+        return False
+
+
+def _save_execution(execution: Execution, archive):
+    if all(_getter_is_serializable(getter) for getters in execution._getters for getter in getters):
+        return archive.save_attr(execution, _EXECUTION_MEMBERS)
+    else:
+        return archive.save_attr(execution, _EXECUTION_MEMBERS[:-4])
+
+
+def _load_execution(
+    execution: Execution,
+    archive: InputArchive,
+    members,
+    version: int,
+):
+    archive.load_attr(execution, members)
+    execution._user_cb = None
+    if not hasattr(execution, "_getters"):  # Other possibility: store them with initial value
+        execution._parameters = {}
+        execution._getters = []
+        execution._noise = None
+        execution._mitigations = []
+
+
+Serialization.register_class(
+    Execution,
+    class_serial_members_write=_save_execution,
+    class_serial_members_read=_load_execution,
+)

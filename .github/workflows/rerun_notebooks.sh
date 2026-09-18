@@ -29,6 +29,9 @@ for notebook in `find "$notebooks_directory" -name "*.ipynb"`; do
     elif [ "$notebook_name" = "Remote_Computation_Tutorial.ipynb" ]
     then
         echo "  Skip $notebook_name"
+    elif [ "$notebook_name" = "Error_Mitigation_Tutorial.ipynb" ]
+    then
+        echo "  Skip $notebook_name"
     else
         run_notebook
     fi

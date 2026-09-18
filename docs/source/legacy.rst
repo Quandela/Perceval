@@ -5,6 +5,171 @@ While, with its latest versions, Perceval tends to stabilise its public API, som
 
 This section lists the major breaking changes.
 
+Breaking changes in Perceval 1.3
+--------------------------------
+
+Global workflow change
+^^^^^^^^^^^^^^^^^^^^^^
+
+The top layers of perceval (starting from :code:`Processor`) have been completely re-written to support new features,
+and make the whole process more versatile and easy to write.
+
+The former runtime workflow is still available from :code:`perceval.runtime.legacy`, and should continue to work,
+but will not offer all the possibilities that the new workflow offers.
+It is strongly recommended to swap to the new workflow as soon as possible.
+
+In the new workflow, an :code:`Experiment` describes what is run, a computer describes where it is run, and an
+:code:`Execution` controls the run. The following table shows the equivalent code for every class exported by the
+legacy runtime package. Most of the new classes have a one-to-one relationship with the legacy workflow,
+and most of their methods share the same name and signature to help the transition, but there are still a few exceptions.
+Also, the two workflows can't be mixed together.
+
+The snippets use the following imports (and placeholder values :code:`TOKEN` and :code:`PROJECT_ID` for remote calls):
+
+.. code-block:: python
+
+   import perceval as pcvl
+   from perceval.algorithm import Sampler, Analyzer
+   from perceval.runtime import legacy
+
+.. list-table:: Legacy runtime migration examples
+   :header-rows: 1
+
+   * - Old class
+     - Old workflow
+     - New workflow
+   * - :code:`Processor`
+     - .. code-block:: python
+
+          processor = legacy.Processor("SLOS", pcvl.BS(), noise)
+          processor.with_input(pcvl.FockState([1, 1]))
+     - .. code-block:: python
+
+          experiment = pcvl.Experiment(pcvl.BS())
+          experiment.with_input(pcvl.FockState([1, 1]))
+          computer = pcvl.SimulatedComputer("SLOS")
+          computer.noise = noise
+   * - :code:`RemoteProcessor`
+     - .. code-block:: python
+
+          processor = legacy.RemoteProcessor("sim:slos", TOKEN)
+     - .. code-block:: python
+
+          communication_layer = pcvl.QuandelaCommunicationLayer("sim:slos", TOKEN)
+          computer = pcvl.RemoteComputer(communication_layer)
+   * - :code:`Sampler`
+     - .. code-block:: python
+
+          sampler = Sampler(processor)
+     - .. code-block:: python
+
+          factory = pcvl.ExecutionFactory(computer, experiment)
+   * - :code:`ScalewaySession`
+
+       :code:`KipuSession`
+
+       :code:`QuandelaSession`
+     - .. code-block:: python
+
+          session = pcvl.ScalewaySession(
+            "EMU-SAMPLING-L4", PROJECT_ID, TOKEN)
+          with session:
+              processor = session.build_remote_processor()
+              # Run jobs
+     - .. code-block:: python
+
+          communication_layer = pcvl.ScalewayCommunicationLayer(
+            "EMU-SAMPLING-L4", PROJECT_ID, TOKEN)
+          computer = pcvl.RemoteComputer(communication_layer)
+          with computer.acquire():
+              # Run executions
+   * - :code:`Job`
+
+       :code:`LocalJob`
+
+       :code:`RemoteJob`
+     - .. code-block:: python
+
+          sampler = Sampler(processor)
+          job: legacy.Job = sampler.probs
+          results = job(n_samples=1000)
+          job = sampler.probs.execute_async(n_samples = 5000)
+     - .. code-block:: python
+
+          factory = pcvl.ExecutionFactory(computer, experiment)
+          execution: pcvl.Execution = factory.probs
+          with computer.acquire():
+              results = execution(n_samples=1000)
+              execution = factory.probs.execute_async(n_samples = 5000)
+   * - :code:`JobGroup`
+     - .. code-block:: python
+
+          group = legacy.JobGroup("my group")
+          group.add(Sampler(processor).samples,
+                    max_samples=1_000)
+          group.launch_async_jobs()
+     - .. code-block:: python
+
+          group = pcvl.ExecutionGroup("my group")
+          factory = pcvl.ExecutionFactory(computer, experiment)
+          group.add(factory.samples, max_samples=1_000)
+          with computer.acquire():
+             group.launch_async_executions()
+             ...
+   * - :code:`Analyzer`
+
+       :code:`StateTomography`
+     - .. code-block:: python
+
+          analyzer = Analyzer(processor, [pcvl.FockState([1, 1])], "*")
+          analyzer.compute()
+     - .. code-block:: python
+
+          with computer.acquire()
+              # Same class - only the arguments change
+              analyzer = Analyzer(
+                experiment, computer, [pcvl.FockState([1, 1])], "*")
+              analyzer.compute()
+
+.. note::
+   :code:`LocalJob` and :code:`RemoteJob` both become :ref:`Execution`; whether the execution is local or remote is
+   determined by its computer, allowing both remote and local :ref:`Execution` to be used in :ref:`ExecutionGroup`.
+
+.. warning::
+   Already stored :code:`JobGroup` won't be loaded automatically when using the same name in an :ref:`ExecutionGroup`
+   since the inner representation and storage location have changed.
+
+Note that the :code:`with computer.acquire()` context is not mandatory,
+but will handle automatically the computer's lifetime if one exists (start/stop) and make your code more versatile.
+As such, it is advised to use it only once and place it at the highest level possible.
+
+Noise and Experiment
+^^^^^^^^^^^^^^^^^^^^
+
+The :ref:`NoiseModel` used to be an attribute of the :ref:`Experiment` class.
+While this is still possible, and should still work,
+it is strongly advised to set this as a member of the :ref:`Computer` that will execute the computation.
+
+RemoteProcessor vs RemoteComputer
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A few things have been removed between the :code:`RemoteProcessor` and the :ref:`RemoteComputer`. Here is a list of changes:
+
+- The :code:`name` attribute doesn't exist anymore, so platforms can no longer be changed on-the-fly
+- The :meth:`get_rpc_handler()` method no longer exists as :ref:`RemoteComputer` do not have to rely on it.
+  Using a :code:`RPCHandler` manually should not be done anymore.
+- The :meth:`resume_job()` method no longer exists.
+  To retrieve an :ref:`Execution` from the cloud, it must have been serialized before (manually, or automatically by using an :ref:`ExecutionGroup`)
+
+Algorithms
+^^^^^^^^^^
+
+The algorithm classes (:ref:`Analyzer`, :ref:`Tomography`) now store a copy of the given :ref:`Experiment`
+(including if it's given as a :code:`Processor`), so any change to it after instantiating the algorithm won't affect
+the results of the algorithm anymore
+(including setting values to the original parameters - that must be done before instantiating the algorithm).
+
+
 Breaking changes in Perceval 1.2.3
 ----------------------------------
 

@@ -44,7 +44,7 @@ from .circuit import DisplayConfig, ASkin
 from perceval.utils import BasicState, Matrix, simple_float, simple_complex, DensityMatrix, mlstr, ModeType, Encoding
 from perceval.utils.logging import get_logger, channel
 from perceval.utils.states import StateVector, BSCount, BSDistribution, SVDistribution
-from perceval.runtime import JobGroup, AProcessor
+from perceval.runtime import JobGroup, AProcessor, ExecutionGroup
 
 from .format import Format
 from ._processor_utils import collect_herald_info
@@ -344,14 +344,14 @@ def pdisplay_graph(g: nx.Graph, output_format: Format = Format.MPLOT):
     return renderer.render(g)
 
 
-def pdisplay_job_group(jg: JobGroup,  output_format: Format = Format.TEXT):
+def pdisplay_execution_group(jg: ExecutionGroup,  output_format: Format = Format.TEXT):
     progress = jg.progress()
 
     for key, value in progress.items():
         if isinstance(value, int):
             progress[key] = [value]
 
-    return tabulate(progress.values(), headers=['Job Category', 'Count', 'Details'], showindex=progress.keys(),
+    return tabulate(progress.values(), headers=['Category', 'Count', 'Details'], showindex=progress.keys(),
                     tablefmt=_TABULATE_FMT_MAPPING[output_format])
 
 
@@ -368,9 +368,9 @@ def _pdisplay(qpt, **kwargs):
     return pdisplay_tomography_chi(qpt, **kwargs)
 
 
-@dispatch(JobGroup)
+@dispatch((JobGroup, ExecutionGroup))
 def _pdisplay(jg, **kwargs):
-    return pdisplay_job_group(jg, **kwargs)
+    return pdisplay_execution_group(jg, **kwargs)
 
 
 @dispatch((ACircuit, nl.TD, nl.LC))

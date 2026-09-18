@@ -12,7 +12,7 @@ so it requires a backend able to compute probability amplitudes, such as :ref:`S
 
 If possible, it will also automatically use masks on the backend to reduce the computation time and memory.
 
-Also, contrarily to :ref:`Experiment` or :ref:`Processor`,
+Also, contrarily to :ref:`Experiment` or :ref:`Computer`,
 it relies on being given complete information from the start and cannot be used to do composition, remote computing...
 
 The basic :code:`Simulator` is only able to perform computation with non-polarized unitary circuits.

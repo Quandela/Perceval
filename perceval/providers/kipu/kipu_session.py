@@ -1,3 +1,5 @@
+# SKIP LICENSE INSERTION
+
 # MIT License
 #
 # Copyright (c) 2026 Kipu Quantum GmbH
@@ -27,8 +29,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.runtime import ISession
-from perceval.runtime.remote_processor import RemoteProcessor
+from perceval.runtime.legacy import ISession, RemoteProcessor
 from perceval.utils.logging import get_logger, channel
 
 from .kipu_rpc_handler import KipuRPCHandler

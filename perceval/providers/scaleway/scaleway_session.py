@@ -28,8 +28,7 @@
 # SOFTWARE.
 from typing import Optional
 
-from perceval.runtime import ISession
-from perceval.runtime.remote_processor import RemoteProcessor
+from perceval.runtime.legacy import ISession, RemoteProcessor
 from perceval.utils.logging import get_logger, channel
 
 from .scaleway_rpc_handler import RPCHandler
@@ -53,7 +52,7 @@ class Session(ISession):
         self,
         platform_name: str,
         project_id: str,
-        token: str,
+        token: str = None,
         max_idle_duration_s: int = 1200,
         max_duration_s: int = 3600,
         deduplication_id: Optional[str] = None,
@@ -67,9 +66,6 @@ class Session(ISession):
 
         if not project_id:
             raise Exception("project_id cannot be None")
-
-        if not token:
-            raise Exception("token cannot be None")
 
         if not isinstance(max_duration_s, int):
             raise TypeError("max_duration_s cannot be an int (ie: seconds)")

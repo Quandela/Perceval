@@ -28,6 +28,7 @@
 # SOFTWARE.
 
 import sys
+from copy import copy
 
 from perceval.backends import ABackend, AStrongSimulationBackend, ExqaliburBackendWrapper, BACKEND_LIST
 from perceval.components import Experiment, Source
@@ -35,15 +36,19 @@ from perceval.simulators import SimulatorFactory, ExqaliburNoisySamplingSimulato
 from perceval.utils import NoiseModel, BasicState, StateVector, SVDistribution, AnnotatedFockState, ProcessorType, \
     ConversionHelper, ProgressCallback, noise_to_perf_dict
 from perceval.utils.logging import get_logger, channel
+from perceval.serialization import InputArchive, Serialization
 
 from .local_computer import LocalComputer
 from .computation import Computation
+from .computation_iterator import ComputationIterator
 from .platform_specs import PlatformSpecs
+from .error_mitigation import Imperfections
 
 
 class SimulatedComputer(LocalComputer):
     """
     A computer able to perform local simulations
+
     :param backend: The backend to use to perform the simulations. Can be a backend name or a backend instance
     """
 
@@ -68,26 +73,44 @@ class SimulatedComputer(LocalComputer):
             self._backend = backend
 
     @property
+    def name(self) -> str:
+        return self._backend.name
+
+    @property
     def noise(self) -> NoiseModel:
         return self._noise
 
     @noise.setter
     def noise(self, noise: NoiseModel):
+        if noise is None:
+            noise = NoiseModel()
         self._noise = noise
-
-    def validate_single(self, computation: Computation) -> None:
-        super().validate_single(computation)
-        self.check_min_detected_photons_filter(computation)
 
     @property
     def specs(self) -> PlatformSpecs:
-        res = PlatformSpecs()
-        res.parameters = self.available_parameters
-        return res
+        sp = super().specs
+        accepted_state_kinds = ["FS", "NFS", "SVD"]
+        if isinstance(self._backend, AStrongSimulationBackend):
+            accepted_state_kinds += ["AFS", "SV"]
+
+        sp.constraints = {
+            "accepted_state_kinds": accepted_state_kinds
+        }
+        return sp
+
+    def _get_imperfections(self, computation: Computation | ComputationIterator) -> Imperfections:
+        experiment = computation.experiment
+        return Imperfections(experiment.noise or self.noise, computation.experiment.detectors)
+
+    def validate_single(self, computation: Computation) -> None:
+        super().validate_single(computation)
+        if computation.experiment.input_state is None:
+            raise ValueError("The experiment has no input_state (call `with_input()`)")
+        self.check_min_detected_photons_filter(computation)
 
     @property
     def available_parameters(self) -> dict[str, str]:
-        return {"compute_physical_logical_perf": "bool. If True, physical and logical performances will be returned."
+        return {"compute_physical_logical_perf": "bool. If True, physical and logical performances will be returned. "
                                                  "Else, only a global performance will be returned."}
 
     def _create_source(self, experiment: Experiment) -> Source:
@@ -108,11 +131,11 @@ class SimulatedComputer(LocalComputer):
 
     @staticmethod
     def _make_input(experiment: Experiment, source: Source):
-        if isinstance(experiment.input_state, SVDistribution) \
-                or (isinstance(experiment.input_state, AnnotatedFockState) and experiment.input_state.has_polarization):
+        if isinstance(experiment.input_state, SVDistribution):
             # Custom input
             return experiment.input_state
-
+        elif isinstance(experiment.input_state, AnnotatedFockState) and experiment.input_state.has_polarization:
+            return SVDistribution(experiment.input_state)
         return source, experiment.input_state
 
     @staticmethod
@@ -131,20 +154,28 @@ class SimulatedComputer(LocalComputer):
               **kwargs) -> dict:
         """
         Computes the probabilities for a given experiment. Does not apply error mitigations
+
         :param experiment: The Experiment to simulate.
+        :param progress_callback: An optional progress callback that will be used to report the progress of the simulation,
+         and possibly cancel the computation.
         :param precision: The precision of the computation.
          Probabilities lower than the biggest input probability times this are ignored. Used only with Probability backends
         :param max_shots: The maximum number of shots to consider. A shot is any event with at least 1 photon
          Used only is the computer has a Sampling backend or if the precision is not given
-        :param max_samples. The maximum number of samples to consider.
+        :param max_samples: The maximum number of samples to consider.
          A sample is any event with at least min_photons photon (defined in the Experiment).
          Used only is the computer has a Sampling backend or if the precision and the max_shots are not given
         :param compilation_seed: A seed to use for the compilation starting point or the random phases
-        :return:
+        :return: A dict with the following fields:\n
+            -  "result": BSDistribution,
+            -  "global_perf": float,
+            -  If compute_physical_logical_perf is True:
+                + "physical_perf": float,
+                + "logical_perf": float,
         """
         if isinstance(self._backend, AStrongSimulationBackend):
             experiment = experiment.use_phase_noise(self.noise, compilation_seed)
-            simulator = SimulatorFactory.build(experiment, self._backend)
+            simulator = SimulatorFactory.build(experiment, self._backend, self.noise)
 
             precision = self._parse_precision(precision, max_shots, max_samples)
             if precision is not None:
@@ -195,6 +226,25 @@ class SimulatedComputer(LocalComputer):
                 progress_callback: ProgressCallback = None,
                 compilation_seed: int = None,
                 **kwargs) -> dict:
+        """
+        Computes the probabilities for a given experiment. Does not apply error mitigations
+
+        :param experiment: The Experiment to simulate.
+        :param progress_callback: An optional progress callback that will be used to report the progress of the simulation,
+         and possibly cancel the computation.
+        :param max_shots: The maximum number of shots to consider. A shot is any event with at least 1 photon
+         Used only is the computer has a Sampling backend or if the precision is not given
+        :param max_samples: The maximum number of samples to consider.
+         A sample is any event with at least min_photons photon (defined in the Experiment).
+         Used only is the computer has a Sampling backend or if the precision and the max_shots are not given
+        :param compilation_seed: A seed to use for the compilation starting point or the random phases
+        :return: A dict with the following fields:\n
+            -  "result": BSSamples,
+            -  "global_perf": float,
+            -  If compute_physical_logical_perf is True:
+                + "physical_perf": float,
+                + "logical_perf": float,
+        """
         if isinstance(self._backend, AStrongSimulationBackend):
             res = self.probs(experiment,
                              progress_callback,
@@ -218,6 +268,25 @@ class SimulatedComputer(LocalComputer):
                      progress_callback: ProgressCallback = None,
                      compilation_seed: int = None,
                      **kwargs) -> dict:
+        """
+        Computes the probabilities for a given experiment. Does not apply error mitigations
+
+        :param experiment: The Experiment to simulate.
+        :param progress_callback: An optional progress callback that will be used to report the progress of the simulation,
+         and possibly cancel the computation.
+        :param max_shots: The maximum number of shots to consider. A shot is any event with at least 1 photon
+         Used only is the computer has a Sampling backend or if the precision is not given
+        :param max_samples: The maximum number of samples to consider.
+         A sample is any event with at least min_photons photon (defined in the Experiment).
+         Used only is the computer has a Sampling backend or if the precision and the max_shots are not given
+        :param compilation_seed: A seed to use for the compilation starting point or the random phases
+        :return: A dict with the following fields:\n
+            -  "result": BSCount,
+            -  "global_perf": float,
+            -  If compute_physical_logical_perf is True:
+                + "physical_perf": float,
+                + "logical_perf": float,
+        """
         if isinstance(self._backend, AStrongSimulationBackend):
             res = self.probs(experiment,
                              progress_callback,
@@ -236,7 +305,7 @@ class SimulatedComputer(LocalComputer):
         return res
 
     def log_resources(self, method: str, experiment: Experiment, extra_parameters: dict):
-        """Log resources of the AbstractComputer
+        """Log resources of the AComputer
 
         :param method: name of the method used
         :param extra_parameters: extra parameters to log.
@@ -283,3 +352,30 @@ class SimulatedComputer(LocalComputer):
     @property
     def performance(self):
         return noise_to_perf_dict(self.noise)
+
+
+_SIMULATED_COMPUTER_MEMBERS = ["_backend", "_error_mitigations", "_parameters", "_noise"]
+
+
+def _save_simulated_computer(computer: SimulatedComputer, archive):
+    serializable_computer = copy(computer)
+    serializable_computer._backend = computer._backend.name
+    return archive.save_attr(serializable_computer, _SIMULATED_COMPUTER_MEMBERS)
+
+
+def _load_simulated_computer(
+    computer: SimulatedComputer,
+    archive: InputArchive,
+    members,
+    version: int,
+):
+    values = {name: value for name, value in members}
+    computer.__init__(archive.create(values.pop("_backend")))
+    archive.load_attr(computer, list(values.items()))
+
+
+Serialization.register_class(
+    SimulatedComputer,
+    class_serial_members_write=_save_simulated_computer,
+    class_serial_members_read=_load_simulated_computer,
+)

@@ -1,7 +1,7 @@
 Circuit rendering skins
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-When rendering a :ref:`Circuit`, an :ref:`Experiment` or a :ref:`Processor`, you can select a skin which will change how
+When rendering a :ref:`Circuit` or an :ref:`Experiment`, you can select a skin which will change how
 the components are displayed.
 
 >>> import perceval as pcvl

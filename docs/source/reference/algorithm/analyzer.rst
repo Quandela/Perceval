@@ -1,8 +1,8 @@
 Analyzer
 ^^^^^^^^
 
-The ``Analyzer`` algorithm aims at testing a processor, computing a probability table between input states and expected
-outputs, a performance score and an error rate.
+The :code:`Analyzer` algorithm aims at testing an :ref:`Experiment`, computing a probability table between input states
+and expected outputs, a performance score and an error rate, through a given :ref:`Computer`
 
 For example, we call the Naive backend that we store in simulator_backend:
 
@@ -15,14 +15,17 @@ from the Perceval library.
 
 let's simulate the distribution obtained when we input two photons in a beam-splitter. We will use the Naive backend already stored in simulator_backend.
 
-We will simulate the behavior of the circuit using the `Circuit Analyzer` which has three arguments:
+We will simulate the behavior of the circuit using the :code:`Analyzer` which has four arguments:
 
-- The first one is an instance of a processor containing the circuit to analyse.
-- The second one is the input state (we will use `input_state`).
-- The third one is the desired output states. To compute all possible output states, one just input `"*"`.
+- The first one is an instance of the computer that we are going to use.
+- The second one is the experiment to analyse.
+- The third one is the input state (we will use `input_state`).
+- The fourth one is the desired output states. To compute all possible output states, one just input `"*"`.
 
->>> p = Processor("SLOS", comp.BS()) # create a processor running on SLOS backend
->>> ca = pcvl.algorithm.Analyzer(p, [input_state], "*")
+>>> experiment = pcvl.Experiment(pcvl.BS())  # No need to declare the input state here
+>>> computer = pcvl.SimulatedComputer(simulator_backend)
+>>> with computer.acquire():
+...     ca = pcvl.algorithm.Analyzer(computer, experiment, [input_state], "*")
 
 Then, we display the result of `Analyzer` via :ref:`pdisplay`.
 

@@ -32,14 +32,13 @@ import numpy as np
 from scipy.stats import unitary_group
 
 import perceval as pcvl
-from perceval.components import catalog, Circuit, PauliType, PauliEigenStateType, get_pauli_eigen_state_prep_circ
-from perceval.backends import SLOSBackend
-from perceval.components import Unitary
+from perceval.runtime import SimulatedComputer
+from perceval.components import (catalog, PauliType, PauliEigenStateType, get_pauli_eigen_state_prep_circ, Unitary,
+                                 Experiment)
 from perceval.algorithm import ProcessTomography, StateTomography
 from perceval.algorithm.tomography.tomography_utils import (is_physical, _generate_pauli_index, _vector_to_sq_matrix,
                                                             _matrix_to_vector, _matrix_basis, _coef_linear_decomp,
                                                             process_fidelity)
-from perceval.runtime import Processor
 
 CNOT_TARGET = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype=np.cdouble)
 
@@ -47,8 +46,8 @@ CNOT_TARGET = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]],
 @pytest.mark.parametrize("pauli_gate", [PauliEigenStateType.Zm, PauliEigenStateType.Zp, PauliEigenStateType.Xp,
                                         PauliEigenStateType.Yp])
 def test_density_matrix_state_tomography(pauli_gate):
-    p = Processor("Naive", Circuit(2) // get_pauli_eigen_state_prep_circ(pauli_gate))  # 1 qubit Pauli X gate
-    qst = StateTomography(operator_processor=p)
+    e = Experiment(get_pauli_eigen_state_prep_circ(pauli_gate))  # 1 qubit Pauli X gate
+    qst = StateTomography(SimulatedComputer("SLOS"), e)
     density_matrix = qst.perform_state_tomography([PauliEigenStateType.Xp])
 
     res = is_physical(density_matrix, nqubit=1)
@@ -59,9 +58,9 @@ def test_density_matrix_state_tomography(pauli_gate):
     assert res["Completely Positive"] is True
 
 
-def fidelity_op_process_tomography(op, op_proc):
+def fidelity_op_process_tomography(op, experiment):
     # create process tomography object
-    qpt = ProcessTomography(operator_processor=op_proc)
+    qpt = ProcessTomography(SimulatedComputer("SLOS"), experiment)
     # compute Chi matrix
     chi_op_ideal = qpt.chi_target(op)
     chi_op = qpt.chi_matrix()
@@ -73,7 +72,7 @@ def fidelity_op_process_tomography(op, op_proc):
 @pytest.mark.long_test
 def test_fidelity_klm_cnot():
     # set operator circuit, num qubits
-    cnot_p = Processor("SLOS", catalog["klm cnot"].build_experiment())
+    cnot_p = catalog["klm cnot"].build_experiment()
     cnot_fidelity = fidelity_op_process_tomography(CNOT_TARGET, cnot_p)
     assert cnot_fidelity == pytest.approx(1)
 
@@ -81,7 +80,7 @@ def test_fidelity_klm_cnot():
 @pytest.mark.long_test
 def test_fidelity_postprocessed_cnot():
     # set operator circuit, num qubits
-    cnot_p = Processor("SLOS", catalog["postprocessed cnot"].build_experiment())
+    cnot_p = catalog["postprocessed cnot"].build_experiment()
     cnot_fidelity = fidelity_op_process_tomography(CNOT_TARGET, cnot_p)
     assert cnot_fidelity == pytest.approx(1)
 
@@ -101,9 +100,7 @@ def test_fidelity_random_op():
         random_op = np.kron(random_op, L[i])
         random_op_circ.add(2 * i, Unitary(pcvl.Matrix(L[i])))
 
-    random_op_proc = Processor(backend=SLOSBackend(), m_circuit=random_op_circ.m)
-    random_op_proc.add(0, random_op_circ)
-
+    random_op_proc = Experiment(random_op_circ)
     random_op_fidelity = fidelity_op_process_tomography(random_op, random_op_proc)
 
     assert random_op_fidelity == pytest.approx(1)
@@ -112,14 +109,14 @@ def test_fidelity_random_op():
 def test_processor_odd_modes():
     # tests that a generic processor with odd number of modes does not work
     with pytest.raises(ValueError):
-        ProcessTomography(operator_processor=Processor(SLOSBackend(), m_circuit=5))
+        ProcessTomography(SimulatedComputer("SLOS"), Experiment(m_circuit=5))
 
 
 @pytest.mark.long_test
 def test_chi_cnot_is_physical():
-    cnot_p = Processor("SLOS", catalog["klm cnot"].build_experiment())
+    cnot_p = catalog["klm cnot"].build_experiment()
 
-    qpt = ProcessTomography(operator_processor=cnot_p)
+    qpt = ProcessTomography(SimulatedComputer("SLOS"), cnot_p)
 
     chi_op = qpt.chi_matrix()
     res = is_physical(chi_op, nqubit=2)
@@ -174,7 +171,7 @@ def test_matrix_basis_n_decomp():
 
 @pytest.mark.skip(reason='3 qubit tests takes a long time to compute')
 def test_avg_fidelity_postprocessed_ccz_gate():
-    ccz_p = Processor("SLOS", catalog["postprocessed ccz"].build_experiment())
+    ccz_p = catalog["postprocessed ccz"].build_experiment()
     op_CCZ = np.array([[1, 0, 0, 0, 0, 0, 0, 0],
                        [0, 1, 0, 0, 0, 0, 0, 0],
                        [0, 0, 1, 0, 0, 0, 0, 0],
@@ -184,6 +181,6 @@ def test_avg_fidelity_postprocessed_ccz_gate():
                        [0, 0, 0, 0, 0, 0, 1, 0],
                        [0, 0, 0, 0, 0, 0, 0, -1]], dtype=np.cdouble)
 
-    qpt = ProcessTomography(operator_processor=ccz_p)
+    qpt = ProcessTomography(SimulatedComputer("SLOS"), ccz_p)
     ccz_avg_f = qpt.average_fidelity(op_CCZ)
     assert ccz_avg_f == pytest.approx(1)

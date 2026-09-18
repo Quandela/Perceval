@@ -2,11 +2,16 @@ runtime
 ^^^^^^^
 
 .. toctree::
-   processor
-   remote_processor
-   remote_config
+   :maxdepth: 2
+
+   computer
+   communication_layer
+   command
+   computation
+   execution_factory
+   execution
+   execution_group
+   error_mitigation/index
    platform_specs
-   job
-   job_status
-   job_group
-   rpchandler
+   execution_status
+   legacy/index

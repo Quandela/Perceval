@@ -28,11 +28,12 @@
 # SOFTWARE.
 """Provider related imports and classes"""
 
-from perceval.runtime import ISession
+from perceval.runtime.legacy import ISession
 
-from .quandela import Session as QuandelaSession
-from .scaleway import Session as ScalewaySession
-from .kipu import Session as KipuSession
+from .quandela import Session as QuandelaSession, QuandelaCommunicationLayer, RemoteConfig
+from .scaleway import Session as ScalewaySession, ScalewayCommunicationLayer, ScalewayConfig
+from .kipu import Session as KipuSession, KipuCommunicationLayer, KipuConfig
+from .abstract_config import ARemoteConfig
 
 PROVIDER_LIST = {
     "Quandela": QuandelaSession,

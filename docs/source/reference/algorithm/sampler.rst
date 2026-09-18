@@ -1,5 +1,9 @@
-Sampler
-^^^^^^^
+Legacy Sampler
+^^^^^^^^^^^^^^
+
+.. warning::
+   This page describes a legacy algorithm that was used with :ref:`Processor` and :ref:`RemoteProcessor` to launch jobs.
+   It has been replaced by the :ref:`ExecutionFactory` that works with :ref:`Computer` and :ref:`Experiment`.
 
 The :code:`Sampler` is the simplest algorithm provided, yet an important gateway to using processors.
 

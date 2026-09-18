@@ -7,11 +7,11 @@ by computing the permanent of a :math:`n \times n` matrix, with a time complexit
 
 As such, it is very efficient to compute very precise output states, but not to compute the whole distribution.
 
-Thus, using it is not recommended in :ref:`Simulator` (except when using :meth:`probability()`) or :ref:`Processor`,
+Thus, using it is not recommended in :ref:`Simulator` (except when using :meth:`probability()`) or :ref:`SimulatedComputer`,
 but it is well suited for applications where only a few output probabilities matter.
 If the whole or most of the computational space is needed, other backends like :ref:`SLOSBackend` are more suited.
 
-This backend is available in :ref:`Processor` by using the name :code:`"Naive"`.
+This backend is available in :ref:`SimulatedComputer` by using the name :code:`"Naive"`.
 
 >>> import perceval as pcvl
 >>> c = pcvl.Circuit(4) // pcvl.BS() // (2, pcvl.BS())

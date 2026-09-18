@@ -67,26 +67,24 @@ class Experiment:
     - Ports to define groups of modes
     - Heralds
     - A post-selection method
-    - A NoiseModel
+    - A NoiseModel (deprecated, should now be set into the computer)
 
     :param m_circuit: Number of spatial modes (int), first part of the circuit (Circuit) or None.
                       If a circuit is passed, its size is used as the experiment size.
-    :param noise: A `NoiseModel`
+    :param noise: (deprecated) A `NoiseModel`
     :param name: The experiment name
     """
 
-    _no_copiable_attributes = { '_circuit_changed_observers', '_noise_changed_observers', '_input_changed_observers' }
+    _no_copiable_attributes = { '_noise_changed_observers' }
 
     def __init__(self, m_circuit: int | ACircuit = None, noise: NoiseModel = None, name: str = "Experiment"):
-        self._input_state = None
+        self._input_state: FockState | AnnotatedFockState | SVDistribution | None = None
         self.name: str = name
 
         self._min_detected_photons_filter: int | None = None
 
         # TODO: Legacy - Remove when removing Processors
-        self._circuit_changed_observers: list[Callable[[Experiment | AComponent | None], None]] = []
         self._noise_changed_observers: list[Callable[[], None]] = []
-        self._input_changed_observers: list[Callable[[], None]] = []
 
         self.noise: NoiseModel | None = noise
 
@@ -143,21 +141,11 @@ class Experiment:
         get_logger().debug(f"Clear input and circuit in experiment {self.name}", channel.general)
         self._reset_circuit()
         self._input_state = None
-        self._input_changed()
-        self._circuit_changed()
         if new_m is not None:
             self.m = new_m
 
-    def _circuit_changed(self, component=None):
-        for observer in self._circuit_changed_observers:
-            observer_fn = observer()
-            if observer_fn is not None:
-                observer_fn(component)  # Used to notify the Processors containing this experiment of a new component
-
-    def add_observers(self, circuit_observer: callable, noise_observer: callable, input_observer: callable):
-        self._circuit_changed_observers.append(weakref.WeakMethod(circuit_observer))
+    def add_observers(self, noise_observer: callable):
         self._noise_changed_observers.append(weakref.WeakMethod(noise_observer))
-        self._input_changed_observers.append(weakref.WeakMethod(input_observer))
 
     def min_detected_photons_filter(self, n: int):
         r"""
@@ -204,7 +192,7 @@ class Experiment:
     def set_postselection(self, postselect: PostSelect | str):
         r"""
         Set a logical post-selection function. Along with the heralded modes, this function has an impact
-        on the logical performance of the processor holding this experiment
+        on the logical performance of the results when computing using this experiment
 
         :param postselect: Sets a post-selection function.
         """
@@ -214,12 +202,10 @@ class Experiment:
         if not isinstance(postselect, PostSelect):
             raise TypeError("Parameter must be a PostSelect object")
 
-        self._circuit_changed()
         self._postselect = postselect
 
     def clear_postselection(self):
         if self._postselect != PostSelect():
-            self._circuit_changed()
             self._postselect = PostSelect()
 
     def __deepcopy__(self, memo):
@@ -317,7 +303,6 @@ class Experiment:
         else:
             raise RuntimeError(f"Cannot add {type(component)} object to an Experiment")
 
-        self._circuit_changed(component)
         return self
 
     def _add_ffconfig(self, modes, component: AFFConfigurator):
@@ -393,7 +378,7 @@ class Experiment:
         self._has_td = self._has_td or experiment._has_td
         if experiment.heralds:
             # adding the same experiment component again renders incorrect heralds if not copied
-            # This concerns our gate based processors from catalog which has no input params
+            # This concerns our gate based experiments from catalog which has no input params
             get_logger().debug("  Force copy during experiment compose", channel.general)
             experiment = experiment.copy()
 
@@ -568,7 +553,6 @@ class Experiment:
         if location == PortLocation.OUTPUT or location == PortLocation.IN_OUT:
             self._out_ports[herald] = [mode]
             self._out_mode_type[mode] = ModeType.HERALD
-        self._circuit_changed()
 
     def add_herald(self, mode: int, expected: int, name: str = None, location: PortLocation = PortLocation.IN_OUT):
         r"""
@@ -786,6 +770,16 @@ class Experiment:
                 raise UnavailableModeException(m, f"Port is not at location '{location.name}'")
         return self
 
+    def remove_all_ports(self, location: PortLocation = PortLocation.IN_OUT):
+        """Remove all ports (including heralds) defined in this Experiment"""
+        if location in (PortLocation.IN_OUT, PortLocation.INPUT):
+            self._in_ports.clear()
+            self._in_mode_type = [ModeType.PHOTONIC] * self.circuit_size
+        if location in (PortLocation.IN_OUT, PortLocation.OUTPUT):
+            self._out_ports.clear()
+            self._out_mode_type = [ModeType.PHOTONIC if m not in self.detectors_injected else ModeType.CLASSICAL
+                                   for m in range(self.circuit_size)]
+
     def is_mode_connectible(self, mode: int) -> bool:
         if mode < 0:
             return False
@@ -831,18 +825,22 @@ class Experiment:
     def in_heralds(self) -> dict[int, int]:
         return {port_range[0]: port.expected for port, port_range in self._in_ports.items() if isinstance(port, Herald)}
 
+    def remove_heralded_modes(self, s: FockState) -> FockState:
+        if self.heralds:
+            s = s.remove_modes(list(self.heralds.keys()))
+        return s
+
+    def remove_in_heralded_modes(self, s: FockState) -> FockState:
+        if self.in_heralds:
+            s = s.remove_modes(list(self.in_heralds.keys()))
+        return s
+
     def check_input(self, input_state: FockState):
         r"""Check if a basic state input matches with the current experiment configuration"""
         assert self.m_in, "A circuit has to be set before the input state"
         expected_input_length = self.m_in
         assert len(input_state) == expected_input_length, \
             f"Input length not compatible with circuit (expects {expected_input_length}, got {len(input_state)})"
-
-    def _input_changed(self):
-        for observer in self._input_changed_observers:
-            observer_fn = observer()
-            if observer_fn is not None:
-                observer_fn()
 
     @dispatch(LogicalState)
     def with_input(self, input_state: LogicalState):
@@ -865,13 +863,15 @@ class Experiment:
                 input_idx += 1
 
         self._input_state = FockState(input_list)
-        self._input_changed()
 
     @dispatch(AnnotatedFockState)
     def with_input(self, input_state: AnnotatedFockState) -> None:
+        assert self.circuit_size, "A circuit has to be set before the input state"
+        assert input_state.m == self.circuit_size, "All modes must be given when using an AnnotatedFockState as input " \
+                                                   "(including heralded ones)"
+
         if input_state.has_polarization:
             self._input_state = input_state
-            self._input_changed()
         else:
             raise TypeError("Local simulations only support AnnotatedFockState in case of a polarized input state")
 
@@ -895,7 +895,6 @@ class Experiment:
         assert self.m is not None, "A circuit has to be set before the input distribution"
         assert svd.m == self.circuit_size, f'Input distribution contains states with a bad size ({svd.m}), expected {self.circuit_size}'
         self._input_state = svd
-        self._input_changed()
 
     def flatten(self, max_depth=None) -> list[tuple]:
         """

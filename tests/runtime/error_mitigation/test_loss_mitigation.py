@@ -37,7 +37,8 @@ from perceval.utils import BasicState, BSDistribution
 from perceval.components import catalog, Unitary
 from perceval.utils import Matrix, NoiseModel
 from perceval.algorithm import Sampler
-from perceval import Processor, Detector, PhotonRecycling, Computation, CommandFactory, Experiment, PostSelect
+from perceval import Processor, Detector, PhotonRecycling, Computation, CommandFactory, Experiment, PostSelect, \
+    Imperfections
 from perceval.utils.dist_metrics import tvd_dist, kl_divergence
 import perceval as pcvl
 
@@ -174,13 +175,14 @@ def test_mitigation_over_postselect_tvd():
 @patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 def test_photon_recycling_class(mock_warn):
     pr = PhotonRecycling()
+    imperfections = Imperfections(NoiseModel(transmittance=0.3), [])
 
     n_photons = 4
 
     e = _get_random_experiment(n_photons)
     starting_comp = Computation(CommandFactory.sample_count, e)
 
-    computations = pr.extend_computation(starting_comp, NoiseModel(transmittance=0.3))
+    computations = pr.extend_computation(starting_comp, imperfections)
 
     assert len(computations) == 1
     e2 = computations[0].experiment
@@ -192,7 +194,7 @@ def test_photon_recycling_class(mock_warn):
     e.set_postselection(PostSelect("[2] <= 2"))
 
     with LogChecker(mock_warn):
-        computations = pr.extend_computation(starting_comp, NoiseModel(transmittance=0.3))
+        computations = pr.extend_computation(starting_comp, imperfections)
     e2 = computations[0].experiment
     assert e2.min_photons_filter == n_photons - 2
     assert e2.heralds == {}

@@ -5,11 +5,11 @@ This class exposes a single :code:`build` static method that can be used to crea
 In particular, it allows you to simulate circuits with non-unitary components or polarized components.
 
 >>> import perceval as pcvl
->>> p = pcvl.Processor("SLOS", 2)
->>> p.add(0, pcvl.BS())
->>> p.add(0, pcvl.TD(1))  # Add a non-unitary component
->>> p.add(0, pcvl.BS())
->>> sim = pcvl.SimulatorFactory.build(p)  # SLOS is transmitted from p to sim
+>>> e = pcvl.Experiment("SLOS", 2)
+>>> e.add(0, pcvl.BS())
+>>> e.add(0, pcvl.TD(1))  # Add a non-unitary component
+>>> e.add(0, pcvl.BS())
+>>> sim = pcvl.SimulatorFactory.build(e, backend="SLOS")
 >>> sim.probs(pcvl.BasicState([1, 1]))
 {
   |1,0>: 0.25
@@ -22,7 +22,7 @@ In particular, it allows you to simulate circuits with non-unitary components or
 The type of the simulator will depend on your components.
 However, it is guaranteed that the resulting simulator will have at least these methods:
 
-- :code:`set_selection` for heralds, postselect, and min_detected_photons_filter (already done if the circuit is a :code:`Processor`).
+- :code:`set_selection` for heralds, postselect, and min_detected_photons_filter (already done if the circuit is an :code:`Experiment`).
 - :code:`probs` to compute the output probabilities for one input state.
 - :code:`probs_svd` to compute the output probabilities for a :code:`SVDistribution`, with possible support for detectors
 
