@@ -251,7 +251,7 @@ class SerializerDataSplitFunctions(ASerializer[T, DescriptorClass]):
         return obj
 
 
-class SerializerClass(Generic[T, DescriptorType]):
+class SerializerClass(ASerializer[T, DescriptorType]):
 
     def __init__(
                 self,

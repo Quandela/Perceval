@@ -80,7 +80,7 @@ class RPCBasedCommunicationLayer(CommunicationLayer):
             try:
                 self._platform_details = self._rpc_handler.fetch_platform_details()
             except HTTPError as e:
-                if not len(self._specs):  # throw only the first time
+                if not len(self._specs):
                     raise HTTPError(f"Error while fetching platform details: {e}") from None
                 else:
                     get_logger().warn(f"Error while fetching platform details: {e}")
