@@ -40,14 +40,11 @@ from ._state_serialization import serialize_state, serialize_statevector, serial
     serialize_bscount, serialize_svdistribution
 from perceval.components import ACircuit, BSLayeredPPNR, Detector, AComponent, Herald, Port, Experiment, CompiledCircuit
 from perceval.components.compiled_circuit import CompiledCircuitVersion
+from perceval.serialization.library.utils import b64encoding
 from perceval.utils import Matrix, BasicState, SVDistribution, BSDistribution, BSCount, BSSamples, StateVector, \
     NoiseModel, PostSelect
 from base64 import b64encode
 import json
-
-
-def b64encoding(obj: bytes) -> str:
-    return b64encode(obj).decode('utf-8')
 
 
 @dispatch(bool, str)
