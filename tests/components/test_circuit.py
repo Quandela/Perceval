@@ -35,7 +35,7 @@ from collections import Counter
 from perceval import Circuit, P, BasicState, pdisplay, Matrix, BackendFactory, Processor
 from perceval.rendering.pdisplay import pdisplay_circuit, pdisplay_matrix
 from perceval.rendering.format import Format
-from perceval.utils import InterferometerShape
+from perceval.utils import InterferometerShape, FockState
 import perceval.algorithm as algo
 import perceval.components.unitary_components as comp
 from .._test_utils import strip_line_12, assert_circuits_eq
@@ -468,3 +468,23 @@ def test_phase_noise():
     circuit = comp.PS(0.775)
     circuit.apply_phase_noise(0, 0.25)
     assert pytest.approx(float(circuit.param("phi"))) == 0.75
+
+
+def test_compute_fock_matrix():
+    circ = comp.Unitary.random(5) // comp.BS() // comp.PS(0.4)
+    backend = BackendFactory.get_backend("SLOS")
+
+    basis = [
+        FockState([3, 0, 0, 0, 0]),
+        FockState([0, 3, 0, 0, 0]),
+    ]
+
+    fock_matrix = circ.compute_fock_matrix(basis=basis, perm_method="ryser")
+
+    backend = BackendFactory.get_backend("SLOS")
+    backend.set_circuit(circ)
+    backend.set_input_state(basis[0])
+    evolved_state = backend.evolve()
+
+    for output_idx, output_state in enumerate(basis):
+        assert fock_matrix[output_idx, 0] == pytest.approx(evolved_state[output_state])
