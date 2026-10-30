@@ -48,7 +48,7 @@ from ._enums import Encoding, InterferometerShape, FileFormat, ModeType, Process
 from .persistent_data import PersistentData
 from .versions import PMetadata
 from .density_matrix import DensityMatrix
-from .noise_model import NoiseModel, perf_dict_to_noise, noise_to_perf_dict
+from .noise_model import NoiseModel, MultiSourceNoiseModel, perf_dict_to_noise, noise_to_perf_dict
 from .logging import get_logger, use_perceval_logger, use_python_logger, LoggerConfig, deprecated
 from .progress_cb import partial_progress_callable, ProgressCallback
 from .dist_metrics import tvd_dist, kl_divergence

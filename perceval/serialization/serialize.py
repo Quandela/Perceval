@@ -214,7 +214,7 @@ def serialize(obj, compress=None):
         compress = False
     tag = NOISE_TAG
     compress = _handle_compress_parameter(compress, tag)
-    return _handle_compression(f"{PCVL_PREFIX}{tag}{SEP}" + json.dumps(obj.__dict__()), do_compress=compress)
+    return _handle_compression(f"{PCVL_PREFIX}{tag}{SEP}" + json.dumps(obj.to_dict()), do_compress=compress)
 
 
 @dispatch(PostSelect, compress=(list, bool))

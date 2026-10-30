@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from ._validated_params import AValidatedParam, ValidatedBool, ValidatedFloat
+from ._validated_params import AValidatedParam, ValidatedBool, ValidatedFloat, ValidatedListOrScalar, ValidatedInt
 from .constants import TRANSMITTANCE_KEY, G2_KEY, INDISTINGUISHABILITY_KEY
 from math import pi
 
@@ -77,15 +77,15 @@ class NoiseModel:
         self.phase_error = phase_error
 
     def __deepcopy__(self, memo):
-        return NoiseModel(**self.__dict__())
+        return NoiseModel(**self.to_dict())
 
     def __str__(self) -> str:
-        return str(self.__dict__())
+        return str(self.to_dict())
 
     def __repr__(self) -> str:
-        return str(self.__dict__())
+        return str(self.to_dict())
 
-    def __dict__(self) -> dict:
+    def to_dict(self) -> dict:
         cls = type(self)
         res = {}
         for attr in dir(self):
@@ -105,7 +105,128 @@ class NoiseModel:
 
 # Note: NoiseModel serialization is in serialization._archive_serialization
 
-def perf_dict_to_noise(perfs: dict[str, float]) -> NoiseModel:
+class MultiSourceNoiseModel:
+    # Do not inherit from NoiseModel so that isinstance(NoiseModel) returns False
+
+    XQ_MAX_MODES = 256  # Maximum number of modes in exqalibur
+
+    # Sources parameters
+    brightness = ValidatedListOrScalar(ValidatedFloat(0, 1, 1))
+    indistinguishability = ValidatedListOrScalar(ValidatedFloat(0, 1, 1))
+    external_indistinguishability = ValidatedListOrScalar(ValidatedFloat(0, 1, 1))
+    source_positions = ValidatedListOrScalar(ValidatedInt(0, 125, 0))  # For each mode, which source is connected
+    # _g2 = ValidatedListOrScalar(ValidatedFloat(0, 1, 0))
+
+    # System-wide parameter
+    # _g2_distinguishable = ValidatedBool(True)  # System wide as the model doesn't allow for separate values
+    # _transmittance = ValidatedFloat(0, 1, 1)
+
+    # Optical circuit parameter
+    phase_imprecision = ValidatedFloat(0, default_value=0)
+    phase_error = ValidatedFloat(0, pi, 0)
+
+    def __init__(self,
+                 brightness: list[float] | float = None,
+                 indistinguishability: list[float] | float = None,
+                 external_indistinguishability: list[float] | float = None,
+                 # g2: float = None,
+                 source_positions: list[int] = None,
+                 # g2_distinguishable: bool = None,
+                 # transmittance: float = None,
+                 phase_imprecision: float = None,
+                 phase_error: float = None
+                 ):
+        self.brightness = brightness
+        self.indistinguishability = indistinguishability
+        self.external_indistinguishability = external_indistinguishability
+        self.source_positions = source_positions if source_positions is not None else [0] * self.XQ_MAX_MODES
+        # self.g2 = g2
+        # self.g2_distinguishable = g2_distinguishable
+        # self.transmittance = transmittance
+        self.phase_imprecision = phase_imprecision
+        self.phase_error = phase_error
+
+        # Validation : all values must either be scalars or lists of the same length as the number of sources.
+        # Replaces scalars by a repeated list of that length
+        if source_positions is not None:
+            n_sources = max(self.source_positions) + 1
+
+            if isinstance(self.brightness, (list, tuple)):
+                if len(self.brightness) != n_sources:
+                    raise ValueError(f"Number of brightness parameters {len(self.brightness)} does not match number of sources {n_sources}")
+            else:
+                self.brightness = [self.brightness] * n_sources  # Default to same brightness everywhere
+
+            if isinstance(self.indistinguishability, (list, tuple)):
+                if len(self.indistinguishability) != n_sources:
+                    raise ValueError(f"Number of brightness parameters {len(self.indistinguishability)} does not match number of sources {n_sources}")
+            else:
+                self.indistinguishability = [self.indistinguishability] * n_sources
+
+            if isinstance(self.external_indistinguishability, (list, tuple)):
+                if len(self.external_indistinguishability) != n_sources:
+                    raise ValueError(
+                        f"Number of brightness parameters {len(self.external_indistinguishability)} does not match number of sources {n_sources}")
+            else:
+                self.external_indistinguishability = [self.external_indistinguishability] * n_sources
+
+        else:
+            n_sources_set = {1}  # 1 for the source positions that default to all 0
+            for val in (self.brightness, self.indistinguishability, self.external_indistinguishability):
+                if isinstance(val, (list, tuple)):
+                    n_sources_set.add(len(val))
+
+            if len(n_sources_set) != 1:
+                raise ValueError(f"Received different numbers of sources: {n_sources_set}")
+            n_sources = n_sources_set.pop()
+            if n_sources != 1:
+                raise ValueError(f"The sources positions are not specified - Expected all numbers between 0 and {n_sources - 1}")
+
+            # Here we have 1 source
+            self.source_positions = [0] * self.XQ_MAX_MODES
+
+            if not isinstance(self.brightness, (list, tuple)):
+                self.brightness = [self.brightness]
+            if not isinstance(self.indistinguishability, (list, tuple)):
+                self.indistinguishability = [self.indistinguishability]
+            if not isinstance(self.external_indistinguishability, (list, tuple)):
+                self.external_indistinguishability = [self.external_indistinguishability]
+
+    @property
+    def n_sources(self) -> int:
+        return len(self.brightness)
+
+    def __deepcopy__(self, memo):
+        return MultiSourceNoiseModel(**self.to_dict())
+
+    def __str__(self) -> str:
+        return str(self.to_dict())
+
+    def __repr__(self) -> str:
+        return str(self.to_dict())
+
+    def to_dict(self) -> dict:
+        cls = type(self)
+        res = {}
+        for attr in dir(self):
+            if not attr.startswith("__") and isinstance(cls.__dict__.get(attr), AValidatedParam):
+                v = getattr(self, attr)
+                if not cls.__dict__[attr].is_default_value(v):
+                    res[attr] = v
+        return res
+
+    def __eq__(self, other) -> bool:
+        cls = type(self)
+        for attr in dir(self):
+            if not attr.startswith("__") and isinstance(cls.__dict__.get(attr), AValidatedParam):
+                if getattr(self, attr) != getattr(other, attr):
+                    return False
+        return True
+
+
+def perf_dict_to_noise(perfs: dict[str, float]) -> NoiseModel | MultiSourceNoiseModel:
+    # TODO: detect multi-source dict
+
     nm = NoiseModel()
     if TRANSMITTANCE_KEY in perfs:
         nm.transmittance = perfs[TRANSMITTANCE_KEY] / 100
@@ -116,9 +237,14 @@ def perf_dict_to_noise(perfs: dict[str, float]) -> NoiseModel:
     return nm
 
 
-def noise_to_perf_dict(nm: NoiseModel) -> dict:
+def noise_to_perf_dict(nm: NoiseModel | MultiSourceNoiseModel) -> dict:
+    if isinstance(nm, NoiseModel):
+        return {
+            INDISTINGUISHABILITY_KEY: nm.indistinguishability * 100,
+            TRANSMITTANCE_KEY: nm.brightness * nm.transmittance * 100,
+            G2_KEY: nm.g2 * 100
+        }
+
     return {
-        INDISTINGUISHABILITY_KEY: nm.indistinguishability * 100,
-        TRANSMITTANCE_KEY: nm.brightness * nm.transmittance * 100,
-        G2_KEY: nm.g2 * 100
+        # TODO
     }

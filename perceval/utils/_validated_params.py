@@ -29,26 +29,27 @@
 
 from numbers import Number
 from abc import abstractmethod, ABC
+from typing import TypeVar, Generic
+
+T = TypeVar('T')
 
 
-class AValidatedParam(ABC):
+class AValidatedParam(ABC, Generic[T]):
 
-    def __init__(self, default_value = None):
-        if default_value is not None:
-            self._validate(default_value)
+    def __init__(self, default_value: T | None = None):
         self.default_value = default_value
 
     def __set_name__(self, owner, name):
         self.private_name = '_' + name
         self.name = name
 
-    def __get__(self, obj, objtype=None):
+    def __get__(self, obj, objtype=None) -> T | None:
         value = getattr(obj, self.private_name)
         if value is None:
             return self.default_value
         return value
 
-    def __set__(self, obj, value):
+    def __set__(self, obj, value: T | None):
         if value is not None:
             self._validate(value)
         setattr(obj, self.private_name, value)
@@ -57,22 +58,34 @@ class AValidatedParam(ABC):
     def _validate(self, value):
         pass
 
-    def is_default(self):
-        return self.default_value is not None
+    def is_default_value(self, value):
+        return value == self.default_value
 
 
-class ValidatedBool(AValidatedParam):
+class ValidatedBool(AValidatedParam[bool]):
     def __init__(self, default_value=None):
         super().__init__(default_value)
 
     def _validate(self, value):
         if not isinstance(value, bool):
             raise TypeError(f"{self.name} expected a boolean value, got {type(value)}")
-        return value
 
 
-class ValidatedFloat(AValidatedParam):
-    def __init__(self, min_value=None, max_value=None, default_value=None):
+class ValidatedInt(AValidatedParam[int]):
+    def __init__(self, min_value: int | None = None, max_value: int | None = None, default_value=None):
+        self._min = min_value
+        self._max = max_value
+        super().__init__(default_value)
+
+    def _validate(self, value):
+        if not isinstance(value, int):
+            raise TypeError(f"{self.name} expected an integer, got {type(value)}")
+        if (self._min is not None and self._min > value) or (self._max is not None and value > self._max):
+            raise ValueError(f"{self.name} value out of bound: {value} not in [{self._min}, {self._max}]")
+
+
+class ValidatedFloat(AValidatedParam[float]):
+    def __init__(self, min_value: float | None = None, max_value: float | None = None, default_value=None):
         self._min = min_value
         self._max = max_value
         super().__init__(default_value)
@@ -80,6 +93,23 @@ class ValidatedFloat(AValidatedParam):
     def _validate(self, value):
         if not isinstance(value, Number):
             raise TypeError(f"{self.name} expected a numerical value, got {type(value)}")
-        if (self._min is None or self._min <= value) and (self._max is None or value <= self._max):
-            return value
-        raise ValueError(f"{self.name} value out of bound: {value} not in [{self._min}, {self._max}]")
+        if (self._min is not None and self._min > value) or (self._max is not None and value > self._max):
+            raise ValueError(f"{self.name} value out of bound: {value} not in [{self._min}, {self._max}]")
+
+
+class ValidatedListOrScalar(AValidatedParam[list[T]]):
+    def __init__(self, validator: AValidatedParam[T]):
+        self._validator = validator
+        super().__init__(validator.default_value)
+
+    def _validate(self, value):
+        if isinstance(value, (list, tuple)):
+            for item in value:
+                self._validator._validate(item)
+        else:
+            self._validator._validate(value)
+
+    def is_default_value(self, value):
+        if isinstance(value, (list, tuple)):
+            return all(v == self.default_value for v in value)
+        return value == self.default_value

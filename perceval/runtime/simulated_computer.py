@@ -334,7 +334,7 @@ class SimulatedComputer(LocalComputer):
         if extra_parameters:
             my_dict.update(extra_parameters)
         if self.noise != NoiseModel():
-            my_dict['noise'] = self.noise.__dict__()
+            my_dict['noise'] = self.noise.to_dict()
         get_logger().log_resources(my_dict)
 
     def compute_physical_logical_perf(self, value: bool):
