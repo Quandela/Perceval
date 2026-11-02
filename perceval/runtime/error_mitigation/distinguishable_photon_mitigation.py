@@ -415,13 +415,14 @@ class DistinguishablePhotonMitigation(AMitigation, tag="DistinguishablePhoton"):
         if isinstance(noise, NoiseModel):
             loss = 1 - noise.transmittance * noise.brightness
         else:
+            # Note: this will not be used for as long as the g2 is always 0 in the MultiSourceNM
             brightness = 1
             for i in range(input_state.n):
                 mode = input_state.photon2mode(i)
                 source = noise.source_positions[mode]
                 brightness *= noise.brightness[source]
 
-            loss = 1 - brightness ** (1 / input_state.n)
+            loss = 1 - brightness ** (1 / input_state.n)  # Or the geometric mean of the losses?
         return [1] + [
             -(p2 * loss) ** i * (1 - p2) ** (input_state.n - i)
             for i in range(1, order + 1)

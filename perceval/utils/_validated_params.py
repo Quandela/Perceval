@@ -98,16 +98,19 @@ class ValidatedFloat(AValidatedParam[float]):
 
 
 class ValidatedListOrScalar(AValidatedParam[list[T]]):
-    def __init__(self, validator: AValidatedParam[T]):
+    def __init__(self, validator: AValidatedParam[T], accept_scalars: bool = True):
         self._validator = validator
+        self._accept_scalars = accept_scalars
         super().__init__(validator.default_value)
 
     def _validate(self, value):
         if isinstance(value, (list, tuple)):
             for item in value:
                 self._validator._validate(item)
-        else:
+        elif self._accept_scalars:
             self._validator._validate(value)
+        else:
+            raise TypeError(f"{self.name} expected a list or tuple, got {type(value)}")
 
     def is_default_value(self, value):
         if isinstance(value, (list, tuple)):

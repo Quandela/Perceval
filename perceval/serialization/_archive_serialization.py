@@ -128,16 +128,3 @@ def register_perceval_serializers() -> None:
     _register_string(BSCount, BSC_TAG, serialize_bscount, deserialize_bscount)
     _register_string(BSSamples, BSS_TAG, serialize_bssamples, deserialize_bssamples)
     _register_string(PostSelect, POSTSELECT_TAG, str, deserialize_postselect)
-
-    Serialization.register_class(NoiseModel,
-        [
-            "brightness",
-            "indistinguishability",
-            "g2",
-            "g2_distinguishable",
-            "transmittance",
-            "phase_imprecision",
-            "phase_error",
-        ],
-        tag=NOISE_TAG,
-    )
