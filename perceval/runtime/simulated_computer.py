@@ -34,7 +34,7 @@ from perceval.backends import ABackend, AStrongSimulationBackend, ExqaliburBacke
 from perceval.components import Experiment, Source
 from perceval.simulators import SimulatorFactory, ExqaliburNoisySamplingSimulator, NoisySamplingSimulator
 from perceval.utils import NoiseModel, BasicState, StateVector, SVDistribution, AnnotatedFockState, ProcessorType, \
-    ConversionHelper, ProgressCallback, noise_to_perf_dict
+    ConversionHelper, ProgressCallback, noise_to_perf_dict, MultiSourceNoiseModel
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import InputArchive, Serialization
 
@@ -57,7 +57,7 @@ class SimulatedComputer(LocalComputer):
     def __init__(self, backend):
         super().__init__()
         self._init_backend(backend)
-        self._noise: NoiseModel = NoiseModel()
+        self._noise: NoiseModel | MultiSourceNoiseModel = NoiseModel()
 
         cls = type(self)
         self._register_method(cls.probs)
@@ -77,11 +77,11 @@ class SimulatedComputer(LocalComputer):
         return self._backend.name
 
     @property
-    def noise(self) -> NoiseModel:
+    def noise(self) -> NoiseModel | MultiSourceNoiseModel:
         return self._noise
 
     @noise.setter
-    def noise(self, noise: NoiseModel):
+    def noise(self, noise: NoiseModel | MultiSourceNoiseModel):
         if noise is None:
             noise = NoiseModel()
         self._noise = noise

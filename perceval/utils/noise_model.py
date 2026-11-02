@@ -68,13 +68,13 @@ class NoiseModel:
                  phase_imprecision: float = None,
                  phase_error: float = None
                  ):
-        self.brightness = brightness
-        self.indistinguishability = indistinguishability
-        self.g2 = g2
-        self.g2_distinguishable = g2_distinguishable
-        self.transmittance = transmittance
-        self.phase_imprecision = phase_imprecision
-        self.phase_error = phase_error
+        self.brightness: float = brightness
+        self.indistinguishability: float = indistinguishability
+        self.g2: float = g2
+        self.g2_distinguishable: bool = g2_distinguishable
+        self.transmittance: float = transmittance
+        self.phase_imprecision: float = phase_imprecision
+        self.phase_error: float = phase_error
 
     def __deepcopy__(self, memo):
         return NoiseModel(**self.to_dict())
@@ -126,9 +126,9 @@ class MultiSourceNoiseModel:
     phase_error = ValidatedFloat(0, pi, 0)
 
     def __init__(self,
-                 brightness: list[float] | float = None,
-                 indistinguishability: list[float] | float = None,
-                 external_indistinguishability: list[float] | float = None,
+                 brightness: list[float] = None,
+                 indistinguishability: list[float] = None,
+                 external_indistinguishability: list[float] = None,
                  # g2: float = None,
                  source_positions: list[int] = None,
                  # g2_distinguishable: bool = None,
@@ -136,15 +136,15 @@ class MultiSourceNoiseModel:
                  phase_imprecision: float = None,
                  phase_error: float = None
                  ):
-        self.brightness = brightness
-        self.indistinguishability = indistinguishability
-        self.external_indistinguishability = external_indistinguishability
-        self.source_positions = source_positions if source_positions is not None else [0] * self.XQ_MAX_MODES
+        self.brightness: list[float] = brightness
+        self.indistinguishability: list[float] = indistinguishability
+        self.external_indistinguishability: list[float] = external_indistinguishability
+        self.source_positions: list[int] = source_positions if source_positions is not None else [0] * self.XQ_MAX_MODES
         # self.g2 = g2
         # self.g2_distinguishable = g2_distinguishable
         # self.transmittance = transmittance
-        self.phase_imprecision = phase_imprecision
-        self.phase_error = phase_error
+        self.phase_imprecision: float = phase_imprecision
+        self.phase_error: float = phase_error
 
         # Validation : all values must either be scalars or lists of the same length as the number of sources.
         # Replaces scalars by a repeated list of that length
@@ -204,6 +204,14 @@ class MultiSourceNoiseModel:
 
     def __repr__(self) -> str:
         return str(self.to_dict())
+
+    @property
+    def g2(self):
+        return 0
+
+    @property
+    def transmittance(self):
+        return 1
 
     def to_dict(self) -> dict:
         cls = type(self)

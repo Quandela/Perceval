@@ -40,7 +40,7 @@ from .check_cancel import call_and_check_cancel
 from .command import Command
 
 from perceval.utils import ProgressCallback, partial_progress_callable, ContextManager, NoiseModel, PMetadata, \
-    ProcessorType, encapsulate_manager_list
+    ProcessorType, encapsulate_manager_list, MultiSourceNoiseModel
 from perceval.utils.constants import KEY_RESULTS
 
 
@@ -370,7 +370,7 @@ class AComputer(ABC):
 
     @noise.setter
     @abstractmethod
-    def noise(self, noise: NoiseModel):
+    def noise(self, noise: NoiseModel | MultiSourceNoiseModel):
         pass
 
     @property
