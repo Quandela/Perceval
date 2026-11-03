@@ -26,7 +26,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from serialization import Serialization
 from ._validated_params import AValidatedParam, ValidatedBool, ValidatedFloat, ValidatedListOrScalar, ValidatedInt
 from .constants import TRANSMITTANCE_KEY, G2_KEY, INDISTINGUISHABILITY_KEY
 from math import pi
@@ -104,19 +103,6 @@ class NoiseModel:
                     return False
         return True
 
-
-Serialization.register_class(NoiseModel,
-                             [
-                                 "brightness",
-                                 "indistinguishability",
-                                 "g2",
-                                 "g2_distinguishable",
-                                 "transmittance",
-                                 "phase_imprecision",
-                                 "phase_error",
-                             ],
-                             tag="NoiseModel",
-                             )
 
 class MultiSourceNoiseModel:
     # Do not inherit from NoiseModel so that isinstance(NoiseModel) returns False
@@ -251,23 +237,6 @@ class MultiSourceNoiseModel:
                 if getattr(self, attr) != getattr(other, attr):
                     return False
         return True
-
-
-Serialization.register_class(MultiSourceNoiseModel,
-                             [
-                                 "_brightness",
-                                 "_indistinguishability",
-                                 "_external_indistinguishability",
-                                 "source_positions",
-                                 "_n_sources",
-                                 # "g2",
-                                 # "g2_distinguishable",
-                                 # "transmittance",
-                                 "phase_imprecision",
-                                 "phase_error",
-                             ],
-                             tag="MultiSourceNoiseModel",
-                             )
 
 
 def perf_dict_to_noise(perfs: dict[str, float]) -> NoiseModel | MultiSourceNoiseModel:
