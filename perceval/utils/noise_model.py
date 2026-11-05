@@ -105,6 +105,34 @@ class NoiseModel:
 
 
 class MultiSourceNoiseModel:
+    """
+    The MultiSourceNoiseModel class is a modification of the NoiseModel class, allowing to simulate several noisy sources.
+    Note that this model is tied to specific source places, and cannot be used on Experiments bigger than the given number
+    of modes.
+
+    One source can be plugged into several modes, but every mode has exactly one source,
+    no matter how many photons are inserted into that mode.
+
+    Example:
+
+    >>> nm = MultiSourceNoiseModel(brightness=[0.05, 0.06],
+    >>>                            indistinguishability=[0.9, 0.8],
+    >>>                            external_indistinguishability=[1, 0.7],
+    >>>                            source_positions=[0, 0, 1, 1])
+    >>> # Two sources, one with brightness 0.05 and measured HOM of 0.9, plugged into modes 0 and 1
+    >>> # one with brightness 0.06 and measured HOM of 0.8, plugged into modes 2 and 3
+    >>> # The measured HOM between photons emitted by each source is sqrt(0.9 * 0.8 * 1 * 0.7)
+
+    :param brightness: first lens brightness of each quantum dot
+    :param indistinguishability: chance two photons emitted by the same quantum dot are indistinguishable.
+     For each source, the measured HOM would be this number.
+    :param external_indistinguishability: chance two photons emitted by two different quantum dots are indistinguishable.
+     For each source, the measured HOM would be the square root of the product of all indistinguishability
+     and external indistinguishability of the given sources
+    :param source_positions: For each mode, the index of the source that is plugged
+    :param phase_imprecision: maximum precision of the phase shifters (0 means infinite precision)
+    :param phase_error: maximum random noise on the phase shifters (in radian)
+    """
     # Do not inherit from NoiseModel so that isinstance(NoiseModel) returns False
 
     XQ_MAX_MODES = 256  # Maximum number of modes in exqalibur
