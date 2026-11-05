@@ -128,7 +128,7 @@ class MultiSourceNoiseModel:
      For each source, the measured HOM would be this number.
     :param external_indistinguishability: chance two photons emitted by two different quantum dots are indistinguishable.
      For each source, the measured HOM would be the square root of the product of all indistinguishability
-     and external indistinguishability of the given sources
+     and external indistinguishability of the given sources. Note that for two sources, only the product of these matters.
     :param source_positions: For each mode, the index of the source that is plugged
     :param phase_imprecision: maximum precision of the phase shifters (0 means infinite precision)
     :param phase_error: maximum random noise on the phase shifters (in radian)

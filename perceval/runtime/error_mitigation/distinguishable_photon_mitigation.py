@@ -98,7 +98,7 @@ class DistinguishablePhotonMitigation(AMitigation, tag="DistinguishablePhoton"):
 
         # Note: We need the extension to be deterministic
         new_input_states = generate_obb_states(input_state, resolved_order)
-        ratios = self._split_ratios(new_input_states, noise.transmittance * noise.brightness)
+        ratios = self._split_ratios(new_input_states, noise)
 
         samples = self._split_integer(
             computation.parameters.get(KEY_MAX_SAMPLES),
@@ -429,12 +429,24 @@ class DistinguishablePhotonMitigation(AMitigation, tag="DistinguishablePhoton"):
         ]
 
     @staticmethod
-    def _split_ratios(states: list[FockState], transmittance: float):
-        if transmittance <= 0:
-            raise ValueError("Can't do anything with 0 transmittance.")
+    def _split_ratios(states: list[FockState], noise: NoiseModel | MultiSourceNoiseModel) -> list[float]:
+        if isinstance(noise, NoiseModel):
+            transmittance = noise.transmittance * noise.brightness
+            res = [transmittance ** (-state.n / 2) for state in states]
 
-        norm = sum(transmittance ** (-state.n / 2) for state in states)
-        return [transmittance ** (-state.n / 2) / norm for state in states]
+        else:
+            res = []
+            for state in states:
+                ratio = 1
+                for i in range(state.n):
+                    m = state.photon2mode(i)
+                    ratio *= 1 / noise.brightness[noise.source_positions[m]] ** 0.5
+                res.append(ratio)
+
+        norm = sum(res)
+        if norm <= 0:
+            raise ValueError("Can't do anything with 0 transmittance.")
+        return [ratio / norm for ratio in res]
 
     @staticmethod
     def _split_integer(total: int | None, ratios: list[float], name: str):
