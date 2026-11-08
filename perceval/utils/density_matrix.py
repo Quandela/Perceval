@@ -546,8 +546,8 @@ class DensityMatrix:
                     continue
                 else:
                     new_term = (f"{self.mat[i, j]:.2f}*" +
-                                str(self.inverse_index[j]) +
-                                self._bra_str(self.inverse_index[i]) +
+                                str(self.inverse_index[i]) +
+                                self._bra_str(self.inverse_index[j]) +
                                 "+")
                     string += new_term
 
