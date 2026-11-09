@@ -10,6 +10,9 @@ Many of the above methods extends to Density Matrices, such as ``sample`` and ``
 For example, the ``apply_loss`` method is already build-in to simulate the probabilistic loss of photons. It is also handled by the simulator for unitary evolutions
 with the method ``evolve_density_matrix``.
 
+The text representation uses the convention ``rho[i, j] |i><j|``: the row labels the ket and the column labels the bra.
+For complex superpositions, exchanging those labels would conjugate the off-diagonal coherences.
+
 The ``pdisplay()`` function also allows to easily see the coherence of your state by highlighting the non diagonal coefficients. For example, here is the resulting density matrix
 when we try to create a bell state with a Post-Selected CNOT:
 
