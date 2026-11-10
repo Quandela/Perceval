@@ -29,8 +29,10 @@
 from collections.abc import Callable
 
 import exqalibur as xq
+
 from perceval.components import ACircuit, GenericInterferometer, PS, catalog
-from perceval.utils import Matrix, P
+from perceval.runtime import cancel_requested
+from perceval.utils import Matrix, P, ProgressCallback
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import serialize_binary, deserialize_circuit
 
@@ -89,7 +91,8 @@ class CircuitOptimizer:
                  template: ACircuit,
                  empty_mode_list: list[int] = None,
                  first_guess: list[float] = None,
-                 seed: int | None = None) -> tuple[ACircuit, float]:
+                 seed: int | None = None,
+                 progress_callback: ProgressCallback | None = None) -> tuple[ACircuit, float]:
         """
         Optimize a template circuit unitary's fidelity with a target matrix or circuit.
 
@@ -99,6 +102,7 @@ class CircuitOptimizer:
                                 which are ignored during optimisation as this does not alter the results (default [])
         :param first_guess: list of starting real value for each parameter. Needs to be the same length as the number
                             of variable parameters in the template circuit (default None, i.e. not using a first guess)
+        :param progress_callback: A callback method to call to monitor the progress. Returning True will stop the optimization
         :return: A tuple of the best optimized circuit and its fidelity to the target
 
         >>> def mzi(i):
@@ -124,6 +128,8 @@ class CircuitOptimizer:
         optimizer = xq.CircuitOptimizer(target, serialize_binary(template), empty_mode_list, seed)
         optimizer.set_max_eval_per_trial(self._max_eval_per_trial)
         optimizer.set_threshold(self._threshold)
+        if progress_callback is not None:
+            optimizer.set_progress_callback(lambda prog, msg: cancel_requested(progress_callback(prog, msg)))
         if first_guess is None:
             optimized_circuit = deserialize_circuit(optimizer.optimize(self._trials))
         else:
