@@ -31,8 +31,9 @@ from unittest.mock import patch
 import pytest
 
 import perceval as pcvl
-from perceval import Experiment, BS, SimulatedComputer, DistinguishablePhotonMitigation, FockState, NoiseModel, Computation, \
-    tvd_dist
+from perceval import Experiment, BS, SimulatedComputer, DistinguishablePhotonMitigation, FockState, NoiseModel, \
+    Computation, \
+    tvd_dist, MultiSourceNoiseModel
 from tests._test_utils import assert_bsd_close, assert_unordered_lists_equal
 from perceval.runtime.error_mitigation._helpers.distinguishable_photon_mitigation import generate_obb_partition, generate_obb_states
 
@@ -175,6 +176,33 @@ def test_full_noise(mock_warn):
     perfect_res = c.execute(computation)
 
     c.noise = NoiseModel(indistinguishability= 0.8, g2=0.05, transmittance=0.06)
+    non_corrected_res = c.execute(computation)
+
+    c.mitigations = [DistinguishablePhotonMitigation(2)]
+    corrected_res = c.execute(computation)
+
+    tvd_non_corrected = tvd_dist(perfect_res["results"], non_corrected_res["results"])
+    tvd_corrected = tvd_dist(perfect_res["results"], corrected_res["results"])
+
+    assert tvd_corrected < tvd_non_corrected
+
+
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")  # Suppress the warning in tvd_dist()
+def test_full_noise_multi_source(mock_warn):
+    e = Experiment(4).add(0, BS()).add(2, BS())
+    e.with_input(FockState([1, 1, 1, 1]))
+    e.min_detected_photons_filter(4)
+
+    c = SimulatedComputer("SLOS")
+    computation = Computation(c.get_command("probs"), e)
+
+    c.noise = MultiSourceNoiseModel(brightness=[0.06, 0.05], source_positions=[0, 1, 0, 1])
+    perfect_res = c.execute(computation)
+
+    c.noise = MultiSourceNoiseModel(brightness=[0.06, 0.05],
+                                    indistinguishability=[0.9, 0.8],
+                                    external_indistinguishability=[1, 0.7],
+                                    source_positions=[0, 0, 1, 1])
     non_corrected_res = c.execute(computation)
 
     c.mitigations = [DistinguishablePhotonMitigation(2)]

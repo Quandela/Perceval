@@ -9,3 +9,7 @@ Noise Model
 .. autoclass:: perceval.utils.noise_model.NoiseModel
    :members:
    :inherited-members:
+
+.. autoclass:: perceval.utils.noise_model.MultiSourceNoiseModel
+   :members:
+   :inherited-members:

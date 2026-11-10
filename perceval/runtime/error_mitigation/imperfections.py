@@ -30,7 +30,7 @@
 import dataclasses
 from copy import copy
 
-from perceval.utils import NoiseModel
+from perceval.utils import NoiseModel, MultiSourceNoiseModel
 from perceval.utils.constants import KEY_NOISE
 from perceval.components import IDetector
 from perceval.serialization import Serialization
@@ -41,7 +41,7 @@ class Imperfections:
     """
     Dataclass representing every imperfection source that can be mitigated.
     """
-    noise: NoiseModel
+    noise: NoiseModel | MultiSourceNoiseModel
     detectors: list[IDetector | None]
 
 

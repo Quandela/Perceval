@@ -40,7 +40,7 @@ from .check_cancel import call_and_check_cancel
 from .command import Command
 
 from perceval.utils import ProgressCallback, partial_progress_callable, ContextManager, NoiseModel, PMetadata, \
-    ProcessorType, encapsulate_manager_list
+    ProcessorType, encapsulate_manager_list, MultiSourceNoiseModel
 from perceval.utils.constants import KEY_RESULTS
 
 
@@ -364,13 +364,13 @@ class AComputer(ABC):
         return specs
 
     @property
-    def noise(self):
+    def noise(self) -> NoiseModel | MultiSourceNoiseModel:
         """The noise model representing the computer. Will be used only for simulators"""
         return NoiseModel()
 
     @noise.setter
     @abstractmethod
-    def noise(self, noise: NoiseModel):
+    def noise(self, noise: NoiseModel | MultiSourceNoiseModel):
         pass
 
     @property
@@ -421,7 +421,7 @@ class AComputer(ABC):
 
     def apply_configuration(self,
                             mitigations: list[AMitigation] = None,
-                            noise: NoiseModel = None,
+                            noise: NoiseModel | MultiSourceNoiseModel = None,
                             parameters: dict[str, Any] = None) -> ContextManager:
         """
         .. warning::
@@ -439,7 +439,10 @@ class AComputer(ABC):
         starting_noise = self.noise if noise is not None else None
         starting_parameters = self.parameters if parameters is not None else None
 
-        def apply(mitigations_: list[AMitigation] | None, noise_: NoiseModel | None, parameters_: dict[str, Any] | None, force = False):
+        def apply(mitigations_: list[AMitigation] | None,
+                  noise_: NoiseModel | MultiSourceNoiseModel | None,
+                  parameters_: dict[str, Any] | None,
+                  force = False):
             if mitigations_ is not None or force:
                 self.mitigations = mitigations_
             if noise_ is not None:

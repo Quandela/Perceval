@@ -32,7 +32,7 @@ from typing import Any
 
 from perceval.components import Experiment
 from perceval.serialization import serialize
-from perceval.utils import PMetadata, NoiseModel, ContextManager
+from perceval.utils import PMetadata, NoiseModel, ContextManager, MultiSourceNoiseModel
 from perceval.utils.constants import KEY_COMMAND, KEY_PARAMETERS, KEY_EXPERIMENT, KEY_VERSION, KEY_PROCESS_ID, \
     KEY_PAYLOAD, KEY_PLATFORM_NAME, KEY_COMPUTATION, KEY_MITIGATIONS, KEY_NOISE
 
@@ -124,7 +124,7 @@ class PayloadGenerator:
     def from_computation(computation: Computation | ComputationIterator,
                          mitigations: list[AMitigation] = None,
                          parameters: dict[str, Any] = None,
-                         noise: NoiseModel = None):
+                         noise: NoiseModel | MultiSourceNoiseModel = None):
         payload: dict = {KEY_COMPUTATION: computation}
         if mitigations is not None:
             payload[KEY_MITIGATIONS] = mitigations
@@ -142,7 +142,7 @@ class PayloadGenerator:
 
     @staticmethod
     def read_configuration_from_payload(payload: dict) \
-            -> tuple[list[AMitigation] | None, NoiseModel | None, dict[str, Any] | None]:
+            -> tuple[list[AMitigation] | None, NoiseModel | MultiSourceNoiseModel | None, dict[str, Any] | None]:
         mitigations = payload.get(KEY_MITIGATIONS)
         noise = payload.get(KEY_NOISE)
         parameters = payload.get(KEY_PARAMETERS)
