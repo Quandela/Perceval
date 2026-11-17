@@ -710,6 +710,16 @@ class Experiment:
         return {p.name: p for _, c in self._components if isinstance(c, AParametrizedComponent)
                 for p in c.get_parameters()}
 
+    def set_circuit_parameters(self, circuit_params: dict[str, float | str]) -> None:
+        """
+        :param circuit_params: A dict containing the name and values for all parameters to set
+        """
+        if circuit_params:
+            parameters = self.get_circuit_parameters()
+            for param, value in circuit_params.items():
+                if value is not None:
+                    parameters[param].set_value(float(value))
+
     @property
     def out_port_names(self):
         r"""

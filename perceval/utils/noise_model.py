@@ -255,6 +255,8 @@ class MultiSourceNoiseModel:
             if not attr.startswith("__") and isinstance(cls.__dict__.get(attr), AValidatedParam):
                 v = getattr(self, attr)
                 if not cls.__dict__[attr].is_default_value(v):
+                    if attr.startswith("_"):
+                        attr = attr[1:]
                     res[attr] = v
         return res
 
