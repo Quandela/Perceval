@@ -31,7 +31,6 @@ from __future__ import annotations  # Python 3.11 : Replace using Self typing
 import copy
 from abc import ABC, abstractmethod
 from enum import Enum
-from functools import cache
 from math import comb
 
 from .abstract_component import AComponent
@@ -109,7 +108,7 @@ class BSLayeredPPNR(IDetector):
 
     def __init__(self, bs_layers: int, reflectivity: float = 0.5):
         assert isinstance(bs_layers, int) and bs_layers > 0,\
-            f"Beam-splitter layers have to be a stricly positive integer (got {bs_layers})"
+            f"Beam-splitter layers have to be a strictly positive integer (got {bs_layers})"
         assert 0 <= reflectivity <= 1, f"Reflectivity must be between 0 and 1 (got {reflectivity})"
         super().__init__()
         self.name = f"BS-PPNR{bs_layers}"
@@ -217,6 +216,8 @@ class Detector(IDetector):
         if self._wires is not None:
             self._max = self._wires if max_detections is None else min(max_detections, self._wires)
 
+        self.name = self.type.name
+
     @property
     def max_detections(self) -> int:
         """Maximum number of detected photons (None for infinity)"""
@@ -236,23 +237,17 @@ class Detector(IDetector):
     @staticmethod
     def threshold() -> Detector:
         """Builds a threshold detector."""
-        d = Detector(1)
-        d.name = "Threshold"
-        return d
+        return Detector(1)
 
     @staticmethod
     def pnr() -> Detector:
         """Builds a perfect photon number resolving (PNR) detector."""
-        d = Detector()
-        d.name = "PNR"
-        return d
+        return Detector()
 
     @staticmethod
     def ppnr(n_wires: int = None, max_detections: int = None, wire_efficiency: float = 1) -> Detector:
         """Builds an interleaved pseudo-PNR detector."""
-        d = Detector(n_wires, max_detections, wire_efficiency)
-        d.name = f"PPNR"
-        return d
+        return Detector(n_wires, max_detections, wire_efficiency)
 
     @property
     def type(self) -> DetectionType:
