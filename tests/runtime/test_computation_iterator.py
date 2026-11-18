@@ -27,7 +27,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval import Experiment, FockState, Computation, BSSamples, NoiseModel, Command
+import pytest
+
+from perceval import Experiment, FockState, Computation, BSSamples, NoiseModel, Command, SimulatedComputer
 from perceval.runtime.computation_iterator import ComputationIterator
 from tests._test_utils import assert_experiment_equals
 
@@ -78,3 +80,17 @@ def test_iteration_parsing():
     assert "iteration" in parsed["results_list"][0]
     assert parsed["results_list"][0]["iteration"] == {"max_samples": 10000}
     assert parsed["results_list"][1]["iteration"] == {"max_samples": 50000}
+
+
+def test_iterator_without_iteration():
+    e = Experiment(2)
+    e.with_input(FockState([1, 0]))
+    computer = SimulatedComputer("SLOS")
+    comp = ComputationIterator(Computation(computer.get_command("probs"), e))
+    assert len(list(comp)) == 1  # The base computation is used
+
+    res = computer.execute(comp)
+
+    assert len(res["results_list"]) == 1
+    assert res["results_list"][0]["results"][FockState([1, 0])] == pytest.approx(1)
+    assert res["results_list"][0]["iteration"] == {}
