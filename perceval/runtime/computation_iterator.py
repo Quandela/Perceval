@@ -182,7 +182,7 @@ class ComputationIterator:
 
         def inserter(res: dict):
             i = len(out[KEY_RESULTS_LIST])
-            res[KEY_ITERATION] = self._iterations[i]
+            res[KEY_ITERATION] = self._iterations[i] if self._iterations else {}  # No iteration: base computation
             if KEY_SHOTS_USED in res:
                 out[KEY_SHOTS_USED] = out[KEY_SHOTS_USED] + res[KEY_SHOTS_USED] if KEY_SHOTS_USED in out else res[KEY_SHOTS_USED]
             out[KEY_RESULTS_LIST].append(res)
