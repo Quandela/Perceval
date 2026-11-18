@@ -48,7 +48,8 @@ def deserialize_bs_layer(pb_d: pb.BSLayeredPPNR) -> BSLayeredPPNR:
 
 def serialize_detector(detector: Detector):
     pb_d = pb.Detector()
-    pb_d.name = detector.name
+    if detector.name is not None:
+        pb_d.name = detector.name
     if detector._wires is not None:
         pb_d.n_wires = detector._wires
     if detector.max_detections is not None:
@@ -63,7 +64,7 @@ def deserialize_detector(pb_d: pb.Detector) -> Detector:
     max_detections = pb_d.max_detections or None
     wire_efficiency = pb_d.wire_efficiency or 1  # default value 0 is not allowed for Detectors
     detector = Detector(n_wires, max_detections, wire_efficiency)
-    detector.name = pb_d.name
+    detector.name = pb_d.name or None
     return detector
 
 

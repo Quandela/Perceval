@@ -261,7 +261,10 @@ def test_postselect_serialization(ps):
                                       Detector.pnr(),
                                       Detector.threshold(),
                                       Detector.ppnr(4, 2),
-                                      Detector.ppnr(4, 2, 0.6)))
+                                      Detector.ppnr(4, 2, 0.6),
+                                      Detector(3),
+                                      Detector(max_detections=2),
+                                      Detector(wire_efficiency=0.7)))
 def test_detector_serialization(detector):
     serialized = serialize(detector)
     deserialized = deserialize(serialized)
@@ -476,3 +479,17 @@ def test_deserialize_unknown_object(mock_warn):
     container = [{serial_unknown: 1}]
     with LogChecker(mock_warn):
         assert deserialize(container, strict=False) == container
+
+
+def test_experiment_serialization_unnamed_detector():
+    e = Experiment(2)
+    e.add(0, BS())
+    e.add(0, Detector(3))
+    e.add(1, Detector(max_detections=1, wire_efficiency=0.5))
+
+    e_deser = deserialize(serialize(e))
+    for d, d_deser in zip(e.detectors, e_deser.detectors):
+        assert d.name == d_deser.name
+        assert d._wires == d_deser._wires
+        assert d.max_detections == d_deser.max_detections
+        assert d.efficiency == pytest.approx(d_deser.efficiency)
