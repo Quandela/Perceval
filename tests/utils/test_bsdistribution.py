@@ -138,3 +138,20 @@ def test_operators():
         num_c * bsf
     with pytest.raises(Exception):
         bsf   / num_c
+
+
+@pytest.mark.parametrize("normalized", [True, False])
+def test_copy_constructor_is_independent(normalized):
+    original = BSDistribution({FockState([1, 0]): 0.25, FockState([0, 1]): 0.75})
+    if normalized:
+        original.normalize()
+
+    copied = BSDistribution(original)
+    copied[FockState([1, 1])] = 0.5
+    copied *= 2
+
+    assert len(original) == 2
+    assert original[FockState([1, 0])] == pytest.approx(0.25)
+    assert original[FockState([0, 1])] == pytest.approx(0.75)
+    assert FockState([1, 1]) not in original
+    assert len(copied) == 3

@@ -88,8 +88,9 @@ class BSDistribution():
                         self._function.trim(global_params["min_p"])
                         return
                     elif isinstance(args[0], BSDistribution):
-                        self._function = args[0]._function
-                        self._distribution = args[0]._distribution
+                        other = copy.deepcopy(args[0])
+                        self._function = other._function
+                        self._distribution = other._distribution
                         return
                     elif isinstance(args[0], exqalibur.FSFunction):
                         self._function = args[0]
