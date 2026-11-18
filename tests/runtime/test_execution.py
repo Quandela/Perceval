@@ -157,6 +157,22 @@ def test_run_async_fail(execution):
     assert "AssertionError" in execution.get_results(allow_partial_results=True)["results"]
 
 
+
+def test_run_sync_fail(execution):
+    with pytest.raises(AssertionError):
+        execution.execute_sync(5, must_fail=True)
+    assert execution.status.status == RunningStatus.ERROR
+    assert "AssertionError" in execution.status.stop_message
+
+
+def test_run_sync_fail_partial_results(execution):
+    res = execution.execute_sync(5, must_fail=True, allow_partial_results=True)
+    assert "AssertionError" in res["results"]
+    assert execution.is_failed
+    assert execution.status.status == RunningStatus.ERROR
+    assert "AssertionError" in execution.status.stop_message
+    assert execution.get_results(allow_partial_results=True) is res
+
 def test_run_async_cancel(execution):
     assert execution.execute_async(5, 0.3) is execution
     execution.cancel()

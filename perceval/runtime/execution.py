@@ -253,10 +253,11 @@ class Execution:
             self._transmit_args(*args, **kwargs)
             self._computer.execute(self._computation, self._results, progress_callback=self._progress_callback)
         except Exception as e:
+            self._status.stop_run(RunningStatus.ERROR, f"{type(e).__name__}: {e}")
             if not allow_partial_results:
                 self._results = {}
-                self._status.stop_run(RunningStatus.ERROR, f"{type(e).__name__}: {e}")
                 raise e
+            return self._results
 
         if self._status.canceled:
             self._status.stop_run(RunningStatus.CANCELED, "Canceled")
