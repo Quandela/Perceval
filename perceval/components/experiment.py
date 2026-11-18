@@ -624,11 +624,27 @@ class Experiment:
         :return: A copy of self where the phase noise has been applied. No copy is made if there is no noise
         """
         noise = noise or self.noise or NoiseModel()
+        if not self._has_phase_noise(noise):
+            return self
+
         rng = random.Random(seed)
 
         res = self.copy()
         res.apply_phase_noise(noise.phase_error, noise.phase_imprecision, rng)
         return res
+
+    def _has_phase_noise(self, noise: NoiseModel) -> bool:
+        """Returns False only when apply_phase_noise would not change any component of this experiment"""
+        if noise.phase_error or noise.phase_imprecision:
+            return True
+        for _, component in self._components:
+            if isinstance(component, AFFConfigurator):
+                return True
+            if isinstance(component, ACircuit):
+                for _, c in component:
+                    if isinstance(c, PS) and (not c.param("max_error").defined or float(c.param("max_error"))):
+                        return True
+        return False
 
     def apply_phase_noise(self, phase_error: float = 0, phase_imprecision: float= 0, rng: random.Random = None):
         """

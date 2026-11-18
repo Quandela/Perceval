@@ -434,3 +434,12 @@ def test_get_parameters():
 def test_remote_processor_creation():
     rp = RemoteProcessor(rpc_handler=get_rpc_handler_for_tests(), m=8)
     rp.add(0, BS())
+
+
+def test_processor_linear_circuit_is_a_copy():
+    p = Processor("SLOS", Circuit(2) // BS() // (1, PS(0.4)) // BS())
+    c = p.linear_circuit()
+    ps = [comp for _, comp in c if isinstance(comp, PS)][0]
+    ps.param("phi").set_value(1.0, force=True)
+
+    assert [float(comp.param("phi")) for _, comp in p.linear_circuit() if isinstance(comp, PS)] == [0.4]

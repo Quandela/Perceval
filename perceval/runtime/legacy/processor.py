@@ -142,6 +142,8 @@ class Processor(AProcessor):
         :return: The resulting Circuit object
         """
         experiment = self.experiment.use_phase_noise(self.noise)
+        if experiment is self.experiment:
+            experiment = experiment.copy()  # The returned circuit must not share its components with the processor
         return experiment.unitary_circuit(flatten=flatten)
 
     def samples(self, max_samples: int, max_shots: int = None, progress_callback=None) -> dict:
