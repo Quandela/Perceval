@@ -58,7 +58,7 @@ class ExperimentSerializer:
 
         self._serialized.n_mode = experiment.circuit_size
 
-        if experiment.min_photons_filter:
+        if experiment.min_photons_filter is not None:
             self._serialized.min_photons_filter = experiment.min_photons_filter
         else:
             self._serialized.min_photons_filter = VALUE_NOT_SET

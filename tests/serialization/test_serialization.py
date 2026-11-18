@@ -351,6 +351,19 @@ def test_experiment_serialization():
     e_2 = deserialize(ser_e)
     assert_experiment_equals(e, e_2)
 
+
+@pytest.mark.parametrize("min_photons", [None, 0, 1, 2])
+def test_experiment_serialization_min_photons_filter(min_photons):
+    e = Experiment(2)
+    e.add(0, BS())
+    e.with_input(BasicState([1, 1]))
+    if min_photons is not None:
+        e.min_detected_photons_filter(min_photons)
+
+    e_2 = deserialize(serialize(e))
+    assert e_2.min_photons_filter == min_photons
+    assert_experiment_equals(e, e_2)
+
 def test_compiled_circuit_serialization():
     circuit = CompiledCircuit("chip name", MZIPhaseFirst().build_circuit(), [0., 1.], get_cc_version())
     c_ser = serialize(circuit)
