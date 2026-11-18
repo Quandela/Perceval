@@ -470,25 +470,25 @@ def test_phase_noise():
     assert pytest.approx(float(circuit.param("phi"))) == 0.75
 
 
-def test_use_phase_noise_copy():
+def test_has_phase_noise():
     def phase(experiment):
         return [float(c.param("phi")) for _, c in experiment.unitary_circuit() if isinstance(c, comp.PS)][0]
 
     e = Experiment(Circuit(2) // comp.BS() // (1, comp.PS(0.4)) // comp.BS())
 
-    # No phase noise: the experiment is used as is
-    assert e.use_phase_noise() is e
-    assert e.use_phase_noise(NoiseModel(brightness=0.9, indistinguishability=0.95)) is e
+    # No phase noise
+    assert not e.has_phase_noise()
+    assert not e.has_phase_noise(NoiseModel(brightness=0.9, indistinguishability=0.95))
+    assert e.use_phase_noise() is not e  # use_phase_noise always returns a copy
 
-    # Phase noise from the noise model: a noisy copy is made, the initial experiment is unchanged
+    # Phase noise from the noise model
     for noise in [NoiseModel(phase_error=0.1), NoiseModel(phase_imprecision=0.3)]:
+        assert e.has_phase_noise(noise)
         noisy_e = e.use_phase_noise(noise, seed=1)
-        assert noisy_e is not e
         assert phase(e) == 0.4
         assert phase(noisy_e) != 0.4
 
     # Phase noise from a PS max_error
-    e_max_error = Experiment(Circuit(2) // comp.BS() // (1, comp.PS(0.4, max_error=0.1)))
-    assert e_max_error.use_phase_noise(seed=1) is not e_max_error
-    e_symbolic_error = Experiment(Circuit(2) // comp.BS() // (1, comp.PS(0.4, max_error=P("err"))))
-    assert e_symbolic_error.use_phase_noise(seed=1) is not e_symbolic_error
+    assert Experiment(Circuit(2) // comp.BS() // (1, comp.PS(0.4, max_error=0.1))).has_phase_noise()
+    assert Experiment(Circuit(2) // comp.BS() // (1, comp.PS(0.4, max_error=P("err")))).has_phase_noise()
+    assert not Experiment(Circuit(2) // comp.BS() // (1, comp.PS(0.4, max_error=0))).has_phase_noise()

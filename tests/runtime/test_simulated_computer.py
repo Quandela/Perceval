@@ -33,7 +33,7 @@ import pytest
 from exqalibur import BSCount, BSSamples
 
 from perceval import SimulatedComputer, Experiment, BS, FockState, BSDistribution, samples_to_sample_count, NoiseModel, \
-    ProcessorType, Computation
+    ProcessorType, Computation, PS
 from perceval.runtime.computation_iterator import ComputationIterator
 from tests._test_utils import assert_bsd_close
 
@@ -185,3 +185,20 @@ def test_execute_iterator():
     assert "iteration" in res["results_list"][0]
     assert res["results_list"][0]["iteration"] == {"input_state": FockState([1, 0])}
     assert res["results_list"][1]["iteration"] == {"input_state": FockState([0, 1])}
+
+
+@pytest.mark.parametrize("backend_name", ["SLOS", "CliffordClifford2017"])
+def test_phase_noise_does_not_change_experiment(backend_name):
+    e = Experiment(2)
+    e.add(0, BS())
+    e.add(1, PS(0.4))
+    e.add(0, BS())
+    e.with_input(FockState([1, 1]))
+    for noise in [NoiseModel(), NoiseModel(brightness=0.9), NoiseModel(phase_error=0.1)]:
+        computer = SimulatedComputer(backend_name)
+        computer.noise = noise
+        if backend_name == "SLOS":
+            computer.probs(e)
+        else:
+            computer.samples(e, 10)
+        assert [float(c.param("phi")) for _, c in e.unitary_circuit() if isinstance(c, PS)] == [0.4]
