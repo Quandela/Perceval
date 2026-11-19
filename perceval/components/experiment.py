@@ -621,7 +621,7 @@ class Experiment:
 
         :param noise: A NoiseModel to use.
         :param seed: Seed for the random number generator
-        :return: A copy of self where the phase noise has been applied. No copy is made if there is no noise
+        :return: A copy of self where the phase noise has been applied
         """
         noise = noise or self.noise or NoiseModel()
         rng = random.Random(seed)
@@ -629,6 +629,26 @@ class Experiment:
         res = self.copy()
         res.apply_phase_noise(noise.phase_error, noise.phase_imprecision, rng)
         return res
+
+    def has_phase_noise(self, noise: NoiseModel = None) -> bool:
+        """
+        Tells whether use_phase_noise would change any component of this experiment.
+
+        :param noise: A NoiseModel to use, with the same fallback as use_phase_noise.
+        :return: False only when no PS has a non-zero or symbolic `max_error`, there is no feed-forward configurator,
+         and the noise has no `phase_error` nor `phase_imprecision`
+        """
+        noise = noise or self.noise or NoiseModel()
+        if noise.phase_error or noise.phase_imprecision:
+            return True
+        for _, component in self._components:
+            if isinstance(component, AFFConfigurator):
+                return True
+            if isinstance(component, ACircuit):
+                for _, c in component:
+                    if isinstance(c, PS) and (not c.param("max_error").defined or float(c.param("max_error"))):
+                        return True
+        return False
 
     def apply_phase_noise(self, phase_error: float = 0, phase_imprecision: float= 0, rng: random.Random = None):
         """

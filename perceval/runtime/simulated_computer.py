@@ -174,7 +174,8 @@ class SimulatedComputer(LocalComputer):
                 + "logical_perf": float,
         """
         if isinstance(self._backend, AStrongSimulationBackend):
-            experiment = experiment.use_phase_noise(self.noise, compilation_seed)
+            if experiment.has_phase_noise(self.noise):  # use_phase_noise always copies the experiment
+                experiment = experiment.use_phase_noise(self.noise, compilation_seed)
             simulator = SimulatorFactory.build(experiment, self._backend, self.noise)
 
             precision = self._parse_precision(precision, max_shots, max_samples)
@@ -206,7 +207,8 @@ class SimulatedComputer(LocalComputer):
             simulator = NoisySamplingSimulator(self._backend)
         simulator.sleep_between_batches = 0  # Remove sleep time between batches of samples in local simulation
 
-        experiment = experiment.use_phase_noise(self.noise, compilation_seed)
+        if experiment.has_phase_noise(self.noise):  # use_phase_noise always copies the experiment
+            experiment = experiment.use_phase_noise(self.noise, compilation_seed)
         simulator.set_circuit(experiment.unitary_circuit())
         simulator.set_selection(
             min_detected_photons_filter=experiment.min_photons_filter,
