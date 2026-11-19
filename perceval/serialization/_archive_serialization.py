@@ -29,7 +29,6 @@
 
 """Registration of Perceval classes in the archive serialization system."""
 
-import json
 from collections.abc import Callable
 from typing import TypeVar, Type
 
@@ -37,7 +36,7 @@ from perceval.components import BS, BSLayeredPPNR, Barrier, Circuit, CompiledCir
     FFCircuitProvider, FFConfigurator, GenericInterferometer, HWP, LC, PBS, PERM, Port, PR, PS, QWP, TD, Unitary, WP
 from perceval.components.compiled_circuit import CompiledCircuitVersion
 from perceval.utils import BSCount, BSDistribution, BSSamples, MatrixN, MatrixS, NoiseModel, PostSelect, StateVector, \
-    SVDistribution, FockState, AnnotatedFockState, NoisyFockState
+    SVDistribution, FockState, AnnotatedFockState, NoisyFockState, MultiSourceNoiseModel
 
 from ._circuit_serialization import serialize_circuit, serialize_compiled_circuit, serialize_compiled_circuit_version, \
     serialize_component, serialize_herald, serialize_port
@@ -130,14 +129,30 @@ def register_perceval_serializers() -> None:
     _register_string(PostSelect, POSTSELECT_TAG, str, deserialize_postselect)
 
     Serialization.register_class(NoiseModel,
-        [
-            "brightness",
-            "indistinguishability",
-            "g2",
-            "g2_distinguishable",
-            "transmittance",
-            "phase_imprecision",
-            "phase_error",
-        ],
-        tag=NOISE_TAG,
-    )
+                                 [
+                                     "brightness",
+                                     "indistinguishability",
+                                     "g2",
+                                     "g2_distinguishable",
+                                     "transmittance",
+                                     "phase_imprecision",
+                                     "phase_error",
+                                 ],
+                                 tag=NOISE_TAG,
+                                 )
+
+    Serialization.register_class(MultiSourceNoiseModel,
+                                 [
+                                     "_brightness",
+                                     "_indistinguishability",
+                                     "_external_indistinguishability",
+                                     "source_positions",
+                                     "_n_sources",
+                                     # "g2",
+                                     # "g2_distinguishable",
+                                     # "transmittance",
+                                     "phase_imprecision",
+                                     "phase_error",
+                                 ],
+                                 tag="MultiSourceNoiseModel",
+                                 )

@@ -44,7 +44,8 @@ from .simulated_computer import SimulatedComputer
 from .async_getter import AsyncGetter
 from .payload_generator import PayloadGenerator
 
-from perceval.utils import perf_dict_to_noise, ProgressCallback, NoiseModel, PostSelect, ContextManager
+from perceval.utils import perf_dict_to_noise, ProgressCallback, NoiseModel, PostSelect, ContextManager, \
+    MultiSourceNoiseModel
 from perceval.utils.logging import channel, get_logger
 from perceval.components import PortLocation, Experiment, update_detectors_from_perfs
 from perceval.serialization import Serialization, InputArchive
@@ -111,7 +112,7 @@ class RemoteComputer(AComputer):
         self._commands = {command.name: command for command in communication_layer.get_commands()}
         self._specs = communication_layer.get_specs()
         self._perfs = communication_layer.get_performances()
-        self._custom_noise: NoiseModel | None = None
+        self._custom_noise: NoiseModel | MultiSourceNoiseModel| None = None
         self.use_mitigations_remotely: bool = True
         self._available_jobs = 0
 
@@ -126,7 +127,7 @@ class RemoteComputer(AComputer):
         return perf_dict_to_noise(self.performance)
 
     @noise.setter
-    def noise(self, noise: NoiseModel | None):
+    def noise(self, noise: NoiseModel | MultiSourceNoiseModel | None):
         self._custom_noise = noise
 
     def _use_mitigations_remotely(self):

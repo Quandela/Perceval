@@ -31,7 +31,7 @@ import math
 from copy import copy, deepcopy
 
 from perceval.components import DetectionType, get_detection_type
-from perceval.utils import BSDistribution, FockState, NoiseModel, get_logger, PostSelect
+from perceval.utils import BSDistribution, FockState, NoiseModel, get_logger, PostSelect, MultiSourceNoiseModel
 from perceval.utils.constants import KEY_MAX_SHOTS, KEY_MAX_SAMPLES, KEY_RESULTS
 from perceval.serialization import Serialization
 
@@ -80,8 +80,11 @@ class DistinguishablePhotonMitigation(AMitigation, tag="DistinguishablePhoton"):
         given specified order of correction.
         """
         noise = imperfections.noise
-        if noise.g2 == 0 and noise.indistinguishability == 1:
+        if isinstance(noise, NoiseModel) and noise.g2 == 0 and noise.indistinguishability == 1:
             return [computation]  # Nothing to mitigate here
+        elif isinstance(noise, MultiSourceNoiseModel):
+            if all(ind == 1. for ind in noise.indistinguishability) and all(ind == 1. for ind in noise.external_indistinguishability):
+                return [computation]  # Nothing to mitigate here
 
         if noise.g2 > .5:
             raise ValueError("PhotonErrorMitigation requires g2 <= 0.5.")
@@ -95,7 +98,7 @@ class DistinguishablePhotonMitigation(AMitigation, tag="DistinguishablePhoton"):
 
         # Note: We need the extension to be deterministic
         new_input_states = generate_obb_states(input_state, resolved_order)
-        ratios = self._split_ratios(new_input_states, noise.transmittance * noise.brightness)
+        ratios = self._split_ratios(new_input_states, noise)
 
         samples = self._split_integer(
             computation.parameters.get(KEY_MAX_SAMPLES),
@@ -166,7 +169,7 @@ class DistinguishablePhotonMitigation(AMitigation, tag="DistinguishablePhoton"):
             order,
             state_idx,
             input_state,
-            noise.indistinguishability,
+            noise,
             pnr_per_mode,
             detection_type
         )
@@ -302,16 +305,20 @@ class DistinguishablePhotonMitigation(AMitigation, tag="DistinguishablePhoton"):
         order: int,
         state_idx: dict[FockState, int],
         input_state: FockState,
-        indistinguishability: float,
+        noise: NoiseModel | MultiSourceNoiseModel,
         pnr_per_mode: list[int | None],
         detection_type: DetectionType,
     ) -> BSDistribution:
         """Mitigate distinguishability by subtracting contributions where
         photons statistics are independent.
         """
-        if indistinguishability == 1:
+        if (isinstance(noise, NoiseModel) and noise.indistinguishability == 1) or \
+            (isinstance(noise, MultiSourceNoiseModel) and all(ind == 1. for ind in noise.indistinguishability)
+                and all(ind == 1. for ind in noise.external_indistinguishability)):
             return dist_batch[state_idx[input_state]]
 
+
+        indistinguishability = cls._extract_best_indistinguishability(noise, input_state)
         photon_count = input_state.n
         order = min(photon_count, order)
         weights_hom = cls._compute_weights_hom(indistinguishability, photon_count, order)
@@ -338,7 +345,7 @@ class DistinguishablePhotonMitigation(AMitigation, tag="DistinguishablePhoton"):
         order: int,
         idx_by_photon_count: dict[int, list[int]],
         input_state: FockState,
-        noise: NoiseModel,
+        noise: NoiseModel | MultiSourceNoiseModel,
         pnr_per_mode: list[int | None],
         detection_type: DetectionType
     ) -> BSDistribution:
@@ -350,7 +357,7 @@ class DistinguishablePhotonMitigation(AMitigation, tag="DistinguishablePhoton"):
 
         photon_count = input_state.n
         order = min(order, max(photon_count - 1, 0))
-        weights_g2 = cls._compute_weights_g2(noise, photon_count, order)
+        weights_g2 = cls._compute_weights_g2(noise, input_state, order)
 
         res = weights_g2[0] * dist_batch[idx_by_photon_count[input_state.n][0]]
         for i in range(1, order + 1):
@@ -392,8 +399,8 @@ class DistinguishablePhotonMitigation(AMitigation, tag="DistinguishablePhoton"):
 
     @staticmethod
     def _compute_weights_g2(
-        noise: NoiseModel | None,
-        photon_count: int,
+        noise: NoiseModel | MultiSourceNoiseModel | None,
+        input_state: FockState,
         order: int
     ) -> list[float]:
         noise = noise or NoiseModel()
@@ -405,19 +412,41 @@ class DistinguishablePhotonMitigation(AMitigation, tag="DistinguishablePhoton"):
             p2 = 0
 
         # The loss is not exactly this product, but this is accurate enough for our needs
-        loss = 1 - noise.transmittance * noise.brightness
+        if isinstance(noise, NoiseModel):
+            loss = 1 - noise.transmittance * noise.brightness
+        else:
+            # Note: this will not be used for as long as the g2 is always 0 in the MultiSourceNM
+            brightness = 1
+            for i in range(input_state.n):
+                mode = input_state.photon2mode(i)
+                source = noise.source_positions[mode]
+                brightness *= noise.brightness[source]
+
+            loss = 1 - brightness ** (1 / input_state.n)  # Or the geometric mean of the losses?
         return [1] + [
-            -(p2 * loss) ** i * (1 - p2) ** (photon_count - i)
+            -(p2 * loss) ** i * (1 - p2) ** (input_state.n - i)
             for i in range(1, order + 1)
         ]
 
     @staticmethod
-    def _split_ratios(states: list[FockState], transmittance: float):
-        if transmittance <= 0:
-            raise ValueError("Can't do anything with 0 transmittance.")
+    def _split_ratios(states: list[FockState], noise: NoiseModel | MultiSourceNoiseModel) -> list[float]:
+        if isinstance(noise, NoiseModel):
+            transmittance = noise.transmittance * noise.brightness
+            res = [transmittance ** (-state.n / 2) for state in states]
 
-        norm = sum(transmittance ** (-state.n / 2) for state in states)
-        return [transmittance ** (-state.n / 2) / norm for state in states]
+        else:
+            res = []
+            for state in states:
+                ratio = 1
+                for i in range(state.n):
+                    m = state.photon2mode(i)
+                    ratio *= 1 / noise.brightness[noise.source_positions[m]] ** 0.5
+                res.append(ratio)
+
+        norm = sum(res)
+        if norm <= 0:
+            raise ValueError("Can't do anything with 0 transmittance.")
+        return [ratio / norm for ratio in res]
 
     @staticmethod
     def _split_integer(total: int | None, ratios: list[float], name: str):
@@ -458,6 +487,27 @@ class DistinguishablePhotonMitigation(AMitigation, tag="DistinguishablePhoton"):
             values[i] += 1
 
         return values
+
+    @staticmethod
+    def _extract_best_indistinguishability(noise: NoiseModel | MultiSourceNoiseModel, input_state: FockState) -> float:
+        if isinstance(noise, NoiseModel):
+            return noise.indistinguishability
+
+        # We do as best as we can - a better model would make a weight list for each possible photon count per source
+        total_indistinguishability = 1
+        seen_sources = set()
+
+        for i in range(input_state.n):
+            mode = input_state.photon2mode(i)
+            source = noise.source_positions[mode]
+            seen_sources.add(source)
+            total_indistinguishability *= noise.indistinguishability[source]
+
+        if len(seen_sources) > 1:
+            for source in seen_sources:
+                total_indistinguishability *= noise.external_indistinguishability[source]
+
+        return total_indistinguishability ** (1 / input_state.n)
 
 
 Serialization.register_class(DistinguishablePhotonMitigation, ["_order"])

@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from perceval.utils import NoiseModel
+from perceval.utils import NoiseModel, MultiSourceNoiseModel
 from perceval.utils.postselect import PostSelect
 
 from .feed_forward_simulator import FFSimulator
@@ -50,7 +50,7 @@ class SimulatorFactory:
     @staticmethod
     def build(circuit: ACircuit | Experiment | list,
               backend: ABackend | str = None,
-              noise: NoiseModel = None,
+              noise: NoiseModel | MultiSourceNoiseModel = None,
               **kwargs) -> ISimulator:
         """
         :param circuit: The optical circuit to build the simulation layers around.

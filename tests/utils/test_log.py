@@ -114,7 +114,7 @@ def test_log_resources(mock_info):
 
     my_dict = _get_last_dict_logged(mock_info.mock_calls[-1].args[0])
     assert SOURCE not in my_dict
-    assert my_dict[NOISE] == noise_model.__dict__()
+    assert my_dict[NOISE] == noise_model.to_dict()
     assert my_dict[LAYER] == 'SimulatedComputer'
     assert my_dict[BACKEND] == 'SLOS'
     assert my_dict[N] == input_state.n
@@ -129,7 +129,7 @@ def test_log_resources(mock_info):
     my_dict = _get_last_dict_logged(mock_info.mock_calls[-1].args[0])
     assert SOURCE not in my_dict
     assert my_dict['platform'] == remote_processor._rpc_handler.name
-    assert my_dict[NOISE] == noise_model.__dict__()
+    assert my_dict[NOISE] == noise_model.to_dict()
     assert my_dict[LAYER] == 'RemoteProcessor'
     assert my_dict[N] == input_state.n
     assert my_dict[M] == circuit.m

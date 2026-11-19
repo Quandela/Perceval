@@ -321,7 +321,7 @@ class RemoteProcessor(AProcessor):
         if self.input_state:
             my_dict['n'] = self.input_state.n
         if self.noise:
-            my_dict['noise'] = self.noise.__dict__()
+            my_dict['noise'] = self.noise.to_dict()
         if extra_parameters:
             my_dict.update(extra_parameters)
         get_logger().log_resources(my_dict)
