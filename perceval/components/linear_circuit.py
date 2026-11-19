@@ -488,8 +488,19 @@ class Circuit(ACircuit):
                                  use_symbolic: bool,
                                  use_polarization: bool) -> Matrix:
         """compute the unitary matrix corresponding to the current circuit"""
-        u = None
         multiplier = 2 if use_polarization else 1
+        if not use_symbolic:
+            if not self._components:
+                return None
+            # A component acting on ports r only changes the matching row block of the accumulated unitary:
+            # update this block in place instead of building and multiplying full size matrices
+            u = Matrix.eye(multiplier*self._m, use_symbolic=False)
+            for r, c in self._components:
+                cU = c.compute_unitary(use_symbolic=False, use_polarization=use_polarization)
+                start, end = multiplier*r[0], multiplier*(r[-1]+1)
+                u[start:end] = cU @ u[start:end]
+            return u
+        u = None
         for r, c in self._components:
             cU = c.compute_unitary(use_symbolic=use_symbolic, use_polarization=use_polarization)
             if len(r) != multiplier*self._m:

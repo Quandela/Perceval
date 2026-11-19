@@ -62,3 +62,45 @@ def test_WP_unitary():
 def test_PR_unitary():
     wp = comp.PR(delta=0.37)
     _check_unitary(wp)
+
+
+def _reference_unitary(circuit: pcvl.Circuit, use_polarization: bool = False):
+    # Explicit product of identity-padded component matrices
+    multiplier = 2 if use_polarization else 1
+    u = np.eye(multiplier * circuit.m, dtype=complex)
+    for r, c in circuit._components:
+        padded = np.eye(multiplier * circuit.m, dtype=complex)
+        start, end = multiplier * r[0], multiplier * (r[-1] + 1)
+        padded[start:end, start:end] = c.compute_unitary(use_polarization=use_polarization)
+        u = padded @ u
+    return u
+
+
+def test_circuit_unitary_matches_padded_product():
+    u_sub = pcvl.Matrix.random_unitary(3)
+    sub = pcvl.Circuit(3) // comp.BS(0.7) // (1, comp.PS(0.3)) // (1, comp.BS.H(1.2))
+    c = (pcvl.Circuit(5) // (1, comp.BS(0.2)) // (4, comp.PS(1.1)) // (2, comp.Unitary(u_sub))
+         // (0, comp.BS.Rx(0.5, phi_tl=0.1)) // (3, comp.PERM([1, 0])))
+    c.add(1, sub, merge=False)
+    c.add(0, comp.Unitary(pcvl.Matrix.random_unitary(5)), merge=False)
+    u = c.compute_unitary(use_symbolic=False)
+    assert isinstance(u, pcvl.MatrixN)
+    assert u.is_unitary()
+    assert np.allclose(u, _reference_unitary(c), atol=1e-12, rtol=1e-12)
+    assert np.allclose(u, c.compute_unitary(use_symbolic=True).tonp())
+
+    c_pol = pcvl.Circuit(3) // (0, comp.BS(0.3)) // (1, comp.WP(0.2, 0.7)) // (2, comp.PR(0.4)) // (1, comp.PBS())
+    u_pol = c_pol.compute_unitary(use_polarization=True)
+    assert u_pol.shape == (6, 6)
+    assert np.allclose(u_pol, _reference_unitary(c_pol, use_polarization=True), atol=1e-12, rtol=1e-12)
+
+
+def test_circuit_unitary_does_not_alias_component():
+    u_ref = pcvl.Matrix.random_unitary(3)
+    unitary = comp.Unitary(u_ref)
+    c = pcvl.Circuit(3) // unitary
+    u = c.compute_unitary()
+    assert np.allclose(u, u_ref)
+    u[0, 0] = 42
+    assert np.allclose(unitary.compute_unitary(), u_ref)
+    assert np.allclose(pcvl.Circuit(2).compute_unitary(), np.eye(2))
