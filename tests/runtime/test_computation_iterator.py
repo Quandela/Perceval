@@ -27,7 +27,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval import Experiment, FockState, Computation, BSSamples, NoiseModel, Command
+import pytest
+
+from perceval import Experiment, FockState, Computation, BSSamples, NoiseModel, Command, ExecutionFactory, \
+    SimulatedComputer
 from perceval.runtime.computation_iterator import ComputationIterator
 from tests._test_utils import assert_experiment_equals
 
@@ -78,3 +81,33 @@ def test_iteration_parsing():
     assert "iteration" in parsed["results_list"][0]
     assert parsed["results_list"][0]["iteration"] == {"max_samples": 10000}
     assert parsed["results_list"][1]["iteration"] == {"max_samples": 50000}
+
+
+def test_validate_with_iteration_parameters():
+    sample_count_command = Command("sample_count", [("max_samples", int, True)])
+    e = Experiment(2)
+    e.with_input(FockState([1, 0]))
+
+    comp = ComputationIterator(Computation(sample_count_command, e))
+    comp.add_iteration(max_samples=2)
+    comp.add_iteration(max_samples=3)
+    comp.validate()  # Mandatory parameter is given by every iteration
+
+    comp.add_iteration(input_state=FockState([0, 1]))
+    with pytest.raises(ValueError):
+        comp.validate()  # Last iteration has no max_samples
+
+    comp.add_params(max_samples=1)
+    comp.validate()
+
+
+def test_execute_with_iteration_max_samples():
+    e = Experiment(2)
+    e.with_input(FockState([1, 0]))
+    factory = ExecutionFactory(SimulatedComputer("SLOS"), e)
+    factory.add_iteration(max_samples=2)
+    factory.add_iteration(max_samples=3)
+
+    res = factory.sample_count.execute_sync()
+
+    assert [r["results"][FockState([1, 0])] for r in res["results_list"]] == [2, 3]

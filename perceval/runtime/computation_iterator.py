@@ -34,7 +34,8 @@ from .command import Command
 from .computation import Computation
 
 from perceval.utils import BasicState, PostSelect
-from perceval.utils.constants import KEY_SHOTS_USED, KEY_RESULTS_LIST, KEY_ITERATION
+from perceval.utils.constants import KEY_SHOTS_USED, KEY_RESULTS_LIST, KEY_ITERATION, KEY_MAX_SAMPLES, KEY_MAX_SHOTS, \
+    KEY_COMPILATION_SEED
 from perceval.components import Experiment
 from perceval.serialization import Serialization
 
@@ -53,6 +54,9 @@ class ComputationIterator:
                                              'max_shots': int,
                                              'postselect': PostSelect,
                                              'compilation_seed': int,}
+
+    # Iteration keys that are given to the computation as parameters (see _set_max_samples...)
+    _PARAMETER_KEYS = (KEY_MAX_SAMPLES, KEY_MAX_SHOTS, KEY_COMPILATION_SEED)
 
     def __init__(self, base_computation: Computation):
         self.base_computation = base_computation
@@ -169,9 +173,17 @@ class ComputationIterator:
         """
         self.base_computation.add_params(*args, **kwargs)
 
-    def validate(self) -> bool:
-        # Already done by the _check_iteration at construction for other computations
-        return self.base_computation.validate()
+    def validate(self):
+        """
+        Checks that all non-optional parameters are filled for every iteration,
+        taking into account the parameters given in the iterations
+
+        :raises ValueError: if parameters are not correct
+        """
+        for iteration in self._iterations or [{}]:
+            # Only the computation parameters are needed here: avoid copying the experiment for each iteration
+            parameters = self.parameters | {key: val for key, val in iteration.items() if key in self._PARAMETER_KEYS}
+            self.command.check(parameters)
 
     def make_inserter(self, out: dict) -> Callable[[dict], None]:
         """
