@@ -89,6 +89,7 @@ class Processor(AProcessor):
         if self._experiment.noise is not None:
             self._experiment.noise = noise
         self._computer.noise = noise
+        self._noise_changed_observer()
 
     @property
     def source_distribution(self) -> SVDistribution | None:

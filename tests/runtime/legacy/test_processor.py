@@ -62,6 +62,19 @@ def test_processor_input_fock_state_with_loss():
     assert_svd_close(p.source_distribution, expected)
 
 
+
+def test_processor_source_distribution_after_noise_change():
+    p = Processor("SLOS", Circuit(2))
+    p.with_input(FockState([1, 0]))
+    assert_svd_close(p.source_distribution, {StateVector([1, 0]): 1})
+
+    p.noise = NoiseModel(brightness=0.5)
+    expected = {StateVector([1, 0]): 0.5, StateVector([0, 0]): 0.5}
+    assert_svd_close(p.source_distribution, expected)
+
+    p.noise = NoiseModel()
+    assert_svd_close(p.source_distribution, {StateVector([1, 0]): 1})
+
 def test_processor_input_fock_state_with_all_noise_sources():
     nm = NoiseModel(brightness=0.2, indistinguishability=0.9, g2=0.1, g2_distinguishable=False)
     p = Processor("Naive", Circuit(4), nm)
