@@ -149,9 +149,6 @@ class ComputationIterator:
         return bool(self._iterations)
 
     def __iter__(self):
-        if len(self._iterations) == 0:
-            yield self.base_computation
-
         for iteration in self._iterations:
             yield self._apply_iteration(iteration)
 
