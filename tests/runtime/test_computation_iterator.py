@@ -29,8 +29,7 @@
 
 import pytest
 
-from perceval import Experiment, FockState, Computation, BSSamples, NoiseModel, Command, ExecutionFactory, \
-    SimulatedComputer
+from perceval import Experiment, FockState, Computation, BSSamples, Command, ExecutionFactory, SimulatedComputer
 from perceval.runtime.computation_iterator import ComputationIterator
 from tests._test_utils import assert_experiment_equals
 
