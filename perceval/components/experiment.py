@@ -37,7 +37,7 @@ from typing import Callable
 from multipledispatch import dispatch
 
 from perceval.utils import FockState, AnnotatedFockState, Parameter, PostSelect, LogicalState, NoiseModel, ModeType, StateVector, \
-    SVDistribution, NoisyFockState
+    SVDistribution, NoisyFockState, MultiSourceNoiseModel
 from perceval.utils.logging import get_logger, channel
 from perceval.utils.algorithms.simplification import perm_compose, simplify
 from ._mode_connector import ModeConnector, UnavailableModeException
@@ -183,6 +183,7 @@ class Experiment:
                 if observer_fn is not None:
                     observer_fn()
         else:
+            # We purposefully don't support MultiSourceNoiseModel here as this is pre 1.3 workflow
             raise TypeError("noise type has to be 'NoiseModel'")
 
     @property
@@ -611,7 +612,7 @@ class Experiment:
         """
         return self._m
 
-    def use_phase_noise(self, noise: NoiseModel = None, seed: int = None) -> Experiment:
+    def use_phase_noise(self, noise: NoiseModel | MultiSourceNoiseModel = None, seed: int = None) -> Experiment:
         """
         Makes a copy of the current Experiment where the noise is applied to each PS component following the given rules:
 
@@ -728,6 +729,16 @@ class Experiment:
     def get_circuit_parameters(self) -> dict[str, Parameter]:
         return {p.name: p for _, c in self._components if isinstance(c, AParametrizedComponent)
                 for p in c.get_parameters()}
+
+    def set_circuit_parameters(self, circuit_params: dict[str, float | str]) -> None:
+        """
+        :param circuit_params: A dict containing the name and values for all parameters to set
+        """
+        if circuit_params:
+            parameters = self.get_circuit_parameters()
+            for param, value in circuit_params.items():
+                if value is not None:
+                    parameters[param].set_value(float(value))
 
     @property
     def out_port_names(self):

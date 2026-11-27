@@ -31,7 +31,7 @@ from typing import Any
 
 from perceval.components import AComponent, Barrier, PERM, IDetector, Herald, PortLocation, Source, Experiment
 from perceval.utils import (NoiseModel, BasicState, FockState, BSDistribution, SVDistribution, StateVector,
-                            partial_progress_callable, ProgressCallback, get_logger, deprecated)
+                            partial_progress_callable, ProgressCallback, get_logger, MultiSourceNoiseModel)
 from perceval.utils.logging import channel
 from perceval.components.feed_forward_configurator import AFFConfigurator
 from perceval.backends import AStrongSimulationBackend, IFFBackend
@@ -66,7 +66,7 @@ class FFSimulator(ISimulator):
         else:
             self._components = circuit
 
-    def set_noise(self, nm: NoiseModel):
+    def set_noise(self, nm: NoiseModel | MultiSourceNoiseModel):
         self._noise_model = nm
 
     def _probs_svd(self,

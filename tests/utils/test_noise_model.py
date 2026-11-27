@@ -26,8 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-from perceval.utils import NoiseModel
+from perceval.utils import NoiseModel, MultiSourceNoiseModel
 import pytest
 
 
@@ -39,7 +38,7 @@ G2_KEY = "g2"
 
 def test_noise_model_default():
     nm = NoiseModel()
-    assert len(nm.__dict__()) == 0
+    assert len(nm.to_dict()) == 0
     assert nm.brightness == BRIGHTNESS_DEF
 
     # Test we can assign a value using setattr
@@ -49,9 +48,9 @@ def test_noise_model_default():
 
 def test_noise_model_init():
     nm = NoiseModel(phase_imprecision=1e-3, g2=0.05)
-    assert PHASE_IMPRECISION_KEY in nm.__dict__()
-    assert G2_KEY in nm.__dict__()
-    assert BRIGHTNESS_KEY not in nm.__dict__()
+    assert PHASE_IMPRECISION_KEY in nm.to_dict()
+    assert G2_KEY in nm.to_dict()
+    assert BRIGHTNESS_KEY not in nm.to_dict()
     assert nm.brightness == BRIGHTNESS_DEF
 
 
@@ -92,3 +91,28 @@ def test_noise_model_eq():
 
     nm3 = NoiseModel(brightness=0.01, indistinguishability=0.89, g2=0.15, g2_distinguishable=False)
     assert nm1 != nm3
+
+
+def test_multi_source_noise_model():
+    nm = MultiSourceNoiseModel()
+    assert nm.brightness == [BRIGHTNESS_DEF]
+
+    with pytest.raises(ValueError):
+        # Missing source positions
+        MultiSourceNoiseModel(indistinguishability=[0.88, 0.92])
+
+    with pytest.raises(ValueError):
+        # Too few sources
+        MultiSourceNoiseModel(indistinguishability=[0.88, 0.92], source_positions=[0, 0])
+
+    with pytest.raises(ValueError):
+        # Too many sources
+        MultiSourceNoiseModel(indistinguishability=[0.88, 0.92], source_positions=[0, 1, 2])
+
+    # Test automatic filling of values
+    nm = MultiSourceNoiseModel(indistinguishability=[0.88, 0.92], external_indistinguishability=0.7, source_positions=[0, 0, 1])
+    assert nm.n_sources == 2
+    assert nm.brightness == [BRIGHTNESS_DEF, BRIGHTNESS_DEF]
+    assert nm.indistinguishability == [0.88, 0.92]
+    assert nm.source_positions == [0, 0, 1]
+    assert nm.external_indistinguishability == [0.7, 0.7]

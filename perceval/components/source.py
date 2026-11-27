@@ -28,10 +28,10 @@
 # SOFTWARE.
 from __future__ import annotations  # Python 3.11 : Replace using Self typing
 
-from exqalibur import BSSamples
 import exqalibur as xq
 
-from perceval.utils import SVDistribution, NoisyFockState, FockState, anonymize_annotations, NoiseModel, global_params
+from perceval.utils import SVDistribution, NoisyFockState, FockState, anonymize_annotations, NoiseModel, global_params, \
+    BSSamples, MultiSourceNoiseModel
 from perceval.utils.logging import get_logger, channel
 
 DISTINGUISHABLE_KEY = 'distinguishable'
@@ -72,14 +72,26 @@ class Source:
         self._sampler : xq.SourceSampler | None = None
 
     @staticmethod
-    def from_noise_model(noise: NoiseModel):
+    def from_noise_model(noise: NoiseModel | MultiSourceNoiseModel | None):
         if noise is None:
             return Source()
-        return Source(emission_probability=noise.brightness,
-                      multiphoton_component=noise.g2,
-                      indistinguishability=noise.indistinguishability,
-                      losses=1 - noise.transmittance,
-                      multiphoton_model=DISTINGUISHABLE_KEY if noise.g2_distinguishable else INDISTINGUISHABLE_KEY)
+        if isinstance(noise, NoiseModel):
+            return Source(emission_probability=noise.brightness,
+                          multiphoton_component=noise.g2,
+                          indistinguishability=noise.indistinguishability,
+                          losses=1 - noise.transmittance,
+                          multiphoton_model=DISTINGUISHABLE_KEY if noise.g2_distinguishable else INDISTINGUISHABLE_KEY)
+
+        s = Source()
+        s._source = xq.MultiSource(noise.source_positions,
+                                   noise.brightness,
+                                   noise.indistinguishability,
+                                   noise.external_indistinguishability)
+
+        return s
+
+    def _is_multi_source(self):
+        return isinstance(self._source, xq.MultiSource)
 
     @property
     def partially_distinguishable(self):
@@ -91,14 +103,20 @@ class Source:
 
     @property
     def multiphoton_component(self):
+        if self._is_multi_source():
+            return 0.
         return self._source.multiphoton_component
 
     @property
     def indistinguishability(self):
+        if self._is_multi_source():
+            return self._source.internal_indistinguishability
         return self._source.indistinguishability
 
     @property
     def losses(self):
+        if self._is_multi_source():
+            return 0
         return self._source.losses
 
     @property
@@ -153,7 +171,6 @@ class Source:
         :param expected_input: Expected input BasicState
         :param min_photons_filter: The minimum number of photons required to generate a state.
         """
-        # TODO: chose iterator depending on the input state
         return self._source.create_simple_iterator(expected_input, min_photons_filter)
 
     def create_sampler(self, expected_input: FockState, min_photons_filter: int = 0) -> xq.SourceSampler:
@@ -205,12 +222,25 @@ class Source:
     def is_perfect(self) -> bool:
         return self._source.is_perfect
 
-    def __eq__(self, value: Source) -> bool:
-        return self._source == value._source and self.simplify_distribution == value.simplify_distribution
+    def __eq__(self, value: object) -> bool:
+        if isinstance(value, Source):
+            if self._is_multi_source() != value._is_multi_source():
+                return False  # Avoid calling not implemented == between simple and multiple source
+            return self._source == value._source and self.simplify_distribution == value.simplify_distribution
+        return NotImplemented
 
     def to_dict(self) -> dict:
-        return {'g2': self.multiphoton_component,
-                'transmittance': 1 - self.losses,
-                'brightness': self.emission_probability,
+        res =  {'brightness': self.emission_probability,
                 'indistinguishability': self.indistinguishability,
                 'g2_distinguishable': self._source.is_g2_distinguishable}
+        if self._is_multi_source():
+            res |= {
+                'external_indistinguishability': self._source.external_indistinguishability,
+                'source_positions': self._source.source_positions,
+            }
+        else:
+            res |= {
+                'g2': self.multiphoton_component,
+                'transmittance': 1 - self.losses,
+            }
+        return res

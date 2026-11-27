@@ -203,11 +203,7 @@ class ComputationIterator:
 
     @staticmethod
     def _set_circuit_params(params: dict, computation: Computation):
-        if params:
-            circuit_params = computation.experiment.get_circuit_parameters()
-            for name, value in params.items():
-                if value is not None:
-                    circuit_params[name].set_value(value)
+        computation.experiment.set_circuit_parameters(params)
 
     @staticmethod
     def _set_input_state(input_state: BasicState, computation: Computation):

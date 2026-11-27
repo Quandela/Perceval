@@ -34,6 +34,8 @@ from perceval.utils.constants import KEY_EXPERIMENT, KEY_CIRCUIT, KEY_RESULT_MAP
     KEY_JOB_CONTEXT, KEY_COMPUTATION, KEY_MAX_SAMPLES, KEY_MAX_SHOTS, KEY_COMMAND, KEY_NOISE, KEY_PARAMETERS, \
     KEY_INPUT_STATE, KEY_POSTSELECT, KEY_HERALDS, KEY_MIN_DETECTED_PHOTONS, KEY_ITERATOR
 from perceval.components import Experiment
+from perceval.utils import MultiSourceNoiseModel
+from perceval.utils.logging import get_logger, channel
 
 from .abstract_computer import AComputer
 from .computation import Computation
@@ -160,7 +162,11 @@ class PayloadUpdater:
         computation: Computation | ComputationIterator = payload.pop(KEY_COMPUTATION)
 
         if KEY_NOISE in payload:
-            computation.experiment.noise = payload.pop(KEY_NOISE)
+            noise = payload.pop(KEY_NOISE)
+            if isinstance(noise, MultiSourceNoiseModel):
+                get_logger().warn("Can't downgrade MultiSourceNoiseModel class to payload v1 - dropping it", channel.user)
+            else:
+                computation.experiment.noise = noise
         payload[KEY_EXPERIMENT] = computation.experiment
         if isinstance(computation, ComputationIterator):
             payload[KEY_ITERATOR] = computation.iterations
